@@ -42,8 +42,16 @@ const Services = () => {
             {services?.map((service) => (
               <Card key={service.id} className="border-border hover:shadow-gold transition-all">
                 <CardHeader>
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <Scissors className="w-8 h-8 text-primary-foreground" />
+                  <div className="w-32 h-32 mx-auto mb-4 rounded-lg bg-gradient-primary flex items-center justify-center overflow-hidden">
+                    {service.image_url ? (
+                      <img 
+                        src={service.image_url} 
+                        alt={service.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Scissors className="w-12 h-12 text-primary-foreground" />
+                    )}
                   </div>
                   <CardTitle className="text-center text-xl">{service.name}</CardTitle>
                   <CardDescription className="text-center">
