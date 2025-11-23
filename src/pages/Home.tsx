@@ -160,6 +160,25 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Galeria Preview */}
+      <section className="py-20 px-4 bg-card/30">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Nossos Trabalhos</h2>
+            <p className="text-muted-foreground">
+              Veja alguns dos resultados que entregamos aos nossos clientes
+            </p>
+          </div>
+          <div className="text-center">
+            <Link to="/gallery">
+              <Button variant="premium" size="lg">
+                Ver Galeria Completa
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
