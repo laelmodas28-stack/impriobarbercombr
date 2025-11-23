@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
 import Professionals from "./pages/Professionals";
+import ProfessionalDetail from "./pages/ProfessionalDetail";
 import Booking from "./pages/Booking";
 import Account from "./pages/Account";
 import About from "./pages/About";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/services" element={<Services />} />
             <Route path="/professionals" element={<Professionals />} />
+            <Route path="/professionals/:id" element={<ProfessionalDetail />} />
             <Route path="/booking" element={<Booking />} />
             <Route path="/account" element={<Account />} />
             <Route path="/about" element={<About />} />
