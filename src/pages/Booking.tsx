@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { User } from "lucide-react";
 
 const Booking = () => {
   const { user } = useAuth();
@@ -133,18 +134,41 @@ const Booking = () => {
                 <CardTitle>2. Escolha o Profissional</CardTitle>
               </CardHeader>
               <CardContent>
-                <Select value={selectedProfessional} onValueChange={setSelectedProfessional}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um profissional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {professionals?.map((professional) => (
-                      <SelectItem key={professional.id} value={professional.id}>
-                        {professional.name} ⭐ {professional.rating}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {professionals?.map((professional) => (
+                    <Card 
+                      key={professional.id}
+                      className={`cursor-pointer transition-all border-2 ${
+                        selectedProfessional === professional.id 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      onClick={() => setSelectedProfessional(professional.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {professional.photo_url ? (
+                              <img 
+                                src={professional.photo_url} 
+                                alt={professional.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-2xl text-primary-foreground">
+                                {professional.name.charAt(0)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold">{professional.name}</p>
+                            <p className="text-sm text-primary font-medium">⭐ {professional.rating}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
