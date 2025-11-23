@@ -144,15 +144,38 @@ const Admin = () => {
 
   const handleProfessionalPhotoUpload = async (professionalId: string, file: File) => {
     try {
-      const fileExt = file.name.split('.').pop();
+      // Validação do tipo de arquivo
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Formato não suportado. Use apenas JPG, JPEG ou PNG. Formato detectado: ${file.type}`);
+        return;
+      }
+
+      // Validação do tamanho (5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error(`Arquivo muito grande. Tamanho máximo: 5MB. Tamanho do arquivo: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        return;
+      }
+
+      toast.info("Enviando foto...");
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
       const fileName = `${professionalId}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('professional-photos')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Erro no upload:", uploadError);
+        toast.error(`Erro no upload: ${uploadError.message}`);
+        return;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('professional-photos')
@@ -163,13 +186,17 @@ const Admin = () => {
         .update({ photo_url: publicUrl })
         .eq('id', professionalId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Erro ao atualizar banco:", updateError);
+        toast.error(`Erro ao atualizar: ${updateError.message}`);
+        return;
+      }
 
       toast.success("Foto atualizada com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["admin-professionals"] });
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao fazer upload da foto");
+    } catch (error: any) {
+      console.error("Erro geral:", error);
+      toast.error(`Erro: ${error?.message || "Erro desconhecido ao fazer upload"}`);
     }
   };
 
@@ -379,12 +406,17 @@ const Admin = () => {
                             </div>
                             <Input
                               type="file"
-                              accept="image/jpeg,image/jpg,image/png"
+                              accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
                               className="hidden"
                               id={`photo-${professional.id}`}
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                if (file) handleProfessionalPhotoUpload(professional.id, file);
+                                if (file) {
+                                  console.log("Arquivo selecionado:", file.name, "Tipo:", file.type, "Tamanho:", file.size);
+                                  handleProfessionalPhotoUpload(professional.id, file);
+                                }
+                                // Limpar o input para permitir selecionar o mesmo arquivo novamente
+                                e.target.value = '';
                               }}
                             />
                             <Label 
