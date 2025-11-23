@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Upload, User } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
+import ImageUpload from "@/components/ImageUpload";
+import { resizeImage } from "@/lib/imageUtils";
 
 const Admin = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [barbershopName, setBarbershopName] = useState("");
 
   // Get barbershop data
@@ -106,6 +106,23 @@ const Admin = () => {
     enabled: profile?.role === "admin" && !!barbershop,
   });
 
+  const { data: gallery, refetch: refetchGallery } = useQuery({
+    queryKey: ["admin-gallery", barbershop?.id],
+    queryFn: async () => {
+      if (!barbershop) return [];
+      
+      const { data, error } = await supabase
+        .from("gallery")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
+        .order("display_order");
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: profile?.role === "admin" && !!barbershop,
+  });
+
   if (!user || profile?.role !== "admin") {
     navigate("/");
     return null;
@@ -144,29 +161,18 @@ const Admin = () => {
 
   const handleProfessionalPhotoUpload = async (professionalId: string, file: File) => {
     try {
-      // Validação do tipo de arquivo
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(`Formato não suportado. Use apenas JPG, JPEG ou PNG. Formato detectado: ${file.type}`);
-        return;
-      }
-
-      // Validação do tamanho (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        toast.error(`Arquivo muito grande. Tamanho máximo: 5MB. Tamanho do arquivo: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-        return;
-      }
-
       toast.info("Enviando foto...");
 
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      // Redimensionar imagem
+      const resizedFile = await resizeImage(file, 800, 800);
+
+      const fileExt = resizedFile.name.split('.').pop()?.toLowerCase();
       const fileName = `${professionalId}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('professional-photos')
-        .upload(filePath, file, { 
+        .upload(filePath, resizedFile, { 
           cacheControl: '3600',
           upsert: true 
         });
@@ -203,15 +209,19 @@ const Admin = () => {
   const handleLogoUpload = async (file: File) => {
     if (!barbershop) return;
     
-    setUploadingLogo(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      toast.info("Enviando logo...");
+
+      // Redimensionar logo
+      const resizedFile = await resizeImage(file, 512, 512);
+
+      const fileExt = resizedFile.name.split('.').pop();
       const fileName = `logo-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('barbershop-branding')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, resizedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -231,8 +241,6 @@ const Admin = () => {
     } catch (error) {
       console.error(error);
       toast.error("Erro ao fazer upload da logo");
-    } finally {
-      setUploadingLogo(false);
     }
   };
 
@@ -257,27 +265,18 @@ const Admin = () => {
 
   const handleServiceImageUpload = async (serviceId: string, file: File) => {
     try {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(`Formato não suportado. Use apenas JPG, JPEG ou PNG.`);
-        return;
-      }
-
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast.error(`Arquivo muito grande. Tamanho máximo: 5MB.`);
-        return;
-      }
-
       toast.info("Enviando imagem...");
 
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      // Redimensionar imagem
+      const resizedFile = await resizeImage(file, 800, 800);
+
+      const fileExt = resizedFile.name.split('.').pop()?.toLowerCase();
       const fileName = `${serviceId}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('service-images')
-        .upload(filePath, file, { 
+        .upload(filePath, resizedFile, { 
           cacheControl: '3600',
           upsert: true 
         });
@@ -311,6 +310,89 @@ const Admin = () => {
     }
   };
 
+  const handleGalleryImageUpload = async (file: File) => {
+    if (!barbershop) return;
+    
+    try {
+      toast.info("Enviando foto para galeria...");
+
+      // Redimensionar imagem
+      const resizedFile = await resizeImage(file, 1200, 1200);
+
+      const fileExt = resizedFile.name.split('.').pop()?.toLowerCase();
+      const fileName = `gallery-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('gallery')
+        .upload(filePath, resizedFile, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
+
+      if (uploadError) {
+        console.error("Erro no upload:", uploadError);
+        toast.error(`Erro no upload: ${uploadError.message}`);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('gallery')
+        .getPublicUrl(filePath);
+
+      const nextOrder = (gallery?.length || 0);
+
+      const { error: insertError } = await supabase
+        .from('gallery')
+        .insert({
+          barbershop_id: barbershop.id,
+          image_url: publicUrl,
+          display_order: nextOrder
+        });
+
+      if (insertError) {
+        console.error("Erro ao inserir:", insertError);
+        toast.error(`Erro ao adicionar à galeria: ${insertError.message}`);
+        return;
+      }
+
+      toast.success("Foto adicionada à galeria!");
+      refetchGallery();
+    } catch (error: any) {
+      console.error("Erro geral:", error);
+      toast.error(`Erro: ${error?.message || "Erro desconhecido"}`);
+    }
+  };
+
+  const handleDeleteGalleryImage = async (galleryId: string, imageUrl: string) => {
+    try {
+      // Extrair o caminho do arquivo da URL
+      const urlParts = imageUrl.split('/gallery/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+        
+        // Deletar do storage
+        await supabase.storage
+          .from('gallery')
+          .remove([filePath]);
+      }
+
+      // Deletar do banco
+      const { error } = await supabase
+        .from('gallery')
+        .delete()
+        .eq('id', galleryId);
+
+      if (error) throw error;
+
+      toast.success("Foto removida da galeria");
+      refetchGallery();
+    } catch (error) {
+      console.error("Erro ao deletar:", error);
+      toast.error("Erro ao remover foto");
+    }
+  };
+
   const todayBookings = bookings?.filter(
     b => b.booking_date === format(new Date(), "yyyy-MM-dd")
   );
@@ -326,7 +408,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="bookings">
               <Calendar className="w-4 h-4 mr-2" />
               Agendamentos
@@ -338,6 +420,10 @@ const Admin = () => {
             <TabsTrigger value="services">
               <Scissors className="w-4 h-4 mr-2" />
               Serviços
+            </TabsTrigger>
+            <TabsTrigger value="gallery">
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Galeria
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
@@ -447,61 +533,38 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {professionals?.map((professional) => (
-                    <Card key={professional.id} className="border-border">
-                      <CardContent className="p-4">
-                        <div className="flex gap-4 items-start">
-                          <div className="flex-shrink-0">
-                            <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center overflow-hidden">
-                              {professional.photo_url ? (
-                                <img 
-                                  src={professional.photo_url} 
-                                  alt={professional.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <User className="w-10 h-10 text-primary-foreground" />
-                              )}
-                            </div>
-                            <Input
-                              type="file"
-                              accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
-                              className="hidden"
-                              id={`photo-${professional.id}`}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  console.log("Arquivo selecionado:", file.name, "Tipo:", file.type, "Tamanho:", file.size);
-                                  handleProfessionalPhotoUpload(professional.id, file);
-                                }
-                                // Limpar o input para permitir selecionar o mesmo arquivo novamente
-                                e.target.value = '';
-                              }}
-                            />
-                            <Label 
-                              htmlFor={`photo-${professional.id}`}
-                              className="cursor-pointer mt-2 text-xs text-primary hover:underline flex items-center gap-1"
-                            >
-                              <Upload className="w-3 h-3" />
-                              Alterar foto
-                            </Label>
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-lg">{professional.name}</p>
-                            <p className="text-sm text-muted-foreground mb-2">{professional.bio}</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-primary font-semibold">⭐ {professional.rating}</span>
-                              <Badge variant={professional.is_active ? "default" : "secondary"}>
-                                {professional.is_active ? "Ativo" : "Inativo"}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                 <div className="grid gap-4">
+                   {professionals?.map((professional) => (
+                     <Card key={professional.id} className="border-border">
+                       <CardContent className="p-4">
+                         <div className="flex gap-4 items-start">
+                           <div className="w-32">
+                             <ImageUpload
+                               label=""
+                               currentImageUrl={professional.photo_url}
+                               onImageSelect={(file) => handleProfessionalPhotoUpload(professional.id, file)}
+                               maxSizeMB={5}
+                               maxWidth={800}
+                               maxHeight={800}
+                               aspectRatio="square"
+                               className="w-full"
+                             />
+                           </div>
+                           <div className="flex-1">
+                             <p className="font-semibold text-lg">{professional.name}</p>
+                             <p className="text-sm text-muted-foreground mb-2">{professional.bio}</p>
+                             <div className="flex items-center gap-2">
+                               <span className="text-primary font-semibold">⭐ {professional.rating}</span>
+                               <Badge variant={professional.is_active ? "default" : "secondary"}>
+                                 {professional.is_active ? "Ativo" : "Inativo"}
+                               </Badge>
+                             </div>
+                           </div>
+                         </div>
+                       </CardContent>
+                     </Card>
+                   ))}
+                 </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -516,64 +579,43 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {services?.map((service) => (
-                    <Card key={service.id} className="border-border">
-                      <CardContent className="p-4">
-                        <div className="flex gap-4 items-start">
-                          <div className="flex-shrink-0">
-                            <div className="w-20 h-20 rounded-lg bg-gradient-primary flex items-center justify-center overflow-hidden">
-                              {service.image_url ? (
-                                <img 
-                                  src={service.image_url} 
-                                  alt={service.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Scissors className="w-10 h-10 text-primary-foreground" />
-                              )}
-                            </div>
-                            <Input
-                              type="file"
-                              accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
-                              className="hidden"
-                              id={`image-${service.id}`}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  handleServiceImageUpload(service.id, file);
-                                }
-                                e.target.value = '';
-                              }}
-                            />
-                            <Label 
-                              htmlFor={`image-${service.id}`}
-                              className="cursor-pointer mt-2 text-xs text-primary hover:underline flex items-center gap-1"
-                            >
-                              <Upload className="w-3 h-3" />
-                              Alterar imagem
-                            </Label>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-semibold text-lg">{service.name}</p>
-                                <p className="text-sm text-muted-foreground mb-2">{service.description}</p>
-                                <p className="text-sm">
-                                  <span className="text-primary font-bold">R$ {service.price}</span>
-                                  <span className="text-muted-foreground ml-2">• {service.duration_minutes} min</span>
-                                </p>
-                              </div>
-                              <Badge variant={service.is_active ? "default" : "secondary"}>
-                                {service.is_active ? "Ativo" : "Inativo"}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                 <div className="grid gap-4">
+                   {services?.map((service) => (
+                     <Card key={service.id} className="border-border">
+                       <CardContent className="p-4">
+                         <div className="flex gap-4 items-start">
+                           <div className="w-32">
+                             <ImageUpload
+                               label=""
+                               currentImageUrl={service.image_url}
+                               onImageSelect={(file) => handleServiceImageUpload(service.id, file)}
+                               maxSizeMB={5}
+                               maxWidth={800}
+                               maxHeight={800}
+                               aspectRatio="square"
+                               className="w-full"
+                             />
+                           </div>
+                           <div className="flex-1">
+                             <div className="flex justify-between items-start">
+                               <div>
+                                 <p className="font-semibold text-lg">{service.name}</p>
+                                 <p className="text-sm text-muted-foreground mb-2">{service.description}</p>
+                                 <p className="text-sm">
+                                   <span className="text-primary font-bold">R$ {service.price}</span>
+                                   <span className="text-muted-foreground ml-2">• {service.duration_minutes} min</span>
+                                 </p>
+                               </div>
+                               <Badge variant={service.is_active ? "default" : "secondary"}>
+                                 {service.is_active ? "Ativo" : "Inativo"}
+                               </Badge>
+                             </div>
+                           </div>
+                         </div>
+                       </CardContent>
+                     </Card>
+                   ))}
+                 </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -587,39 +629,16 @@ const Admin = () => {
                   Personalize a logo que aparece no cabeçalho do app
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {barbershop?.logo_url && (
-                  <div className="flex justify-center">
-                    <img 
-                      src={barbershop.logo_url} 
-                      alt="Logo atual"
-                      className="w-32 h-32 object-contain rounded-lg border border-border"
-                    />
-                  </div>
-                )}
-                <div>
-                  <Input
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    ref={logoInputRef}
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleLogoUpload(file);
-                    }}
-                  />
-                  <Button
-                    onClick={() => logoInputRef.current?.click()}
-                    disabled={uploadingLogo}
-                    variant="imperial"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {uploadingLogo ? "Enviando..." : "Fazer Upload da Logo"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Formatos aceitos: JPG, JPEG, PNG (máx. 5MB)
-                  </p>
-                </div>
+              <CardContent>
+                <ImageUpload
+                  label=""
+                  currentImageUrl={barbershop?.logo_url}
+                  onImageSelect={handleLogoUpload}
+                  maxSizeMB={5}
+                  maxWidth={512}
+                  maxHeight={512}
+                  aspectRatio="square"
+                />
               </CardContent>
             </Card>
 
@@ -643,6 +662,67 @@ const Admin = () => {
                 <Button onClick={handleNameUpdate} variant="imperial">
                   Salvar Nome
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Galeria */}
+          <TabsContent value="gallery" className="space-y-6">
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Galeria / Portfólio</CardTitle>
+                <CardDescription>
+                  Adicione até 10 fotos dos seus trabalhos (estilo Instagram)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Upload Nova Foto */}
+                {(!gallery || gallery.length < 10) && (
+                  <div className="border-2 border-dashed border-border rounded-lg p-6">
+                    <ImageUpload
+                      label="Adicionar Nova Foto"
+                      onImageSelect={handleGalleryImageUpload}
+                      maxSizeMB={5}
+                      maxWidth={1200}
+                      maxHeight={1200}
+                      aspectRatio="square"
+                    />
+                  </div>
+                )}
+
+                {/* Grid de Fotos */}
+                {gallery && gallery.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {gallery.map((item) => (
+                      <div key={item.id} className="relative group">
+                        <div className="aspect-square rounded-lg overflow-hidden border border-border bg-card">
+                          <img
+                            src={item.image_url}
+                            alt={item.title || "Foto da galeria"}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleDeleteGalleryImage(item.id, item.image_url)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!gallery || gallery.length === 0) && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma foto na galeria ainda</p>
+                    <p className="text-sm">Adicione fotos dos seus trabalhos para mostrar aos clientes</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
