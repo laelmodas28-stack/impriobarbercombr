@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Users, Scissors, Settings, Upload, User } from "lucide-react";
 import { toast } from "sonner";
+import { useBarbershop } from "@/hooks/useBarbershop";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -22,6 +23,9 @@ const Admin = () => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [barbershopName, setBarbershopName] = useState("");
+
+  // Get barbershop data
+  const { barbershop } = useBarbershop();
 
   // Check if user is admin
   const { data: profile } = useQuery({
@@ -40,9 +44,16 @@ const Admin = () => {
     enabled: !!user,
   });
 
+  // Set barbershop name when data loads
+  if (barbershop && !barbershopName) {
+    setBarbershopName(barbershop.name);
+  }
+
   const { data: bookings, refetch: refetchBookings } = useQuery({
-    queryKey: ["admin-bookings"],
+    queryKey: ["admin-bookings", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop) return [];
+      
       const { data, error } = await supabase
         .from("bookings")
         .select(`
@@ -51,59 +62,48 @@ const Admin = () => {
           service:services(name),
           professional:professionals(name)
         `)
+        .eq("barbershop_id", barbershop.id)
         .order("booking_date", { ascending: true })
         .order("booking_time", { ascending: true });
       
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin",
+    enabled: profile?.role === "admin" && !!barbershop,
   });
 
   const { data: professionals } = useQuery({
-    queryKey: ["admin-professionals"],
+    queryKey: ["admin-professionals", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop) return [];
+      
       const { data, error } = await supabase
         .from("professionals")
         .select("*")
+        .eq("barbershop_id", barbershop.id)
         .order("name");
       
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin",
+    enabled: profile?.role === "admin" && !!barbershop,
   });
 
   const { data: services } = useQuery({
-    queryKey: ["admin-services"],
+    queryKey: ["admin-services", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop) return [];
+      
       const { data, error } = await supabase
         .from("services")
         .select("*")
+        .eq("barbershop_id", barbershop.id)
         .order("name");
       
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin",
-  });
-
-  const { data: barbershopInfo } = useQuery({
-    queryKey: ["barbershop-info"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershop_info")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      if (data && !barbershopName) {
-        setBarbershopName(data.name);
-      }
-      return data;
-    },
-    enabled: profile?.role === "admin",
+    enabled: profile?.role === "admin" && !!barbershop,
   });
 
   if (!user || profile?.role !== "admin") {
@@ -201,6 +201,8 @@ const Admin = () => {
   };
 
   const handleLogoUpload = async (file: File) => {
+    if (!barbershop) return;
+    
     setUploadingLogo(true);
     try {
       const fileExt = file.name.split('.').pop();
@@ -218,14 +220,14 @@ const Admin = () => {
         .getPublicUrl(filePath);
 
       const { error: updateError } = await supabase
-        .from('barbershop_info')
+        .from('barbershops')
         .update({ logo_url: publicUrl })
-        .eq('id', barbershopInfo?.id);
+        .eq('id', barbershop.id);
 
       if (updateError) throw updateError;
 
       toast.success("Logo atualizada com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["barbershop-info"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao fazer upload da logo");
@@ -235,16 +237,18 @@ const Admin = () => {
   };
 
   const handleNameUpdate = async () => {
+    if (!barbershop) return;
+    
     try {
       const { error } = await supabase
-        .from('barbershop_info')
+        .from('barbershops')
         .update({ name: barbershopName })
-        .eq('id', barbershopInfo?.id);
+        .eq('id', barbershop.id);
 
       if (error) throw error;
 
       toast.success("Nome atualizado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["barbershop-info"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar nome");
@@ -584,10 +588,10 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {barbershopInfo?.logo_url && (
+                {barbershop?.logo_url && (
                   <div className="flex justify-center">
                     <img 
-                      src={barbershopInfo.logo_url} 
+                      src={barbershop.logo_url} 
                       alt="Logo atual"
                       className="w-32 h-32 object-contain rounded-lg border border-border"
                     />
