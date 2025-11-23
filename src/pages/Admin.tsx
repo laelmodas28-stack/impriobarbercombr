@@ -251,6 +251,62 @@ const Admin = () => {
     }
   };
 
+  const handleServiceImageUpload = async (serviceId: string, file: File) => {
+    try {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Formato não suportado. Use apenas JPG, JPEG ou PNG.`);
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error(`Arquivo muito grande. Tamanho máximo: 5MB.`);
+        return;
+      }
+
+      toast.info("Enviando imagem...");
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      const fileName = `${serviceId}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('service-images')
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
+
+      if (uploadError) {
+        console.error("Erro no upload:", uploadError);
+        toast.error(`Erro no upload: ${uploadError.message}`);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('service-images')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('services')
+        .update({ image_url: publicUrl })
+        .eq('id', serviceId);
+
+      if (updateError) {
+        console.error("Erro ao atualizar banco:", updateError);
+        toast.error(`Erro ao atualizar: ${updateError.message}`);
+        return;
+      }
+
+      toast.success("Imagem atualizada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-services"] });
+    } catch (error: any) {
+      console.error("Erro geral:", error);
+      toast.error(`Erro: ${error?.message || "Erro desconhecido"}`);
+    }
+  };
+
   const todayBookings = bookings?.filter(
     b => b.booking_date === format(new Date(), "yyyy-MM-dd")
   );
@@ -460,18 +516,55 @@ const Admin = () => {
                   {services?.map((service) => (
                     <Card key={service.id} className="border-border">
                       <CardContent className="p-4">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-semibold text-lg">{service.name}</p>
-                            <p className="text-sm text-muted-foreground">{service.description}</p>
-                            <p className="text-sm mt-2">
-                              <span className="text-primary font-bold">R$ {service.price}</span>
-                              <span className="text-muted-foreground ml-2">• {service.duration_minutes} min</span>
-                            </p>
+                        <div className="flex gap-4 items-start">
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-20 rounded-lg bg-gradient-primary flex items-center justify-center overflow-hidden">
+                              {service.image_url ? (
+                                <img 
+                                  src={service.image_url} 
+                                  alt={service.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Scissors className="w-10 h-10 text-primary-foreground" />
+                              )}
+                            </div>
+                            <Input
+                              type="file"
+                              accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png"
+                              className="hidden"
+                              id={`image-${service.id}`}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleServiceImageUpload(service.id, file);
+                                }
+                                e.target.value = '';
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`image-${service.id}`}
+                              className="cursor-pointer mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                            >
+                              <Upload className="w-3 h-3" />
+                              Alterar imagem
+                            </Label>
                           </div>
-                          <Badge variant={service.is_active ? "default" : "secondary"}>
-                            {service.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-lg">{service.name}</p>
+                                <p className="text-sm text-muted-foreground mb-2">{service.description}</p>
+                                <p className="text-sm">
+                                  <span className="text-primary font-bold">R$ {service.price}</span>
+                                  <span className="text-muted-foreground ml-2">• {service.duration_minutes} min</span>
+                                </p>
+                              </div>
+                              <Badge variant={service.is_active ? "default" : "secondary"}>
+                                {service.is_active ? "Ativo" : "Inativo"}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
