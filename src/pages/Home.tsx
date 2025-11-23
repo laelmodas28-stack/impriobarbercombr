@@ -136,7 +136,15 @@ const Home = () => {
               <Card key={professional.id} className="border-border hover:shadow-gold transition-all">
                 <CardHeader className="text-center">
                   <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <User className="w-12 h-12 text-primary-foreground" />
+                    {professional.photo_url ? (
+                      <img 
+                        src={professional.photo_url} 
+                        alt={professional.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-12 h-12 text-primary-foreground" />
+                    )}
                   </div>
                   <CardTitle>{professional.name}</CardTitle>
                   <div className="flex items-center justify-center gap-1 text-primary">
