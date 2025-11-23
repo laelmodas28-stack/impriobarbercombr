@@ -21,7 +21,8 @@ const Header = () => {
       const { data, error } = await supabase
         .from("barbershop_info")
         .select("*")
-        .single();
+        .limit(1)
+        .maybeSingle();
       
       if (error) throw error;
       return data;
