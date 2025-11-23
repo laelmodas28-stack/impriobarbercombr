@@ -1,21 +1,27 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Header from "@/components/Header";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Upload, User } from "lucide-react";
 import { toast } from "sonner";
 
 const Admin = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [barbershopName, setBarbershopName] = useState("");
 
   // Check if user is admin
   const { data: profile } = useQuery({
@@ -82,6 +88,23 @@ const Admin = () => {
     enabled: profile?.role === "admin",
   });
 
+  const { data: barbershopInfo } = useQuery({
+    queryKey: ["barbershop-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershop_info")
+        .select("*")
+        .single();
+      
+      if (error) throw error;
+      if (data && !barbershopName) {
+        setBarbershopName(data.name);
+      }
+      return data;
+    },
+    enabled: profile?.role === "admin",
+  });
+
   if (!user || profile?.role !== "admin") {
     navigate("/");
     return null;
@@ -115,6 +138,88 @@ const Admin = () => {
         return "bg-blue-500/20 text-blue-500";
       default:
         return "";
+    }
+  };
+
+  const handleProfessionalPhotoUpload = async (professionalId: string, file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${professionalId}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('professional-photos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('professional-photos')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('professionals')
+        .update({ photo_url: publicUrl })
+        .eq('id', professionalId);
+
+      if (updateError) throw updateError;
+
+      toast.success("Foto atualizada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-professionals"] });
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao fazer upload da foto");
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('barbershop-branding')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('barbershop-branding')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('barbershop_info')
+        .update({ logo_url: publicUrl })
+        .eq('id', barbershopInfo?.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Logo atualizada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["barbershop-info"] });
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao fazer upload da logo");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleNameUpdate = async () => {
+    try {
+      const { error } = await supabase
+        .from('barbershop_info')
+        .update({ name: barbershopName })
+        .eq('id', barbershopInfo?.id);
+
+      if (error) throw error;
+
+      toast.success("Nome atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["barbershop-info"] });
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao atualizar nome");
     }
   };
 
@@ -258,8 +363,38 @@ const Admin = () => {
                   {professionals?.map((professional) => (
                     <Card key={professional.id} className="border-border">
                       <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
+                        <div className="flex gap-4 items-start">
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center overflow-hidden">
+                              {professional.photo_url ? (
+                                <img 
+                                  src={professional.photo_url} 
+                                  alt={professional.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <User className="w-10 h-10 text-primary-foreground" />
+                              )}
+                            </div>
+                            <Input
+                              type="file"
+                              accept="image/jpeg,image/jpg,image/png"
+                              className="hidden"
+                              id={`photo-${professional.id}`}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleProfessionalPhotoUpload(professional.id, file);
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`photo-${professional.id}`}
+                              className="cursor-pointer mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                            >
+                              <Upload className="w-3 h-3" />
+                              Alterar foto
+                            </Label>
+                          </div>
+                          <div className="flex-1">
                             <p className="font-semibold text-lg">{professional.name}</p>
                             <p className="text-sm text-muted-foreground mb-2">{professional.bio}</p>
                             <div className="flex items-center gap-2">
@@ -314,18 +449,70 @@ const Admin = () => {
           </TabsContent>
 
           {/* Configurações */}
-          <TabsContent value="settings">
+          <TabsContent value="settings" className="space-y-6">
             <Card className="border-border">
               <CardHeader>
-                <CardTitle>Configurações da Barbearia</CardTitle>
+                <CardTitle>Logo da Barbearia</CardTitle>
                 <CardDescription>
-                  Gerencie as informações da barbearia
+                  Personalize a logo que aparece no cabeçalho do app
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Para editar as informações da barbearia, acesse a aba Cloud no painel do Lovable.
-                </p>
+              <CardContent className="space-y-4">
+                {barbershopInfo?.logo_url && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={barbershopInfo.logo_url} 
+                      alt="Logo atual"
+                      className="w-32 h-32 object-contain rounded-lg border border-border"
+                    />
+                  </div>
+                )}
+                <div>
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    ref={logoInputRef}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleLogoUpload(file);
+                    }}
+                  />
+                  <Button
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    variant="imperial"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploadingLogo ? "Enviando..." : "Fazer Upload da Logo"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Formatos aceitos: JPG, JPEG, PNG (máx. 5MB)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Nome da Barbearia</CardTitle>
+                <CardDescription>
+                  Altere o nome que aparece no app
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="barbershop-name">Nome</Label>
+                  <Input
+                    id="barbershop-name"
+                    value={barbershopName}
+                    onChange={(e) => setBarbershopName(e.target.value)}
+                    placeholder="Nome da Barbearia"
+                  />
+                </div>
+                <Button onClick={handleNameUpdate} variant="imperial">
+                  Salvar Nome
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
