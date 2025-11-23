@@ -31,7 +31,7 @@ const Booking = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("*")
+        .select("*, barbershop:barbershops(id, name)")
         .eq("is_active", true);
       if (error) throw error;
       return data;
@@ -43,7 +43,7 @@ const Booking = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
-        .select("*")
+        .select("*, barbershop:barbershops(id, name)")
         .eq("is_active", true);
       if (error) throw error;
       return data;
@@ -69,13 +69,24 @@ const Booking = () => {
     }
 
     const service = services?.find(s => s.id === selectedService);
-    if (!service) return;
+    const professional = professionals?.find(p => p.id === selectedProfessional);
+    
+    if (!service || !professional) return;
+
+    // Obter barbershop_id do profissional ou serviço selecionado
+    const barbershopId = professional.barbershop_id || service.barbershop_id;
+    
+    if (!barbershopId) {
+      toast.error("Erro ao identificar a barbearia");
+      return;
+    }
 
     try {
       const { error } = await supabase.from("bookings").insert({
         client_id: user.id,
         service_id: selectedService,
         professional_id: selectedProfessional,
+        barbershop_id: barbershopId,
         booking_date: format(selectedDate, "yyyy-MM-dd"),
         booking_time: selectedTime,
         total_price: service.price,

@@ -16,10 +16,10 @@ const Header = () => {
   const { user, signOut } = useAuth();
 
   const { data: barbershopInfo } = useQuery({
-    queryKey: ["barbershop-info"],
+    queryKey: ["barbershop-header"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("barbershop_info")
+        .from("barbershops")
         .select("*")
         .limit(1)
         .maybeSingle();
