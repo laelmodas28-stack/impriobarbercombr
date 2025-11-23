@@ -12,11 +12,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import ImageUpload from "@/components/ImageUpload";
 import { resizeImage } from "@/lib/imageUtils";
+import DashboardMetrics from "@/components/admin/DashboardMetrics";
+import ThemeSelector from "@/components/admin/ThemeSelector";
+import ProfessionalForm from "@/components/admin/ProfessionalForm";
+import ServiceForm from "@/components/admin/ServiceForm";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -393,6 +397,30 @@ const Admin = () => {
     }
   };
 
+  const handleThemeChange = async (themeColor: string) => {
+    if (!barbershop) return;
+    
+    try {
+      const { error } = await supabase
+        .from('barbershops')
+        .update({ primary_color: themeColor })
+        .eq('id', barbershop.id);
+
+      if (error) throw error;
+
+      toast.success("Tema atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
+      
+      // Recarregar página para aplicar novo tema
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error("Erro ao atualizar tema:", error);
+      toast.error("Erro ao atualizar tema");
+    }
+  };
+
   const todayBookings = bookings?.filter(
     b => b.booking_date === format(new Date(), "yyyy-MM-dd")
   );
@@ -407,8 +435,12 @@ const Admin = () => {
           <p className="text-muted-foreground">Gerencie sua barbearia</p>
         </div>
 
-        <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="dashboard">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Dashboard
+            </TabsTrigger>
             <TabsTrigger value="bookings">
               <Calendar className="w-4 h-4 mr-2" />
               Agendamentos
@@ -430,6 +462,16 @@ const Admin = () => {
               Configurações
             </TabsTrigger>
           </TabsList>
+
+          {/* Dashboard */}
+          <TabsContent value="dashboard" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
+              <p className="text-muted-foreground">Visão geral do desempenho da barbearia</p>
+            </div>
+            
+            {bookings && <DashboardMetrics bookings={bookings} />}
+          </TabsContent>
 
           {/* Agendamentos */}
           <TabsContent value="bookings" className="space-y-6">
@@ -524,7 +566,11 @@ const Admin = () => {
           </TabsContent>
 
           {/* Profissionais */}
-          <TabsContent value="professionals">
+          <TabsContent value="professionals" className="space-y-6">
+            {/* Formulário de Cadastro */}
+            <ProfessionalForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-professionals"] })} />
+
+            {/* Lista de Profissionais */}
             <Card className="border-border">
               <CardHeader>
                 <CardTitle>Profissionais Cadastrados</CardTitle>
@@ -570,7 +616,11 @@ const Admin = () => {
           </TabsContent>
 
           {/* Serviços */}
-          <TabsContent value="services">
+          <TabsContent value="services" className="space-y-6">
+            {/* Formulário de Cadastro */}
+            <ServiceForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-services"] })} />
+
+            {/* Lista de Serviços */}
             <Card className="border-border">
               <CardHeader>
                 <CardTitle>Serviços Disponíveis</CardTitle>
@@ -622,6 +672,12 @@ const Admin = () => {
 
           {/* Configurações */}
           <TabsContent value="settings" className="space-y-6">
+            {/* Tema */}
+            <ThemeSelector 
+              currentTheme={barbershop?.primary_color || "#D4AF37"}
+              onThemeChange={handleThemeChange}
+            />
+
             <Card className="border-border">
               <CardHeader>
                 <CardTitle>Logo da Barbearia</CardTitle>
