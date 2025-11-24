@@ -17,40 +17,52 @@ export type Database = {
       barbershop_info: {
         Row: {
           address: string | null
+          closing_time: string | null
           created_at: string
           description: string | null
           id: string
           instagram: string | null
           logo_url: string | null
           name: string
+          opening_days: string[] | null
+          opening_time: string | null
           phone: string | null
           photos: string[] | null
+          tiktok: string | null
           updated_at: string
           whatsapp: string | null
         }
         Insert: {
           address?: string | null
+          closing_time?: string | null
           created_at?: string
           description?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
           name?: string
+          opening_days?: string[] | null
+          opening_time?: string | null
           phone?: string | null
           photos?: string[] | null
+          tiktok?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
         Update: {
           address?: string | null
+          closing_time?: string | null
           created_at?: string
           description?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
           name?: string
+          opening_days?: string[] | null
+          opening_time?: string | null
           phone?: string | null
           photos?: string[] | null
+          tiktok?: string | null
           updated_at?: string
           whatsapp?: string | null
         }

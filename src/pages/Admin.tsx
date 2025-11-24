@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import Header from "@/components/Header";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,9 +28,41 @@ const Admin = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [barbershopName, setBarbershopName] = useState("");
+  const [tiktok, setTiktok] = useState("");
+  const [openingTime, setOpeningTime] = useState("09:00");
+  const [closingTime, setClosingTime] = useState("19:00");
+  const [selectedDays, setSelectedDays] = useState<string[]>([
+    "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"
+  ]);
+
+  const weekDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
   // Get barbershop data
   const { barbershop } = useBarbershop();
+
+  // Get barbershop info (separate from barbershop)
+  const { data: barbershopInfo } = useQuery({
+    queryKey: ["barbershop-info-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershop_info")
+        .select("*")
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Set values when data loads
+  if (barbershopInfo && !tiktok) {
+    setTiktok(barbershopInfo.tiktok || "");
+    setOpeningTime(barbershopInfo.opening_time?.substring(0, 5) || "09:00");
+    setClosingTime(barbershopInfo.closing_time?.substring(0, 5) || "19:00");
+    if (barbershopInfo.opening_days) {
+      setSelectedDays(barbershopInfo.opening_days);
+    }
+  }
 
   // Check if user is admin
   const { data: profile } = useQuery({
@@ -421,6 +454,36 @@ const Admin = () => {
     }
   };
 
+  const handleBusinessInfoUpdate = async () => {
+    try {
+      const { error } = await supabase
+        .from('barbershop_info')
+        .update({
+          tiktok,
+          opening_time: openingTime + ":00",
+          closing_time: closingTime + ":00",
+          opening_days: selectedDays
+        })
+        .eq('id', barbershopInfo?.id);
+
+      if (error) throw error;
+
+      toast.success("Informações atualizadas com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["barbershop-info-admin"] });
+    } catch (error) {
+      console.error("Erro ao atualizar informações:", error);
+      toast.error("Erro ao atualizar informações");
+    }
+  };
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
+
   const todayBookings = bookings?.filter(
     b => b.booking_date === format(new Date(), "yyyy-MM-dd")
   );
@@ -717,6 +780,78 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleNameUpdate} variant="imperial">
                   Salvar Nome
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Informações de Contato</CardTitle>
+                <CardDescription>
+                  Configure redes sociais e horários de funcionamento
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* TikTok */}
+                <div className="space-y-2">
+                  <Label htmlFor="tiktok">TikTok (opcional)</Label>
+                  <Input
+                    id="tiktok"
+                    value={tiktok}
+                    onChange={(e) => setTiktok(e.target.value)}
+                    placeholder="@suabarbearia"
+                  />
+                </div>
+
+                {/* Horários */}
+                <div className="space-y-4">
+                  <Label>Horário de Funcionamento</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="opening-time">Abertura</Label>
+                      <Input
+                        id="opening-time"
+                        type="time"
+                        value={openingTime}
+                        onChange={(e) => setOpeningTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="closing-time">Fechamento</Label>
+                      <Input
+                        id="closing-time"
+                        type="time"
+                        value={closingTime}
+                        onChange={(e) => setClosingTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dias de Funcionamento */}
+                <div className="space-y-3">
+                  <Label>Dias de Funcionamento</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {weekDays.map((day) => (
+                      <div key={day} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={day}
+                          checked={selectedDays.includes(day)}
+                          onCheckedChange={() => toggleDay(day)}
+                        />
+                        <label
+                          htmlFor={day}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {day}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={handleBusinessInfoUpdate} variant="imperial">
+                  Salvar Informações
                 </Button>
               </CardContent>
             </Card>

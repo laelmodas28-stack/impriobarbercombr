@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar, Crown, Scissors, Star, Users, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { SocialLinks } from "@/components/SocialLinks";
+import { BusinessHours } from "@/components/BusinessHours";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,6 +32,19 @@ const Home = () => {
         .select("*")
         .eq("is_active", true)
         .limit(3);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: barbershopInfo } = useQuery({
+    queryKey: ["barbershop-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershop_info")
+        .select("*")
+        .single();
       
       if (error) throw error;
       return data;
@@ -183,6 +198,30 @@ const Home = () => {
                 Ver Galeria Completa
               </Button>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Contato e Horários */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Redes Sociais</CardTitle>
+                <CardDescription>Siga-nos nas redes sociais</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SocialLinks 
+                  whatsapp={barbershopInfo?.whatsapp}
+                  instagram={barbershopInfo?.instagram}
+                  tiktok={barbershopInfo?.tiktok}
+                  className="justify-center"
+                />
+              </CardContent>
+            </Card>
+            
+            <BusinessHours />
           </div>
         </div>
       </section>

@@ -11,7 +11,7 @@ import Header from "@/components/Header";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, startOfDay } from "date-fns";
+import { format, startOfDay, isToday, getHours, getMinutes, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { User } from "lucide-react";
 
@@ -50,17 +50,65 @@ const Booking = () => {
     },
   });
 
+  const { data: barbershopInfo } = useQuery({
+    queryKey: ["barbershop-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershop_info")
+        .select("opening_time, closing_time")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   if (!user) {
     navigate("/auth");
     return null;
   }
 
-  const timeSlots = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-    "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
+  // Gerar slots de horário dinamicamente baseado nos horários do banco
+  const generateTimeSlots = () => {
+    const slots: string[] = [];
+    const openTime = barbershopInfo?.opening_time || "08:00:00";
+    const closeTime = barbershopInfo?.closing_time || "19:00:00";
+    
+    const [openHour] = openTime.split(':').map(Number);
+    const [closeHour] = closeTime.split(':').map(Number);
+    
+    for (let hour = openHour; hour < closeHour; hour++) {
+      slots.push(`${String(hour).padStart(2, '0')}:00`);
+      slots.push(`${String(hour).padStart(2, '0')}:30`);
+    }
+    
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
+
+  // Filtrar horários passados se for hoje
+  const getAvailableTimeSlots = () => {
+    if (!selectedDate) return timeSlots;
+    
+    if (isToday(selectedDate)) {
+      const now = new Date();
+      const currentHour = getHours(now);
+      const currentMinute = getMinutes(now);
+      
+      return timeSlots.filter(slot => {
+        const [slotHour, slotMinute] = slot.split(':').map(Number);
+        
+        if (slotHour > currentHour) return true;
+        if (slotHour === currentHour && slotMinute > currentMinute) return true;
+        
+        return false;
+      });
+    }
+    
+    return timeSlots;
+  };
+
+  const availableTimeSlots = getAvailableTimeSlots();
 
   const handleBooking = async () => {
     if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime) {
@@ -203,16 +251,22 @@ const Booking = () => {
                 
                 <div>
                   <Label className="mb-3 block">Horário</Label>
-                  <Select value={selectedTime} onValueChange={setSelectedTime}>
+                  <Select value={selectedTime} onValueChange={setSelectedTime} disabled={!selectedDate}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um horário" />
+                      <SelectValue placeholder={selectedDate ? "Selecione um horário" : "Selecione uma data primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {timeSlots.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
+                      {availableTimeSlots.length > 0 ? (
+                        availableTimeSlots.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          Sem horários disponíveis
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
