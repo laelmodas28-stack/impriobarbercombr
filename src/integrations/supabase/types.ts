@@ -236,6 +236,53 @@ export type Database = {
           },
         ]
       }
+      notification_settings: {
+        Row: {
+          admin_email: string | null
+          admin_whatsapp: string | null
+          barbershop_id: string | null
+          created_at: string | null
+          custom_message: string | null
+          enabled: boolean | null
+          id: string
+          send_to_client: boolean | null
+          send_whatsapp: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_email?: string | null
+          admin_whatsapp?: string | null
+          barbershop_id?: string | null
+          created_at?: string | null
+          custom_message?: string | null
+          enabled?: boolean | null
+          id?: string
+          send_to_client?: boolean | null
+          send_whatsapp?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_email?: string | null
+          admin_whatsapp?: string | null
+          barbershop_id?: string | null
+          created_at?: string | null
+          custom_message?: string | null
+          enabled?: boolean | null
+          id?: string
+          send_to_client?: boolean | null
+          send_whatsapp?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professionals: {
         Row: {
           barbershop_id: string
