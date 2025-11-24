@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -54,16 +54,6 @@ const Admin = () => {
     },
   });
 
-  // Set values when data loads
-  if (barbershopInfo && !tiktok) {
-    setTiktok(barbershopInfo.tiktok || "");
-    setOpeningTime(barbershopInfo.opening_time?.substring(0, 5) || "09:00");
-    setClosingTime(barbershopInfo.closing_time?.substring(0, 5) || "19:00");
-    if (barbershopInfo.opening_days) {
-      setSelectedDays(barbershopInfo.opening_days);
-    }
-  }
-
   // Check if user is admin
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -82,9 +72,30 @@ const Admin = () => {
   });
 
   // Set barbershop name when data loads
-  if (barbershop && !barbershopName) {
-    setBarbershopName(barbershop.name);
-  }
+  useEffect(() => {
+    if (barbershop?.name) {
+      setBarbershopName(barbershop.name);
+    }
+  }, [barbershop?.name]);
+
+  // Set barbershop info when data loads
+  useEffect(() => {
+    if (barbershopInfo) {
+      setTiktok(barbershopInfo.tiktok || "");
+      setOpeningTime(barbershopInfo.opening_time?.substring(0, 5) || "09:00");
+      setClosingTime(barbershopInfo.closing_time?.substring(0, 5) || "19:00");
+      if (barbershopInfo.opening_days && barbershopInfo.opening_days.length > 0) {
+        setSelectedDays(barbershopInfo.opening_days);
+      }
+    }
+  }, [barbershopInfo]);
+
+  // Redirect if not admin
+  useEffect(() => {
+    if (user && profile && profile.role !== "admin") {
+      navigate("/");
+    }
+  }, [user, profile, navigate]);
 
   const { data: bookings, refetch: refetchBookings } = useQuery({
     queryKey: ["admin-bookings", barbershop?.id],
@@ -160,8 +171,8 @@ const Admin = () => {
     enabled: profile?.role === "admin" && !!barbershop,
   });
 
-  if (!user || profile?.role !== "admin") {
-    navigate("/");
+  // Don't render if not loaded yet or not admin
+  if (!user || (profile && profile.role !== "admin")) {
     return null;
   }
 
