@@ -1,5 +1,4 @@
 import { FaWhatsapp, FaInstagram, FaTiktok } from "react-icons/fa";
-import { Button } from "@/components/ui/button";
 
 interface SocialLinksProps {
   whatsapp?: string | null;
@@ -34,19 +33,10 @@ export const SocialLinks = ({ whatsapp, instagram, tiktok, className = "" }: Soc
           href={getWhatsAppLink()}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-11 px-8 bg-[#25D366] hover:bg-[#20BD5A] text-white transition-colors"
         >
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white"
-            asChild
-          >
-            <span>
-              <FaWhatsapp className="h-5 w-5" />
-              <span>WhatsApp</span>
-            </span>
-          </Button>
+          <FaWhatsapp className="h-5 w-5" />
+          <span>WhatsApp</span>
         </a>
       )}
       {instagram && (
@@ -54,19 +44,10 @@ export const SocialLinks = ({ whatsapp, instagram, tiktok, className = "" }: Soc
           href={getInstagramLink()}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-11 px-8 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white transition-opacity"
         >
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full gap-2 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white"
-            asChild
-          >
-            <span>
-              <FaInstagram className="h-5 w-5" />
-              <span>Instagram</span>
-            </span>
-          </Button>
+          <FaInstagram className="h-5 w-5" />
+          <span>Instagram</span>
         </a>
       )}
       {tiktok && (
@@ -74,19 +55,10 @@ export const SocialLinks = ({ whatsapp, instagram, tiktok, className = "" }: Soc
           href={getTikTokLink()}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-11 px-8 bg-black hover:bg-gray-800 text-white transition-colors"
         >
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full gap-2 bg-black hover:bg-gray-800 text-white"
-            asChild
-          >
-            <span>
-              <FaTiktok className="h-5 w-5" />
-              <span>TikTok</span>
-            </span>
-          </Button>
+          <FaTiktok className="h-5 w-5" />
+          <span>TikTok</span>
         </a>
       )}
     </div>
