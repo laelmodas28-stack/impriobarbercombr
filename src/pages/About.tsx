@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
+import { SocialLinks } from "@/components/SocialLinks";
+import { BusinessHours } from "@/components/BusinessHours";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Crown, MapPin, Phone, Instagram } from "lucide-react";
-import { FaWhatsapp } from "react-icons/fa";
+import { Crown, MapPin, Phone } from "lucide-react";
 
 const About = () => {
   const { data: info } = useQuery({
@@ -20,17 +21,6 @@ const About = () => {
     },
   });
 
-  const handleWhatsApp = () => {
-    if (info?.whatsapp) {
-      window.open(`https://wa.me/${info.whatsapp}`, "_blank");
-    }
-  };
-
-  const handleInstagram = () => {
-    if (info?.instagram) {
-      window.open(`https://instagram.com/${info.instagram}`, "_blank");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,30 +80,21 @@ const About = () => {
                 </div>
               )}
 
-              <div className="flex gap-4 pt-4">
-                {info?.whatsapp && (
-                  <Button 
-                    variant="imperial" 
-                    onClick={handleWhatsApp}
-                    className="flex-1"
-                  >
-                    <FaWhatsapp className="mr-2 h-5 w-5" />
-                    WhatsApp
-                  </Button>
-                )}
-                {info?.instagram && (
-                  <Button 
-                    variant="imperial" 
-                    onClick={handleInstagram}
-                    className="flex-1"
-                  >
-                    <Instagram className="mr-2 h-5 w-5" />
-                    Instagram
-                  </Button>
-                )}
+              <div className="pt-4">
+                <p className="font-semibold mb-3">Siga-nos nas redes sociais</p>
+                <SocialLinks 
+                  whatsapp={info?.whatsapp}
+                  instagram={info?.instagram}
+                  tiktok={info?.tiktok}
+                />
               </div>
             </CardContent>
           </Card>
+
+          {/* Horários */}
+          <div className="mt-8">
+            <BusinessHours />
+          </div>
         </div>
       </div>
     </div>
