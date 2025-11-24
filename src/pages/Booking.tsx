@@ -130,7 +130,7 @@ const Booking = () => {
     }
 
     try {
-      const { error } = await supabase.from("bookings").insert({
+      const { data: booking, error } = await supabase.from("bookings").insert({
         client_id: user.id,
         service_id: selectedService,
         professional_id: selectedProfessional,
@@ -140,9 +140,36 @@ const Booking = () => {
         total_price: service.price,
         notes: notes,
         status: "pending"
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Buscar dados do perfil do cliente
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, phone")
+        .eq("id", user.id)
+        .single();
+
+      // Enviar notificação
+      try {
+        await supabase.functions.invoke("send-booking-notification", {
+          body: {
+            bookingId: booking?.id,
+            clientEmail: user.email,
+            clientName: profile?.full_name || "Cliente",
+            clientPhone: profile?.phone,
+            date: format(selectedDate, "yyyy-MM-dd"),
+            time: selectedTime,
+            service: service.name,
+            professional: professional.name,
+            price: service.price,
+          },
+        });
+      } catch (notifError) {
+        console.error("Erro ao enviar notificação:", notifError);
+        // Não bloquear o agendamento se a notificação falhar
+      }
 
       toast.success("Agendamento realizado com sucesso!");
       navigate("/account");

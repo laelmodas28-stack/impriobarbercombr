@@ -28,12 +28,22 @@ const Admin = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [barbershopName, setBarbershopName] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [openingTime, setOpeningTime] = useState("09:00");
   const [closingTime, setClosingTime] = useState("19:00");
   const [selectedDays, setSelectedDays] = useState<string[]>([
     "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"
   ]);
+  
+  // Notification settings
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [customMessage, setCustomMessage] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminWhatsapp, setAdminWhatsapp] = useState("");
+  const [sendToClient, setSendToClient] = useState(true);
+  const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
   const weekDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
@@ -81,6 +91,8 @@ const Admin = () => {
   // Set barbershop info when data loads
   useEffect(() => {
     if (barbershopInfo) {
+      setInstagram(barbershopInfo.instagram || "");
+      setWhatsapp(barbershopInfo.whatsapp || "");
       setTiktok(barbershopInfo.tiktok || "");
       setOpeningTime(barbershopInfo.opening_time?.substring(0, 5) || "09:00");
       setClosingTime(barbershopInfo.closing_time?.substring(0, 5) || "19:00");
@@ -170,6 +182,36 @@ const Admin = () => {
     },
     enabled: profile?.role === "admin" && !!barbershop,
   });
+
+  // Fetch notification settings
+  const { data: notificationSettings, refetch: refetchNotifications } = useQuery({
+    queryKey: ["notification-settings", barbershop?.id],
+    queryFn: async () => {
+      if (!barbershop) return null;
+      
+      const { data, error } = await supabase
+        .from("notification_settings")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: profile?.role === "admin" && !!barbershop,
+  });
+
+  // Load notification settings
+  useEffect(() => {
+    if (notificationSettings) {
+      setNotificationsEnabled(notificationSettings.enabled ?? true);
+      setCustomMessage(notificationSettings.custom_message || "");
+      setAdminEmail(notificationSettings.admin_email || "");
+      setAdminWhatsapp(notificationSettings.admin_whatsapp || "");
+      setSendToClient(notificationSettings.send_to_client ?? true);
+      setSendWhatsapp(notificationSettings.send_whatsapp ?? false);
+    }
+  }, [notificationSettings]);
 
   // Don't render if not loaded yet or not admin
   if (!user || (profile && profile.role !== "admin")) {
@@ -470,6 +512,8 @@ const Admin = () => {
       const { error } = await supabase
         .from('barbershop_info')
         .update({
+          instagram,
+          whatsapp,
           tiktok,
           opening_time: openingTime + ":00",
           closing_time: closingTime + ":00",
@@ -484,6 +528,45 @@ const Admin = () => {
     } catch (error) {
       console.error("Erro ao atualizar informações:", error);
       toast.error("Erro ao atualizar informações");
+    }
+  };
+
+  const handleNotificationSettingsUpdate = async () => {
+    if (!barbershop) return;
+    
+    try {
+      const settingsData = {
+        barbershop_id: barbershop.id,
+        enabled: notificationsEnabled,
+        custom_message: customMessage,
+        admin_email: adminEmail,
+        admin_whatsapp: adminWhatsapp,
+        send_to_client: sendToClient,
+        send_whatsapp: sendWhatsapp,
+      };
+
+      if (notificationSettings) {
+        // Update existing
+        const { error } = await supabase
+          .from('notification_settings')
+          .update(settingsData)
+          .eq('id', notificationSettings.id);
+
+        if (error) throw error;
+      } else {
+        // Create new
+        const { error } = await supabase
+          .from('notification_settings')
+          .insert([settingsData]);
+
+        if (error) throw error;
+      }
+
+      toast.success("Configurações de notificação salvas!");
+      refetchNotifications();
+    } catch (error) {
+      console.error("Erro ao salvar configurações:", error);
+      toast.error("Erro ao salvar configurações");
     }
   };
 
@@ -510,7 +593,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -530,6 +613,9 @@ const Admin = () => {
             <TabsTrigger value="gallery">
               <ImageIcon className="w-4 h-4 mr-2" />
               Galeria
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              🔔 Notificações
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
@@ -803,6 +889,31 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* WhatsApp */}
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">WhatsApp (com código do país)</Label>
+                  <Input
+                    id="whatsapp"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="+5511999999999"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ex: +5511999999999 (incluir + e código do país)
+                  </p>
+                </div>
+
+                {/* Instagram */}
+                <div className="space-y-2">
+                  <Label htmlFor="instagram">Instagram</Label>
+                  <Input
+                    id="instagram"
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value)}
+                    placeholder="@suabarbearia"
+                  />
+                </div>
+
                 {/* TikTok */}
                 <div className="space-y-2">
                   <Label htmlFor="tiktok">TikTok (opcional)</Label>
@@ -923,6 +1034,124 @@ const Admin = () => {
                     <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
                     <p>Nenhuma foto na galeria ainda</p>
                     <p className="text-sm">Adicione fotos dos seus trabalhos para mostrar aos clientes</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notificações */}
+          <TabsContent value="notifications" className="space-y-6">
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Configurações de Notificações</CardTitle>
+                <CardDescription>
+                  Configure mensagens automáticas para clientes após agendamento
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Toggle de Notificações */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="notifications-enabled">Ativar Notificações</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enviar emails automaticamente aos clientes
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="notifications-enabled"
+                    checked={notificationsEnabled}
+                    onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                </div>
+
+                {/* Email do Admin */}
+                <div className="space-y-2">
+                  <Label htmlFor="admin-email">Seu Email (para receber cópias)</Label>
+                  <Input
+                    id="admin-email"
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="admin@barbearia.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Você receberá um email sempre que houver um novo agendamento
+                  </p>
+                </div>
+
+                {/* WhatsApp do Admin */}
+                <div className="space-y-2">
+                  <Label htmlFor="admin-whatsapp">Seu WhatsApp (com código do país)</Label>
+                  <Input
+                    id="admin-whatsapp"
+                    value={adminWhatsapp}
+                    onChange={(e) => setAdminWhatsapp(e.target.value)}
+                    placeholder="+5511999999999"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Formato: +5511999999999
+                  </p>
+                </div>
+
+                {/* Mensagem Personalizada */}
+                <div className="space-y-2">
+                  <Label htmlFor="custom-message">Mensagem Personalizada</Label>
+                  <textarea
+                    id="custom-message"
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="Olá {nome}! Seu agendamento foi confirmado para {data} às {hora}..."
+                    rows={5}
+                    className="w-full p-3 border border-border rounded-md bg-background"
+                  />
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Variáveis disponíveis:</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><code>{"{nome}"}</code> - Nome do cliente</li>
+                      <li><code>{"{data}"}</code> - Data do agendamento</li>
+                      <li><code>{"{hora}"}</code> - Horário do agendamento</li>
+                      <li><code>{"{servico}"}</code> - Nome do serviço</li>
+                      <li><code>{"{profissional}"}</code> - Nome do profissional</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Opções de Envio */}
+                <div className="space-y-3">
+                  <Label>Opções de Envio</Label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="send-to-client"
+                      checked={sendToClient}
+                      onChange={(e) => setSendToClient(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="send-to-client" className="text-sm">
+                      Enviar email para o cliente
+                    </label>
+                  </div>
+                </div>
+
+                <Button onClick={handleNotificationSettingsUpdate} variant="imperial">
+                  Salvar Configurações
+                </Button>
+
+                {/* Preview */}
+                {customMessage && (
+                  <div className="mt-6 p-4 border border-border rounded-md bg-muted/30">
+                    <h4 className="font-semibold mb-2">Preview da mensagem:</h4>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {customMessage
+                        .replace("{nome}", "João Silva")
+                        .replace("{data}", "25/11/2024")
+                        .replace("{hora}", "14:00")
+                        .replace("{servico}", "Corte + Barba")
+                        .replace("{profissional}", "Carlos")}
+                    </p>
                   </div>
                 )}
               </CardContent>
