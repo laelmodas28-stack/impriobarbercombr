@@ -208,15 +208,15 @@ const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <Card className="border-border">
               <CardHeader>
-                <CardTitle>Redes Sociais</CardTitle>
-                <CardDescription>Siga-nos nas redes sociais</CardDescription>
+                <CardTitle>Fale Conosco</CardTitle>
+                <CardDescription>Entre em contato através das nossas redes sociais</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-3">
                 <SocialLinks 
                   whatsapp={barbershopInfo?.whatsapp}
                   instagram={barbershopInfo?.instagram}
                   tiktok={barbershopInfo?.tiktok}
-                  className="justify-center"
+                  className="flex-col"
                 />
               </CardContent>
             </Card>

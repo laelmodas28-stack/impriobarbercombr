@@ -12,54 +12,57 @@ export const SocialLinks = ({ whatsapp, instagram, tiktok, className = "" }: Soc
   const handleWhatsApp = () => {
     if (whatsapp) {
       const cleanNumber = whatsapp.replace(/\D/g, '');
-      window.open(`https://wa.me/${cleanNumber}`, '_blank');
+      window.open(`https://wa.me/${cleanNumber}`, '_blank', 'noopener,noreferrer');
     }
   };
 
   const handleInstagram = () => {
     if (instagram) {
-      const username = instagram.replace('@', '');
-      window.open(`https://instagram.com/${username}`, '_blank');
+      const username = instagram.replace('@', '').trim();
+      window.open(`https://instagram.com/${username}`, '_blank', 'noopener,noreferrer');
     }
   };
 
   const handleTikTok = () => {
     if (tiktok) {
-      const username = tiktok.replace('@', '');
-      window.open(`https://tiktok.com/@${username}`, '_blank');
+      const username = tiktok.replace('@', '').trim();
+      window.open(`https://tiktok.com/@${username}`, '_blank', 'noopener,noreferrer');
     }
   };
 
   return (
-    <div className={`flex gap-3 ${className}`}>
+    <div className={`flex gap-4 ${className}`}>
       {whatsapp && (
         <Button
-          variant="outline"
-          size="icon"
+          variant="default"
+          size="lg"
           onClick={handleWhatsApp}
-          className="hover:bg-primary hover:text-primary-foreground transition-all"
+          className="flex-1 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white"
         >
           <FaWhatsapp className="h-5 w-5" />
+          <span>WhatsApp</span>
         </Button>
       )}
       {instagram && (
         <Button
-          variant="outline"
-          size="icon"
+          variant="default"
+          size="lg"
           onClick={handleInstagram}
-          className="hover:bg-primary hover:text-primary-foreground transition-all"
+          className="flex-1 gap-2 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white"
         >
           <FaInstagram className="h-5 w-5" />
+          <span>Instagram</span>
         </Button>
       )}
       {tiktok && (
         <Button
-          variant="outline"
-          size="icon"
+          variant="default"
+          size="lg"
           onClick={handleTikTok}
-          className="hover:bg-primary hover:text-primary-foreground transition-all"
+          className="flex-1 gap-2 bg-black hover:bg-gray-800 text-white"
         >
           <FaTiktok className="h-5 w-5" />
+          <span>TikTok</span>
         </Button>
       )}
     </div>
