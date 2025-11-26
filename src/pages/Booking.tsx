@@ -50,13 +50,15 @@ const Booking = () => {
     },
   });
 
-  const { data: barbershopInfo } = useQuery({
-    queryKey: ["barbershop-info"],
+  const { data: barbershopHours } = useQuery({
+    queryKey: ["barbershop-hours"],
     queryFn: async () => {
+      // Buscar dados de horário da primeira barbearia (para simplificar)
       const { data, error } = await supabase
-        .from("barbershop_info")
+        .from("barbershops")
         .select("opening_time, closing_time")
-        .single();
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -70,8 +72,8 @@ const Booking = () => {
   // Gerar slots de horário dinamicamente baseado nos horários do banco
   const generateTimeSlots = () => {
     const slots: string[] = [];
-    const openTime = barbershopInfo?.opening_time || "08:00:00";
-    const closeTime = barbershopInfo?.closing_time || "19:00:00";
+    const openTime = barbershopHours?.opening_time || "08:00:00";
+    const closeTime = barbershopHours?.closing_time || "19:00:00";
     
     const [openHour] = openTime.split(':').map(Number);
     const [closeHour] = closeTime.split(':').map(Number);
@@ -156,6 +158,7 @@ const Booking = () => {
         await supabase.functions.invoke("send-booking-notification", {
           body: {
             bookingId: booking?.id,
+            barbershopId: barbershopId,
             clientEmail: user.email,
             clientName: profile?.full_name || "Cliente",
             clientPhone: profile?.phone,

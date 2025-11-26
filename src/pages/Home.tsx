@@ -38,13 +38,14 @@ const Home = () => {
     },
   });
 
-  const { data: barbershopInfo } = useQuery({
-    queryKey: ["barbershop-info"],
+  const { data: barbershop } = useQuery({
+    queryKey: ["barbershop-home"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("barbershop_info")
+        .from("barbershops")
         .select("*")
-        .single();
+        .limit(1)
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -213,9 +214,9 @@ const Home = () => {
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 <SocialLinks 
-                  whatsapp={barbershopInfo?.whatsapp}
-                  instagram={barbershopInfo?.instagram}
-                  tiktok={barbershopInfo?.tiktok}
+                  whatsapp={barbershop?.whatsapp}
+                  instagram={barbershop?.instagram}
+                  tiktok={barbershop?.tiktok}
                   className="flex-col"
                 />
               </CardContent>

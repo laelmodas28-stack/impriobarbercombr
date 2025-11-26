@@ -11,6 +11,7 @@ const corsHeaders = {
 
 interface NotificationRequest {
   bookingId: string;
+  barbershopId: string;
   clientEmail: string;
   clientName: string;
   clientPhone?: string;
@@ -32,6 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const {
+      barbershopId,
       clientEmail,
       clientName,
       clientPhone,
@@ -42,19 +44,21 @@ const handler = async (req: Request): Promise<Response> => {
       price,
     }: NotificationRequest = await req.json();
 
-    console.log("Processing notification for:", clientEmail);
+    console.log("Processing notification for:", clientEmail, "Barbershop:", barbershopId);
 
-    // Buscar configurações de notificação
-    const { data: barbershopInfo } = await supabase
-      .from("barbershop_info")
+    // Buscar dados da barbearia
+    const { data: barbershop } = await supabase
+      .from("barbershops")
       .select("*")
+      .eq("id", barbershopId)
       .single();
 
+    // Buscar configurações de notificação da barbearia específica
     const { data: notificationSettings } = await supabase
       .from("notification_settings")
       .select("*")
-      .limit(1)
-      .single();
+      .eq("barbershop_id", barbershopId)
+      .maybeSingle();
 
     if (!notificationSettings?.enabled) {
       console.log("Notifications disabled");
@@ -133,24 +137,24 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
               </div>
 
-              ${barbershopInfo?.whatsapp ? `
+              ${barbershop?.whatsapp ? `
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://wa.me/${barbershopInfo.whatsapp.replace(/\D/g, '')}" 
+                  <a href="https://wa.me/${barbershop.whatsapp.replace(/\D/g, '')}" 
                      style="background: #25D366; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     💬 Entrar em Contato via WhatsApp
                   </a>
                 </div>
               ` : ''}
 
-              ${barbershopInfo?.address ? `
+              ${barbershop?.address ? `
                 <p style="text-align: center; color: #666;">
-                  📍 ${barbershopInfo.address}
+                  📍 ${barbershop.address}
                 </p>
               ` : ''}
             </div>
             <div class="footer">
               <p>Este é um email automático. Caso precise de ajuda, entre em contato conosco.</p>
-              <p>${barbershopInfo?.name || 'Barbearia'}</p>
+              <p>${barbershop?.name || 'Barbearia'}</p>
             </div>
           </div>
         </body>
