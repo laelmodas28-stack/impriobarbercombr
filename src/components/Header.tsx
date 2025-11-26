@@ -65,6 +65,9 @@ const Header = () => {
                     <Link to="/account">Minha Conta</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/subscriptions">Assinaturas</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/admin">Admin</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={signOut}>
