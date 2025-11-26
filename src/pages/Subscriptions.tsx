@@ -9,15 +9,31 @@ import { useSubscriptions } from "@/hooks/useSubscriptions";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check, Crown, Calendar, Award } from "lucide-react";
+import { Check, Crown, Calendar, Award, Scissors } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
 
 const Subscriptions = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { barbershop } = useBarbershop();
   const { plans, plansLoading, clientSubscriptions, activeSubscription, refetchSubscriptions } = useSubscriptions(barbershop?.id);
+
+  // Buscar todos os serviços disponíveis
+  const { data: services } = useQuery({
+    queryKey: ["services-subscriptions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleSubscribe = async (planId: string) => {
     if (!user) {
@@ -127,8 +143,42 @@ const Subscriptions = () => {
           </Card>
         )}
 
+        {/* Serviços Disponíveis */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-center">Serviços Disponíveis</h2>
+          <p className="text-center text-muted-foreground mb-8">
+            Todos os serviços que você pode utilizar com nossas assinaturas
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {services?.map((service) => (
+              <Card key={service.id} className="border-border hover:shadow-gold transition-all">
+                <CardHeader>
+                  <Scissors className="w-8 h-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">{service.name}</CardTitle>
+                  <CardDescription>{service.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center">
+                    <span className="text-2xl font-bold text-primary">
+                      R$ {service.price.toFixed(2)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {service.duration_minutes} min
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
         {/* Planos Disponíveis */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-center">Planos de Assinatura</h2>
+          <p className="text-center text-muted-foreground mb-8">
+            Escolha o plano ideal para você e economize
+          </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plansLoading ? (
             <p className="col-span-3 text-center text-muted-foreground">Carregando planos...</p>
           ) : plans && plans.length > 0 ? (
@@ -204,6 +254,7 @@ const Subscriptions = () => {
               </p>
             </div>
           )}
+        </div>
         </div>
 
         {/* Histórico de Assinaturas */}

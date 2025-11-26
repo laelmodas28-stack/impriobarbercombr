@@ -203,24 +203,24 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Contato e Horários */}
+      {/* Assinaturas e Horários */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle>Fale Conosco</CardTitle>
-                <CardDescription>Entre em contato através das nossas redes sociais</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <SocialLinks 
-                  whatsapp={barbershop?.whatsapp}
-                  instagram={barbershop?.instagram}
-                  tiktok={barbershop?.tiktok}
-                  className="flex-col"
-                />
-              </CardContent>
-            </Card>
+            <Link to="/subscriptions">
+              <Card className="border-border hover:shadow-gold transition-all cursor-pointer h-full">
+                <CardHeader>
+                  <Crown className="w-12 h-12 text-primary mb-4" />
+                  <CardTitle>Assinaturas</CardTitle>
+                  <CardDescription>Conheça nossos planos e serviços mensais</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="premium" className="w-full">
+                    Ver Planos e Serviços
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
             
             <BusinessHours />
           </div>
