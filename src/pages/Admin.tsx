@@ -16,6 +16,8 @@ import { ptBR } from "date-fns/locale";
 import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useBarbershopClients } from "@/hooks/useBarbershopClients";
 import ImageUpload from "@/components/ImageUpload";
 import { resizeImage } from "@/lib/imageUtils";
 import DashboardMetrics from "@/components/admin/DashboardMetrics";
@@ -49,65 +51,34 @@ const Admin = () => {
 
   // Get barbershop data
   const { barbershop } = useBarbershop();
-
-  // Get barbershop info (separate from barbershop)
-  const { data: barbershopInfo } = useQuery({
-    queryKey: ["barbershop-info-admin"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershop_info")
-        .select("*")
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  
   // Check if user is admin
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
+  const { isAdmin, isBarbershopOwner, isLoading: roleLoading } = useUserRole(barbershop?.id);
+  
+  // Get barbershop clients
+  const { clients, getInactiveClients } = useBarbershopClients(barbershop?.id);
 
-  // Set barbershop name when data loads
+  // Set barbershop data when it loads
   useEffect(() => {
-    if (barbershop?.name) {
-      setBarbershopName(barbershop.name);
-    }
-  }, [barbershop?.name]);
-
-  // Set barbershop info when data loads
-  useEffect(() => {
-    if (barbershopInfo) {
-      setInstagram(barbershopInfo.instagram || "");
-      setWhatsapp(barbershopInfo.whatsapp || "");
-      setTiktok(barbershopInfo.tiktok || "");
-      setOpeningTime(barbershopInfo.opening_time?.substring(0, 5) || "09:00");
-      setClosingTime(barbershopInfo.closing_time?.substring(0, 5) || "19:00");
-      if (barbershopInfo.opening_days && barbershopInfo.opening_days.length > 0) {
-        setSelectedDays(barbershopInfo.opening_days);
+    if (barbershop) {
+      setBarbershopName(barbershop.name || "");
+      setInstagram(barbershop.instagram || "");
+      setWhatsapp(barbershop.whatsapp || "");
+      setTiktok(barbershop.tiktok || "");
+      setOpeningTime(barbershop.opening_time?.substring(0, 5) || "09:00");
+      setClosingTime(barbershop.closing_time?.substring(0, 5) || "19:00");
+      if (barbershop.opening_days && barbershop.opening_days.length > 0) {
+        setSelectedDays(barbershop.opening_days);
       }
     }
-  }, [barbershopInfo]);
+  }, [barbershop]);
 
   // Redirect if not admin
   useEffect(() => {
-    if (user && profile && profile.role !== "admin") {
+    if (!roleLoading && !isAdmin) {
       navigate("/");
     }
-  }, [user, profile, navigate]);
+  }, [isAdmin, roleLoading, navigate]);
 
   const { data: bookings, refetch: refetchBookings } = useQuery({
     queryKey: ["admin-bookings", barbershop?.id],
@@ -129,7 +100,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin" && !!barbershop,
+    enabled: isAdmin && !!barbershop,
   });
 
   const { data: professionals } = useQuery({
@@ -146,7 +117,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin" && !!barbershop,
+    enabled: isAdmin && !!barbershop,
   });
 
   const { data: services } = useQuery({
@@ -163,7 +134,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin" && !!barbershop,
+    enabled: isAdmin && !!barbershop,
   });
 
   const { data: gallery, refetch: refetchGallery } = useQuery({
@@ -180,7 +151,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin" && !!barbershop,
+    enabled: isAdmin && !!barbershop,
   });
 
   // Fetch notification settings
@@ -198,7 +169,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
-    enabled: profile?.role === "admin" && !!barbershop,
+    enabled: isAdmin && !!barbershop,
   });
 
   // Load notification settings
@@ -214,7 +185,7 @@ const Admin = () => {
   }, [notificationSettings]);
 
   // Don't render if not loaded yet or not admin
-  if (!user || (profile && profile.role !== "admin")) {
+  if (!user || roleLoading || !isAdmin) {
     return null;
   }
 
@@ -508,9 +479,11 @@ const Admin = () => {
   };
 
   const handleBusinessInfoUpdate = async () => {
+    if (!barbershop) return;
+    
     try {
       const { error } = await supabase
-        .from('barbershop_info')
+        .from('barbershops')
         .update({
           instagram,
           whatsapp,
@@ -519,12 +492,12 @@ const Admin = () => {
           closing_time: closingTime + ":00",
           opening_days: selectedDays
         })
-        .eq('id', barbershopInfo?.id);
+        .eq('id', barbershop.id);
 
       if (error) throw error;
 
       toast.success("Informações atualizadas com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["barbershop-info-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
     } catch (error) {
       console.error("Erro ao atualizar informações:", error);
       toast.error("Erro ao atualizar informações");
@@ -593,7 +566,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8 lg:grid-cols-8">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -601,6 +574,10 @@ const Admin = () => {
             <TabsTrigger value="bookings">
               <Calendar className="w-4 h-4 mr-2" />
               Agendamentos
+            </TabsTrigger>
+            <TabsTrigger value="clients">
+              <User className="w-4 h-4 mr-2" />
+              Clientes
             </TabsTrigger>
             <TabsTrigger value="professionals">
               <Users className="w-4 h-4 mr-2" />
@@ -720,6 +697,55 @@ const Admin = () => {
                       </Badge>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Clientes */}
+          <TabsContent value="clients" className="space-y-6">
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Gestão de Clientes</CardTitle>
+                <CardDescription>
+                  Total: {clients?.length || 0} clientes | Inativos (30+ dias): {getInactiveClients(30).length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {clients && clients.length > 0 ? (
+                    clients.map((client) => (
+                      <Card key={client.id} className="border-border bg-card/30">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div>
+                                  <p className="font-semibold text-lg">{client.client?.full_name}</p>
+                                  <p className="text-sm text-muted-foreground">{client.phone || client.client?.phone}</p>
+                                </div>
+                                {!client.is_active && (
+                                  <Badge variant="secondary">Inativo</Badge>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                                <p><span className="text-muted-foreground">Primeira visita:</span> {client.first_visit ? format(new Date(client.first_visit), "dd/MM/yyyy", { locale: ptBR }) : "N/A"}</p>
+                                <p><span className="text-muted-foreground">Última visita:</span> {client.last_visit ? format(new Date(client.last_visit), "dd/MM/yyyy", { locale: ptBR }) : "N/A"}</p>
+                                <p><span className="text-muted-foreground">Total de visitas:</span> {client.total_visits}</p>
+                              </div>
+                              {client.notes && (
+                                <p className="text-sm mt-2 text-muted-foreground italic">{client.notes}</p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhum cliente registrado ainda
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
