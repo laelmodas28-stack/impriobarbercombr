@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -24,6 +24,8 @@ import DashboardMetrics from "@/components/admin/DashboardMetrics";
 import ThemeSelector from "@/components/admin/ThemeSelector";
 import ProfessionalForm from "@/components/admin/ProfessionalForm";
 import ServiceForm from "@/components/admin/ServiceForm";
+import { SubscriptionPlanForm } from "@/components/admin/SubscriptionPlanForm";
+import { useSubscriptions } from "@/hooks/useSubscriptions";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -57,6 +59,9 @@ const Admin = () => {
   
   // Get barbershop clients
   const { clients, getInactiveClients } = useBarbershopClients(barbershop?.id);
+
+  // Get subscription data
+  const { plans, refetchPlans, allSubscriptions } = useSubscriptions(barbershop?.id);
 
   // Set barbershop data when it loads
   useEffect(() => {
@@ -566,7 +571,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 lg:grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9 lg:grid-cols-9">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -590,6 +595,10 @@ const Admin = () => {
             <TabsTrigger value="gallery">
               <ImageIcon className="w-4 h-4 mr-2" />
               Galeria
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions">
+              <Crown className="w-4 h-4 mr-2" />
+              Assinaturas
             </TabsTrigger>
             <TabsTrigger value="notifications">
               🔔 Notificações
@@ -1062,6 +1071,98 @@ const Admin = () => {
                     <p className="text-sm">Adicione fotos dos seus trabalhos para mostrar aos clientes</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Assinaturas */}
+          <TabsContent value="subscriptions" className="space-y-6">
+            <SubscriptionPlanForm onSuccess={refetchPlans} />
+
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Planos Cadastrados</CardTitle>
+                <CardDescription>
+                  Total: {plans?.length || 0} planos | Assinaturas Ativas: {allSubscriptions?.filter(s => s.status === 'active').length || 0}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {plans && plans.length > 0 ? (
+                    plans.map((plan) => (
+                      <Card key={plan.id} className="border-border bg-card/30">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Crown className="w-5 h-5 text-primary" />
+                                <p className="font-semibold text-lg">{plan.name}</p>
+                                <Badge variant={plan.is_active ? "default" : "secondary"}>
+                                  {plan.is_active ? "Ativo" : "Inativo"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-3">{plan.description}</p>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                <p><span className="text-muted-foreground">Preço:</span> R$ {plan.price}</p>
+                                <p><span className="text-muted-foreground">Duração:</span> {plan.duration_days} dias</p>
+                                <p><span className="text-muted-foreground">Serviços/mês:</span> {plan.max_services_per_month || "Ilimitado"}</p>
+                                <p><span className="text-muted-foreground">Desconto:</span> {plan.discount_percentage || 0}%</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhum plano cadastrado ainda
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Assinaturas dos Clientes</CardTitle>
+                <CardDescription>
+                  Gerencie todas as assinaturas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {allSubscriptions && allSubscriptions.length > 0 ? (
+                    allSubscriptions.map((subscription) => (
+                      <div 
+                        key={subscription.id}
+                        className="flex justify-between items-center p-4 bg-card/30 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-semibold">{subscription.client?.full_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {subscription.plan?.name} - {format(new Date(subscription.start_date), "dd/MM/yyyy")} até {format(new Date(subscription.end_date), "dd/MM/yyyy")}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={
+                            subscription.status === 'active' ? 'default' :
+                            subscription.status === 'expired' ? 'secondary' : 'destructive'
+                          }>
+                            {subscription.status === 'active' ? 'Ativo' :
+                             subscription.status === 'expired' ? 'Expirado' : 'Cancelado'}
+                          </Badge>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            R$ {subscription.plan?.price}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma assinatura ainda
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
