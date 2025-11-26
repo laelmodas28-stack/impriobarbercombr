@@ -22,6 +22,52 @@ interface NotificationRequest {
   price: number;
 }
 
+// Função para enviar SMS usando diferentes provedores
+async function sendSMS(
+  provider: string,
+  apiKey: string,
+  from: string,
+  to: string,
+  message: string
+): Promise<void> {
+  console.log(`Sending SMS via ${provider} to ${to}`);
+  
+  if (provider === 'vonage') {
+    const response = await fetch('https://rest.nexmo.com/sms/json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey.split(':')[0],
+        api_secret: apiKey.split(':')[1],
+        from,
+        to: to.replace(/\D/g, ''),
+        text: message,
+      }),
+    });
+    const data = await response.json();
+    if (data.messages[0].status !== '0') {
+      throw new Error(`Vonage SMS failed: ${data.messages[0]['error-text']}`);
+    }
+  } else if (provider === 'messagebird') {
+    const response = await fetch('https://rest.messagebird.com/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `AccessKey ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        originator: from,
+        recipients: [to.replace(/\D/g, '')],
+        body: message,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`MessageBird SMS failed: ${response.statusText}`);
+    }
+  }
+  // Adicione mais provedores conforme necessário
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -216,6 +262,24 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       console.log("Email sent to admin:", notificationSettings.admin_email);
+    }
+
+    // Enviar SMS para o cliente
+    if (notificationSettings.send_sms && clientPhone && notificationSettings.sms_provider && notificationSettings.sms_api_key) {
+      try {
+        const smsMessage = customMessage.substring(0, 160); // Limitar a 160 caracteres
+        await sendSMS(
+          notificationSettings.sms_provider,
+          notificationSettings.sms_api_key,
+          notificationSettings.sms_from_number || 'Barbearia',
+          clientPhone,
+          smsMessage
+        );
+        console.log("SMS sent to client:", clientPhone);
+      } catch (smsError: any) {
+        console.error("Error sending SMS:", smsError);
+        // Não falhar toda a notificação se SMS falhar
+      }
     }
 
     return new Response(
