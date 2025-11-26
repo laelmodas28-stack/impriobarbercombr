@@ -381,8 +381,13 @@ export type Database = {
           custom_message: string | null
           enabled: boolean | null
           id: string
+          push_enabled: boolean | null
+          send_sms: boolean | null
           send_to_client: boolean | null
           send_whatsapp: boolean | null
+          sms_api_key: string | null
+          sms_from_number: string | null
+          sms_provider: string | null
           updated_at: string | null
         }
         Insert: {
@@ -393,8 +398,13 @@ export type Database = {
           custom_message?: string | null
           enabled?: boolean | null
           id?: string
+          push_enabled?: boolean | null
+          send_sms?: boolean | null
           send_to_client?: boolean | null
           send_whatsapp?: boolean | null
+          sms_api_key?: string | null
+          sms_from_number?: string | null
+          sms_provider?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -405,8 +415,13 @@ export type Database = {
           custom_message?: string | null
           enabled?: boolean | null
           id?: string
+          push_enabled?: boolean | null
+          send_sms?: boolean | null
           send_to_client?: boolean | null
           send_whatsapp?: boolean | null
+          sms_api_key?: string | null
+          sms_from_number?: string | null
+          sms_provider?: string | null
           updated_at?: string | null
         }
         Relationships: [
