@@ -24,21 +24,23 @@ export const BusinessHours = () => {
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 border-border">
       <div className="flex items-start gap-3">
-        <Clock className="h-5 w-5 text-primary mt-1" />
-        <div>
+        <Clock className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+        <div className="flex-1">
           <h3 className="font-semibold mb-2">Horário de Atendimento</h3>
-          {barbershop?.opening_time && barbershop?.closing_time && (
-            <p className="text-sm text-muted-foreground mb-2">
-              {formatTime(barbershop.opening_time)} - {formatTime(barbershop.closing_time)}
-            </p>
-          )}
-          {barbershop?.opening_days && barbershop.opening_days.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {barbershop.opening_days.join(", ")}
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mb-2">
+            {barbershop?.opening_time && barbershop?.closing_time 
+              ? `${formatTime(barbershop.opening_time)} - ${formatTime(barbershop.closing_time)}`
+              : '09:00 - 19:00'
+            }
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {barbershop?.opening_days && barbershop.opening_days.length > 0
+              ? barbershop.opening_days.join(", ")
+              : 'Segunda a Sábado'
+            }
+          </p>
         </div>
       </div>
     </Card>
