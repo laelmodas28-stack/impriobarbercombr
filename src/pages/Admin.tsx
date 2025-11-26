@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -1169,9 +1169,88 @@ const Admin = () => {
 
           {/* Notificações */}
           <TabsContent value="notifications" className="space-y-6">
+            {/* Status de Assinaturas Expirando */}
+            <Card className="border-border bg-amber-500/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-amber-500" />
+                  Notificações de Assinatura
+                </CardTitle>
+                <CardDescription>
+                  Enviar alertas para clientes com assinaturas próximas do vencimento
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-card rounded-lg">
+                  <div>
+                    <p className="font-semibold">Verificar Assinaturas Expirando</p>
+                    <p className="text-sm text-muted-foreground">
+                      Enviar notificações para clientes com assinaturas expirando nos próximos 7 dias
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        toast.info("Verificando assinaturas...");
+                        const { data, error } = await supabase.functions.invoke("check-expiring-subscriptions");
+                        
+                        if (error) throw error;
+                        
+                        toast.success(
+                          `${data.notifications?.length || 0} notificação(ões) enviada(s)!`,
+                          { duration: 5000 }
+                        );
+                      } catch (error: any) {
+                        console.error("Erro ao verificar assinaturas:", error);
+                        toast.error("Erro ao verificar assinaturas");
+                      }
+                    }}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Verificar Agora
+                  </Button>
+                </div>
+                
+                {allSubscriptions && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-green-500/50 bg-green-500/10">
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">Assinaturas Ativas</p>
+                        <p className="text-2xl font-bold text-green-500">
+                          {allSubscriptions.filter(s => s.status === 'active').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-amber-500/50 bg-amber-500/10">
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">Expirando em 7 dias</p>
+                        <p className="text-2xl font-bold text-amber-500">
+                          {allSubscriptions.filter(s => {
+                            const endDate = new Date(s.end_date);
+                            const today = new Date();
+                            const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                            return s.status === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
+                          }).length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-red-500/50 bg-red-500/10">
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">Expiradas</p>
+                        <p className="text-2xl font-bold text-red-500">
+                          {allSubscriptions.filter(s => s.status === 'expired').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="border-border">
               <CardHeader>
-                <CardTitle>Configurações de Notificações</CardTitle>
+                <CardTitle>Configurações de Notificações de Agendamento</CardTitle>
                 <CardDescription>
                   Configure mensagens automáticas para clientes após agendamento
                 </CardDescription>

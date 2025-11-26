@@ -2,3 +2,9 @@ project_id = "yieyjhgpwwepgkerdasv"
 
 [functions.send-booking-notification]
 verify_jwt = false
+
+[functions.send-subscription-expiry-notification]
+verify_jwt = false
+
+[functions.check-expiring-subscriptions]
+verify_jwt = false
