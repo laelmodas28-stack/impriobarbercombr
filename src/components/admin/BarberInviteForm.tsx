@@ -29,62 +29,26 @@ export const BarberInviteForm = ({ barbershopId, onSuccess }: BarberInviteFormPr
     setIsSubmitting(true);
 
     try {
-      // Verificar se o email já está cadastrado
-      const { data: existingUser } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", email)
-        .single();
-
-      if (existingUser) {
-        // Se usuário já existe, apenas conectar como profissional
-        const { data: professional, error: profError } = await supabase
-          .from("professionals")
-          .insert({
-            barbershop_id: barbershopId,
-            name: name,
-            user_id: existingUser.id,
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (profError) throw profError;
-
-        // Adicionar role de barber
-        await supabase.from("user_roles").insert({
-          user_id: existingUser.id,
-          role: "barber",
+      // Adicionar barbeiro diretamente como profissional ativo
+      const { error: profError } = await supabase
+        .from("professionals")
+        .insert({
           barbershop_id: barbershopId,
+          name: name,
+          is_active: true,
         });
 
-        toast.success("Barbeiro conectado com sucesso!");
-      } else {
-        toast.info("Enviando convite para o email: " + email);
-        toast.info(
-          "O barbeiro deve criar uma conta usando este email. Depois, você pode conectá-lo aqui.",
-          { duration: 5000 }
-        );
-        
-        // Salvar como profissional sem user_id (será conectado depois)
-        await supabase
-          .from("professionals")
-          .insert({
-            barbershop_id: barbershopId,
-            name: name,
-            is_active: false, // Inativo até criar conta
-          });
+      if (profError) throw profError;
 
-        toast.success("Barbeiro adicionado! Aguardando cadastro.");
-      }
-
+      toast.success("Barbeiro adicionado com sucesso!");
+      
       setEmail("");
       setName("");
       setPhone("");
       onSuccess();
     } catch (error: any) {
-      console.error("Erro ao convidar barbeiro:", error);
-      toast.error("Erro ao processar convite: " + (error.message || "Erro desconhecido"));
+      console.error("Erro ao adicionar barbeiro:", error);
+      toast.error("Erro ao adicionar barbeiro: " + (error.message || "Erro desconhecido"));
     } finally {
       setIsSubmitting(false);
     }
@@ -146,14 +110,11 @@ export const BarberInviteForm = ({ barbershopId, onSuccess }: BarberInviteFormPr
 
           <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-md">
             <p className="text-sm text-muted-foreground">
-              <strong>Como funciona:</strong>
+              <strong>Informação:</strong>
             </p>
-            <ol className="text-xs text-muted-foreground mt-2 space-y-1 list-decimal list-inside">
-              <li>Digite o email e nome do barbeiro</li>
-              <li>O barbeiro deve criar uma conta em "Cadastrar" usando este email</li>
-              <li>Após criar a conta, ele terá acesso ao sistema como barbeiro</li>
-              <li>Você pode gerenciar os barbeiros na aba "Profissionais"</li>
-            </ol>
+            <p className="text-xs text-muted-foreground mt-2">
+              O barbeiro será adicionado imediatamente como profissional ativo e poderá receber agendamentos.
+            </p>
           </div>
         </form>
       </CardContent>
