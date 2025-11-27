@@ -193,6 +193,32 @@ export type Database = {
           },
         ]
       }
+      booking_reminders_sent: {
+        Row: {
+          booking_id: string
+          id: string
+          sent_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          sent_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reminders_sent_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           barbershop_id: string
@@ -382,6 +408,7 @@ export type Database = {
           enabled: boolean | null
           id: string
           push_enabled: boolean | null
+          reminder_minutes: number | null
           send_sms: boolean | null
           send_to_client: boolean | null
           send_whatsapp: boolean | null
@@ -399,6 +426,7 @@ export type Database = {
           enabled?: boolean | null
           id?: string
           push_enabled?: boolean | null
+          reminder_minutes?: number | null
           send_sms?: boolean | null
           send_to_client?: boolean | null
           send_whatsapp?: boolean | null
@@ -416,6 +444,7 @@ export type Database = {
           enabled?: boolean | null
           id?: string
           push_enabled?: boolean | null
+          reminder_minutes?: number | null
           send_sms?: boolean | null
           send_to_client?: boolean | null
           send_whatsapp?: boolean | null

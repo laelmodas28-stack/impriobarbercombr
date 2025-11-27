@@ -26,6 +26,7 @@ import ProfessionalForm from "@/components/admin/ProfessionalForm";
 import ServiceForm from "@/components/admin/ServiceForm";
 import { SubscriptionPlanForm } from "@/components/admin/SubscriptionPlanForm";
 import { useSubscriptions } from "@/hooks/useSubscriptions";
+import { BarberInviteForm } from "@/components/admin/BarberInviteForm";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -57,6 +58,9 @@ const Admin = () => {
   
   // Push settings
   const [pushEnabled, setPushEnabled] = useState(false);
+  
+  // Reminder settings
+  const [reminderMinutes, setReminderMinutes] = useState(30);
 
   const weekDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
@@ -200,6 +204,7 @@ const Admin = () => {
       setSmsApiKey(notificationSettings.sms_api_key || "");
       setSmsFromNumber(notificationSettings.sms_from_number || "");
       setPushEnabled(notificationSettings.push_enabled ?? false);
+      setReminderMinutes(notificationSettings.reminder_minutes || 30);
     }
   }, [notificationSettings]);
 
@@ -540,6 +545,7 @@ const Admin = () => {
         sms_api_key: smsApiKey,
         sms_from_number: smsFromNumber,
         push_enabled: pushEnabled,
+        reminder_minutes: reminderMinutes,
       };
 
       if (notificationSettings) {
@@ -781,6 +787,14 @@ const Admin = () => {
 
           {/* Profissionais */}
           <TabsContent value="professionals" className="space-y-6">
+            {/* Formulário de Convite para Barbeiros */}
+            {barbershop && (
+              <BarberInviteForm 
+                barbershopId={barbershop.id} 
+                onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-professionals"] })} 
+              />
+            )}
+            
             {/* Formulário de Cadastro */}
             <ProfessionalForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-professionals"] })} />
 
@@ -1318,6 +1332,27 @@ const Admin = () => {
                   />
                   <p className="text-xs text-muted-foreground">
                     Formato: +5511999999999
+                  </p>
+                </div>
+
+                {/* Tempo de Antecedência para Lembretes */}
+                <div className="space-y-2">
+                  <Label htmlFor="reminder-minutes">⏰ Enviar Lembrete com Antecedência</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="reminder-minutes"
+                      type="number"
+                      min="5"
+                      max="1440"
+                      value={reminderMinutes}
+                      onChange={(e) => setReminderMinutes(parseInt(e.target.value) || 30)}
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">minutos antes do agendamento</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    O cliente receberá um lembrete {reminderMinutes} minutos antes do horário agendado.
+                    Recomendado: 30 minutos (padrão) ou 10 minutos para lembretes mais próximos.
                   </p>
                 </div>
 
