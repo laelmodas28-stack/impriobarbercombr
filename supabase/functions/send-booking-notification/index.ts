@@ -132,7 +132,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Enviar email para o cliente
     if (notificationSettings.send_to_client) {
-      const emailHtml = `
+      try {
+        const emailHtml = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -207,19 +208,24 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-      await resend.emails.send({
-        from: "Barbearia <onboarding@resend.dev>",
-        to: [clientEmail],
-        subject: `✅ Agendamento Confirmado - ${formattedDate} às ${time}`,
-        html: emailHtml,
-      });
+        const emailResponse = await resend.emails.send({
+          from: "Barbearia <onboarding@resend.dev>",
+          to: [clientEmail],
+          subject: `✅ Agendamento Confirmado - ${formattedDate} às ${time}`,
+          html: emailHtml,
+        });
 
-      console.log("Email sent to client:", clientEmail);
+        console.log("✅ Email enviado para cliente:", clientEmail, "Response:", JSON.stringify(emailResponse));
+      } catch (emailError: any) {
+        console.error("❌ ERRO ao enviar email para cliente:", clientEmail, "Error:", emailError.message);
+        throw emailError; // Re-throw para capturar no catch principal
+      }
     }
 
     // Enviar email para o admin
     if (notificationSettings.admin_email) {
-      const adminEmailHtml = `
+      try {
+        const adminEmailHtml = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -254,31 +260,39 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-      await resend.emails.send({
-        from: "Notificações <onboarding@resend.dev>",
-        to: [notificationSettings.admin_email],
-        subject: `Novo Agendamento - ${clientName} - ${formattedDate}`,
-        html: adminEmailHtml,
-      });
+        const adminEmailResponse = await resend.emails.send({
+          from: "Notificações <onboarding@resend.dev>",
+          to: [notificationSettings.admin_email],
+          subject: `Novo Agendamento - ${clientName} - ${formattedDate}`,
+          html: adminEmailHtml,
+        });
 
-      console.log("Email sent to admin:", notificationSettings.admin_email);
+        console.log("✅ Email enviado para admin:", notificationSettings.admin_email, "Response:", JSON.stringify(adminEmailResponse));
+      } catch (adminEmailError: any) {
+        console.error("❌ ERRO ao enviar email para admin:", notificationSettings.admin_email, "Error:", adminEmailError.message);
+        // Não fazer throw aqui, continuar com SMS se configurado
+      }
     }
 
     // Enviar SMS para o cliente
-    if (notificationSettings.send_sms && clientPhone && notificationSettings.sms_provider && notificationSettings.sms_api_key) {
-      try {
-        const smsMessage = customMessage.substring(0, 160); // Limitar a 160 caracteres
-        await sendSMS(
-          notificationSettings.sms_provider,
-          notificationSettings.sms_api_key,
-          notificationSettings.sms_from_number || 'Barbearia',
-          clientPhone,
-          smsMessage
-        );
-        console.log("SMS sent to client:", clientPhone);
-      } catch (smsError: any) {
-        console.error("Error sending SMS:", smsError);
-        // Não falhar toda a notificação se SMS falhar
+    if (notificationSettings.send_sms && clientPhone) {
+      if (!notificationSettings.sms_provider || !notificationSettings.sms_api_key) {
+        console.warn("⚠️ SMS está habilitado mas faltam configurações. Provider:", notificationSettings.sms_provider, "API Key configurada:", !!notificationSettings.sms_api_key);
+      } else {
+        try {
+          const smsMessage = customMessage.substring(0, 160); // Limitar a 160 caracteres
+          await sendSMS(
+            notificationSettings.sms_provider,
+            notificationSettings.sms_api_key,
+            notificationSettings.sms_from_number || 'Barbearia',
+            clientPhone,
+            smsMessage
+          );
+          console.log("✅ SMS enviado para cliente:", clientPhone);
+        } catch (smsError: any) {
+          console.error("❌ ERRO ao enviar SMS:", smsError.message);
+          // Não falhar toda a notificação se SMS falhar
+        }
       }
     }
 
