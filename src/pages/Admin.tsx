@@ -50,11 +50,8 @@ const Admin = () => {
   const [sendToClient, setSendToClient] = useState(true);
   const [sendWhatsapp, setSendWhatsapp] = useState(false);
   
-  // SMS settings
+  // SMS settings (simplified - managed by platform)
   const [sendSms, setSendSms] = useState(false);
-  const [smsProvider, setSmsProvider] = useState("vonage");
-  const [smsApiKey, setSmsApiKey] = useState("");
-  const [smsFromNumber, setSmsFromNumber] = useState("");
   
   // Push settings
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -200,9 +197,6 @@ const Admin = () => {
       setSendToClient(notificationSettings.send_to_client ?? true);
       setSendWhatsapp(notificationSettings.send_whatsapp ?? false);
       setSendSms(notificationSettings.send_sms ?? false);
-      setSmsProvider(notificationSettings.sms_provider || "vonage");
-      setSmsApiKey(notificationSettings.sms_api_key || "");
-      setSmsFromNumber(notificationSettings.sms_from_number || "");
       setPushEnabled(notificationSettings.push_enabled ?? false);
       setReminderMinutes(notificationSettings.reminder_minutes || 30);
     }
@@ -541,9 +535,6 @@ const Admin = () => {
         send_to_client: sendToClient,
         send_whatsapp: sendWhatsapp,
         send_sms: sendSms,
-        sms_provider: smsProvider,
-        sms_api_key: smsApiKey,
-        sms_from_number: smsFromNumber,
         push_enabled: pushEnabled,
         reminder_minutes: reminderMinutes,
       };
@@ -1404,49 +1395,36 @@ const Admin = () => {
                       className="h-4 w-4"
                     />
                     <label htmlFor="send-sms" className="text-sm">
-                      Enviar SMS para o cliente
+                      📱 Enviar SMS para o cliente
                     </label>
                   </div>
                   
                   {sendSms && (
-                    <div className="ml-6 space-y-3 p-4 border border-border rounded-md bg-muted/30">
-                      <div className="space-y-2">
-                        <Label htmlFor="sms-provider">Provedor de SMS</Label>
-                        <select
-                          id="sms-provider"
-                          value={smsProvider}
-                          onChange={(e) => setSmsProvider(e.target.value)}
-                          className="w-full p-2 border border-border rounded-md bg-background"
-                        >
-                          <option value="vonage">Vonage (Nexmo)</option>
-                          <option value="messagebird">MessageBird</option>
-                        </select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="sms-api-key">API Key</Label>
-                        <Input
-                          id="sms-api-key"
-                          type="password"
-                          value={smsApiKey}
-                          onChange={(e) => setSmsApiKey(e.target.value)}
-                          placeholder="Para Vonage use: api_key:api_secret"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          {smsProvider === 'vonage' && 'Formato: api_key:api_secret (encontrado no dashboard do Vonage)'}
-                          {smsProvider === 'messagebird' && 'Sua Access Key do MessageBird'}
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="sms-from-number">Número de Origem</Label>
-                        <Input
-                          id="sms-from-number"
-                          value={smsFromNumber}
-                          onChange={(e) => setSmsFromNumber(e.target.value)}
-                          placeholder="Ex: Barbearia ou +5511999999999"
-                        />
-                      </div>
+                    <div className="ml-6 p-4 border border-green-500/20 rounded-md bg-green-500/5">
+                      <p className="text-sm text-muted-foreground">
+                        ✅ SMS está configurado centralmente pela plataforma. As mensagens serão enviadas automaticamente via MessageBird quando você marcar esta opção.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="send-whatsapp"
+                      checked={sendWhatsapp}
+                      onChange={(e) => setSendWhatsapp(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="send-whatsapp" className="text-sm">
+                      💬 Gerar link de WhatsApp para confirmação
+                    </label>
+                  </div>
+                  
+                  {sendWhatsapp && (
+                    <div className="ml-6 p-4 border border-green-500/20 rounded-md bg-green-500/5">
+                      <p className="text-sm text-muted-foreground">
+                        ✅ Os clientes receberão um link direto para confirmar via WhatsApp com a barbearia. Configure seu WhatsApp nas Configurações da Barbearia.
+                      </p>
                     </div>
                   )}
                   

@@ -274,17 +274,20 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Enviar SMS para o cliente
+    // Enviar SMS para o cliente (usando secrets centralizados da plataforma)
     if (notificationSettings.send_sms && clientPhone) {
-      if (!notificationSettings.sms_provider || !notificationSettings.sms_api_key) {
-        console.warn("⚠️ SMS está habilitado mas faltam configurações. Provider:", notificationSettings.sms_provider, "API Key configurada:", !!notificationSettings.sms_api_key);
+      const messagebirdApiKey = Deno.env.get("MESSAGEBIRD_API_KEY");
+      const messagebirdOriginator = Deno.env.get("MESSAGEBIRD_ORIGINATOR");
+      
+      if (!messagebirdApiKey || !messagebirdOriginator) {
+        console.warn("⚠️ SMS está habilitado mas as credenciais do MessageBird não estão configuradas nos secrets da plataforma");
       } else {
         try {
           const smsMessage = customMessage.substring(0, 160); // Limitar a 160 caracteres
           await sendSMS(
-            notificationSettings.sms_provider,
-            notificationSettings.sms_api_key,
-            notificationSettings.sms_from_number || 'Barbearia',
+            "messagebird",
+            messagebirdApiKey,
+            messagebirdOriginator,
             clientPhone,
             smsMessage
           );
