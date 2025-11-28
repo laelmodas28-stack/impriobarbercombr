@@ -58,6 +58,10 @@ const Admin = () => {
   
   // Reminder settings
   const [reminderMinutes, setReminderMinutes] = useState(30);
+  
+  // AI settings
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [mensagemPersonalizada, setMensagemPersonalizada] = useState("Profissional e acolhedor");
 
   const weekDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
@@ -82,6 +86,7 @@ const Admin = () => {
       setTiktok(barbershop.tiktok || "");
       setOpeningTime(barbershop.opening_time?.substring(0, 5) || "09:00");
       setClosingTime(barbershop.closing_time?.substring(0, 5) || "19:00");
+      setMensagemPersonalizada(barbershop.mensagem_personalizada || "Profissional e acolhedor");
       if (barbershop.opening_days && barbershop.opening_days.length > 0) {
         setSelectedDays(barbershop.opening_days);
       }
@@ -199,6 +204,7 @@ const Admin = () => {
       setSendSms(notificationSettings.send_sms ?? false);
       setPushEnabled(notificationSettings.push_enabled ?? false);
       setReminderMinutes(notificationSettings.reminder_minutes || 30);
+      setAiEnabled(notificationSettings.ai_enabled ?? true);
     }
   }, [notificationSettings]);
 
@@ -508,7 +514,8 @@ const Admin = () => {
           tiktok,
           opening_time: openingTime + ":00",
           closing_time: closingTime + ":00",
-          opening_days: selectedDays
+          opening_days: selectedDays,
+          mensagem_personalizada: mensagemPersonalizada
         })
         .eq('id', barbershop.id);
 
@@ -537,6 +544,7 @@ const Admin = () => {
         send_sms: sendSms,
         push_enabled: pushEnabled,
         reminder_minutes: reminderMinutes,
+        ai_enabled: aiEnabled,
       };
 
       if (notificationSettings) {
@@ -1295,6 +1303,43 @@ const Admin = () => {
                     onChange={(e) => setNotificationsEnabled(e.target.checked)}
                     className="h-4 w-4"
                   />
+                </div>
+
+                {/* Toggle de IA */}
+                <div className="p-4 border border-purple-500/30 rounded-lg bg-purple-500/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <Label htmlFor="ai-enabled" className="flex items-center gap-2">
+                        <span className="text-lg">🤖</span>
+                        Usar IA para Gerar Mensagens
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Mensagens únicas e personalizadas geradas automaticamente para cada agendamento
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="ai-enabled"
+                      checked={aiEnabled}
+                      onChange={(e) => setAiEnabled(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                  </div>
+                  
+                  {aiEnabled && (
+                    <div className="mt-4 space-y-2">
+                      <Label htmlFor="mensagem-personalizada">Estilo de Comunicação da Barbearia</Label>
+                      <Input
+                        id="mensagem-personalizada"
+                        value={mensagemPersonalizada}
+                        onChange={(e) => setMensagemPersonalizada(e.target.value)}
+                        placeholder="Ex: Profissional e elegante, Descontraído e jovem, Moderno e tecnológico"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Descreva o tom/estilo que você deseja para as mensagens (ex: "Profissional e acolhedor", "Descontraído e moderno")
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Email do Admin */}
