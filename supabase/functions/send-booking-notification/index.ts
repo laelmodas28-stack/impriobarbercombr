@@ -79,6 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const {
+      bookingId,
       barbershopId,
       clientEmail,
       clientName,
@@ -91,6 +92,26 @@ const handler = async (req: Request): Promise<Response> => {
     }: NotificationRequest = await req.json();
 
     console.log("Processing notification for:", clientEmail, "Barbershop:", barbershopId);
+    
+    // Helper function to save notification to database
+    const saveNotification = async (userId: string, type: string, title: string, message: string) => {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          barbershop_id: barbershopId,
+          type,
+          title,
+          message,
+          booking_id: bookingId,
+        });
+      
+      if (error) {
+        console.error(`❌ Erro ao salvar notificação ${type}:`, error);
+      } else {
+        console.log(`✅ Notificação ${type} salva no banco`);
+      }
+    };
 
     // Buscar dados da barbearia
     const { data: barbershop } = await supabase
@@ -171,6 +192,25 @@ const handler = async (req: Request): Promise<Response> => {
       barberMessage = `Novo agendamento: ${clientName} - ${service} - ${formattedDate} às ${time}`;
     }
 
+    // Buscar client_id do booking
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("client_id")
+      .eq("id", bookingId)
+      .single();
+    
+    const clientUserId = booking?.client_id;
+    
+    // Salvar notificação de confirmação no banco (sempre funciona)
+    if (clientUserId && notificationSettings.send_to_client) {
+      await saveNotification(
+        clientUserId,
+        'booking_confirmation',
+        'Agendamento Confirmado',
+        customMessage
+      );
+    }
+    
     // Enviar email para o cliente
     if (notificationSettings.send_to_client) {
       try {
@@ -263,8 +303,24 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Enviar email para o admin
+    // Salvar e enviar notificação para o admin/barbeiro
     if (notificationSettings.admin_email) {
+      // Buscar owner_id da barbearia para salvar notificação
+      const { data: barbershopData } = await supabase
+        .from('barbershops')
+        .select('owner_id')
+        .eq('id', barbershopId)
+        .single();
+      
+      if (barbershopData) {
+        await saveNotification(
+          barbershopData.owner_id,
+          'barber_notification',
+          'Novo Agendamento',
+          barberMessage
+        );
+      }
+      
       try {
         const adminEmailHtml = `
         <!DOCTYPE html>

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationBell } from "./NotificationBell";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -54,6 +55,7 @@ const Header = () => {
                   Agendar
                 </Button>
               </Link>
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">

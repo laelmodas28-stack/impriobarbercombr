@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,24 @@ const Booking = () => {
     },
   });
 
+  const { data: existingBookings } = useQuery({
+    queryKey: ["existing-bookings", selectedProfessional, selectedDate],
+    queryFn: async () => {
+      if (!selectedProfessional || !selectedDate) return [];
+      
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("booking_time")
+        .eq("professional_id", selectedProfessional)
+        .eq("booking_date", format(selectedDate, "yyyy-MM-dd"))
+        .in("status", ["pending", "confirmed"]);
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedProfessional && !!selectedDate,
+  });
+
   const { data: barbershopHours } = useQuery({
     queryKey: ["barbershop-hours"],
     queryFn: async () => {
@@ -88,26 +106,40 @@ const Booking = () => {
 
   const timeSlots = generateTimeSlots();
 
-  // Filtrar horários passados se for hoje
+  // Resetar horário selecionado quando mudar profissional ou data
+  useEffect(() => {
+    setSelectedTime("");
+  }, [selectedProfessional, selectedDate]);
+
+  // Filtrar horários passados e já ocupados
   const getAvailableTimeSlots = () => {
     if (!selectedDate) return timeSlots;
     
+    let availableSlots = [...timeSlots];
+    
+    // Filtrar horários passados se for hoje
     if (isToday(selectedDate)) {
       const now = new Date();
       const currentHour = getHours(now);
       const currentMinute = getMinutes(now);
       
-      return timeSlots.filter(slot => {
+      availableSlots = availableSlots.filter(slot => {
         const [slotHour, slotMinute] = slot.split(':').map(Number);
-        
         if (slotHour > currentHour) return true;
         if (slotHour === currentHour && slotMinute > currentMinute) return true;
-        
         return false;
       });
     }
     
-    return timeSlots;
+    // Filtrar horários já ocupados pelo profissional
+    if (existingBookings?.length) {
+      const bookedTimes = existingBookings.map(b => 
+        b.booking_time.substring(0, 5) // "16:00:00" -> "16:00"
+      );
+      availableSlots = availableSlots.filter(slot => !bookedTimes.includes(slot));
+    }
+    
+    return availableSlots;
   };
 
   const availableTimeSlots = getAvailableTimeSlots();
