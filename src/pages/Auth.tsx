@@ -155,6 +155,20 @@ const Auth = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground mb-2">
+            É barbeiro?
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/registro-barbeiro")}
+            className="w-full"
+          >
+            <Crown className="w-4 h-4 mr-2" />
+            Criar Barbearia
+          </Button>
+        </div>
       </div>
     </div>
   );
