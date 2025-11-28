@@ -137,6 +137,7 @@ export type Database = {
           id: string
           instagram: string | null
           logo_url: string | null
+          mensagem_personalizada: string | null
           name: string
           opening_days: string[] | null
           opening_time: string | null
@@ -155,6 +156,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          mensagem_personalizada?: string | null
           name: string
           opening_days?: string[] | null
           opening_time?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          mensagem_personalizada?: string | null
           name?: string
           opening_days?: string[] | null
           opening_time?: string | null
@@ -402,6 +405,7 @@ export type Database = {
         Row: {
           admin_email: string | null
           admin_whatsapp: string | null
+          ai_enabled: boolean | null
           barbershop_id: string | null
           created_at: string | null
           custom_message: string | null
@@ -417,6 +421,7 @@ export type Database = {
         Insert: {
           admin_email?: string | null
           admin_whatsapp?: string | null
+          ai_enabled?: boolean | null
           barbershop_id?: string | null
           created_at?: string | null
           custom_message?: string | null
@@ -432,6 +437,7 @@ export type Database = {
         Update: {
           admin_email?: string | null
           admin_whatsapp?: string | null
+          ai_enabled?: boolean | null
           barbershop_id?: string | null
           created_at?: string | null
           custom_message?: string | null

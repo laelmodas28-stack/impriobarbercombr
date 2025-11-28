@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.check-booking-reminders]
 verify_jwt = false
+
+[functions.generate-notification-messages]
+verify_jwt = false

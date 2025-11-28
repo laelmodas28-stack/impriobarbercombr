@@ -121,14 +121,55 @@ const handler = async (req: Request): Promise<Response> => {
       year: "numeric",
     });
 
-    // Substituir variáveis na mensagem
-    let customMessage = notificationSettings.custom_message || "";
-    customMessage = customMessage
-      .replace("{nome}", clientName)
-      .replace("{data}", formattedDate)
-      .replace("{hora}", time)
-      .replace("{servico}", service)
-      .replace("{profissional}", professional);
+    // Tentar gerar mensagens com IA se habilitado
+    let customMessage = "";
+    let barberMessage = "";
+    
+    if (notificationSettings.ai_enabled && barbershop?.mensagem_personalizada) {
+      try {
+        console.log("Gerando mensagens com IA...");
+        const { data: aiMessages, error: aiError } = await supabase.functions.invoke(
+          "generate-notification-messages",
+          {
+            body: {
+              barbershopName: barbershop.name,
+              mensagemPersonalizada: barbershop.mensagem_personalizada,
+              tempoLembrete: notificationSettings.reminder_minutes || 30,
+              customerName: clientName,
+              service: service,
+              startTime: time,
+              barberName: professional,
+              bookingDate: formattedDate,
+            },
+          }
+        );
+
+        if (aiError) {
+          console.error("Erro ao gerar mensagens com IA:", aiError);
+        } else if (aiMessages?.messages) {
+          customMessage = aiMessages.messages.clientConfirmation;
+          barberMessage = aiMessages.messages.barberNotification;
+          console.log("Mensagens geradas com IA com sucesso");
+        }
+      } catch (aiError) {
+        console.error("Erro ao chamar função de IA:", aiError);
+      }
+    }
+    
+    // Fallback para template estático se IA falhou ou não está habilitada
+    if (!customMessage) {
+      customMessage = notificationSettings.custom_message || "";
+      customMessage = customMessage
+        .replace("{nome}", clientName)
+        .replace("{data}", formattedDate)
+        .replace("{hora}", time)
+        .replace("{servico}", service)
+        .replace("{profissional}", professional);
+    }
+    
+    if (!barberMessage) {
+      barberMessage = `Novo agendamento: ${clientName} - ${service} - ${formattedDate} às ${time}`;
+    }
 
     // Enviar email para o cliente
     if (notificationSettings.send_to_client) {
@@ -236,6 +277,7 @@ const handler = async (req: Request): Promise<Response> => {
             .header { background: #667eea; color: white; padding: 20px; text-align: center; }
             .content { background: #f9f9f9; padding: 20px; }
             .details { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #667eea; }
+            .ai-message { background: #e8eaf6; padding: 15px; border-radius: 5px; margin: 10px 0; }
           </style>
         </head>
         <body>
@@ -244,6 +286,11 @@ const handler = async (req: Request): Promise<Response> => {
               <h2>🔔 Novo Agendamento Recebido</h2>
             </div>
             <div class="content">
+              ${notificationSettings.ai_enabled ? `
+                <div class="ai-message">
+                  <p>${barberMessage}</p>
+                </div>
+              ` : ''}
               <div class="details">
                 <p><strong>Cliente:</strong> ${clientName}</p>
                 <p><strong>Email:</strong> ${clientEmail}</p>
