@@ -267,7 +267,11 @@ const handler = async (req: Request): Promise<Response> => {
 
               ${barbershop?.whatsapp ? `
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://wa.me/${barbershop.whatsapp.replace(/\D/g, '')}" 
+                  <a href="https://wa.me/${(() => {
+                    let clean = barbershop.whatsapp.replace(/\\D/g, '');
+                    if (clean.startsWith('55') && clean.length > 11) clean = clean.substring(2);
+                    return '55' + clean;
+                  })()}" 
                      style="background: #25D366; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     💬 Entrar em Contato via WhatsApp
                   </a>
