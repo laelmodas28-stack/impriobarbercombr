@@ -1359,15 +1359,15 @@ const Admin = () => {
 
                 {/* WhatsApp do Admin */}
                 <div className="space-y-2">
-                  <Label htmlFor="admin-whatsapp">Seu WhatsApp (com código do país)</Label>
+                  <Label htmlFor="admin-whatsapp">Seu WhatsApp (DDD + número)</Label>
                   <Input
                     id="admin-whatsapp"
                     value={adminWhatsapp}
                     onChange={(e) => setAdminWhatsapp(e.target.value)}
-                    placeholder="+5511999999999"
+                    placeholder="11980757862"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Formato: +5511999999999
+                    Exemplo: 11980757862 (o +55 será adicionado automaticamente)
                   </p>
                 </div>
 
