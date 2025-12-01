@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-notification-messages]
 verify_jwt = false
+
+[functions.barbershop-chat]
+verify_jwt = false
