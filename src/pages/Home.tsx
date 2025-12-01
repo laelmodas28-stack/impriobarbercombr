@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar, Crown, Scissors, Star, Users, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { ChatWidget } from "@/components/ChatWidget";
 import { SocialLinks } from "@/components/SocialLinks";
 import { BusinessHours } from "@/components/BusinessHours";
 import { useQuery } from "@tanstack/react-query";
@@ -228,6 +229,7 @@ const Home = () => {
       </section>
 
       <Footer />
+      <ChatWidget />
     </div>
   );
 };
