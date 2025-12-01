@@ -1,16 +1,35 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Crown, Scissors, Star, Users, User } from "lucide-react";
+import { Calendar, Crown, Scissors, Star, Users, User, Edit } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ChatWidget } from "@/components/ChatWidget";
 import { SocialLinks } from "@/components/SocialLinks";
 import { BusinessHours } from "@/components/BusinessHours";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const Home = () => {
+  const { isAdmin } = useUserRole();
+  const queryClient = useQueryClient();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
   const { data: services } = useQuery({
     queryKey: ["services"],
     queryFn: async () => {
@@ -53,6 +72,37 @@ const Home = () => {
     },
   });
 
+  const handleOpenEditDialog = () => {
+    if (barbershop) {
+      setEditName(barbershop.name);
+      setEditDescription(barbershop.mensagem_personalizada || "");
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!barbershop?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from("barbershops")
+        .update({
+          name: editName,
+          mensagem_personalizada: editDescription,
+        })
+        .eq("id", barbershop.id);
+
+      if (error) throw error;
+
+      toast.success("Informações atualizadas com sucesso!");
+      setIsEditDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["barbershop-home"] });
+    } catch (error) {
+      console.error("Erro ao atualizar:", error);
+      toast.error("Erro ao atualizar informações");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -62,11 +112,23 @@ const Home = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent" />
         <div className="container mx-auto text-center relative z-10">
           <Crown className="w-16 h-16 mx-auto mb-6 text-primary animate-pulse" />
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            Bem-vindo ao <span className="text-primary">Império</span>
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold">
+              Bem-vindo ao <span className="text-primary">{barbershop?.name || "IMPÉRIO BARBER"}</span>
+            </h1>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleOpenEditDialog}
+                className="opacity-70 hover:opacity-100"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Barbearia premium com atendimento de excelência. Agende seu horário com os melhores profissionais.
+            {barbershop?.mensagem_personalizada || "Barbearia premium com atendimento de excelência. Agende seu horário com os melhores profissionais."}
           </p>
           <Link to="/booking">
             <Button variant="premium" size="xl" className="shadow-elevation">
@@ -230,6 +292,47 @@ const Home = () => {
 
       <Footer />
       <ChatWidget />
+
+      {/* Dialog de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Informações da Barbearia</DialogTitle>
+            <DialogDescription>
+              Atualize o nome e a mensagem de boas-vindas
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da Barbearia</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Ex: Império Barber"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Mensagem de Boas-Vindas</Label>
+              <Textarea
+                id="description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Ex: Barbearia premium com atendimento de excelência..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveChanges}>
+              Salvar Alterações
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
