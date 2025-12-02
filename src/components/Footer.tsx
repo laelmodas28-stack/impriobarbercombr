@@ -3,28 +3,25 @@ import { Crown } from "lucide-react";
 import { SocialLinks } from "./SocialLinks";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
 const Footer = () => {
-  const { data: info } = useQuery({
+  const {
+    data: info
+  } = useQuery({
     queryKey: ["barbershop-info-footer"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershop_info")
-        .select("*")
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from("barbershop_info").select("*").single();
       if (error) throw error;
       return data;
-    },
+    }
   });
-
   const formatTime = (time: string | null) => {
     if (!time) return "";
     return time.substring(0, 5);
   };
-
-  return (
-    <footer className="border-t border-border bg-card/50 mt-20">
+  return <footer className="border-t border-border bg-card/50 mt-20">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
@@ -35,11 +32,7 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Barbearia premium com atendimento de excelência
             </p>
-            <SocialLinks 
-              whatsapp={info?.whatsapp}
-              instagram={info?.instagram}
-              tiktok={info?.tiktok}
-            />
+            <SocialLinks whatsapp={info?.whatsapp} instagram={info?.instagram} tiktok={info?.tiktok} />
           </div>
           
           <div>
@@ -60,34 +53,13 @@ const Footer = () => {
             </div>
           </div>
           
-          <div>
-            <h3 className="font-semibold mb-4">Horários</h3>
-            <div className="text-sm text-muted-foreground space-y-1">
-              {info?.opening_time && info?.closing_time ? (
-                <p className="mb-2">
-                  {formatTime(info.opening_time)} - {formatTime(info.closing_time)}
-                </p>
-              ) : (
-                <p className="mb-2">08:00 - 19:00</p>
-              )}
-              {info?.opening_days && info.opening_days.length > 0 ? (
-                <p>{info.opening_days.join(", ")}</p>
-              ) : (
-                <>
-                  <p>Segunda a Sexta</p>
-                  <p>Sábado</p>
-                </>
-              )}
-            </div>
-          </div>
+          
         </div>
         
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} IMPÉRIO BARBER. Todos os direitos reservados.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
