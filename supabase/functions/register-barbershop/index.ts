@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
@@ -13,10 +14,29 @@ serve(async (req) => {
   }
 
   try {
+    // Schema validation
+    const registerSchema = z.object({
+      code: z.string().min(6).max(50),
+      owner: z.object({
+        email: z.string().email().max(255),
+        password: z.string().min(6).max(100),
+        full_name: z.string().min(2).max(100).trim(),
+        phone: z.string().regex(/^\d{10,15}$/).optional()
+      }),
+      barbershop: z.object({
+        name: z.string().min(2).max(100).trim(),
+        address: z.string().max(200).optional(),
+        description: z.string().max(500).optional()
+      })
+    });
+
+    const body = await req.json();
+    const validatedData = registerSchema.parse(body);
+    const { code, owner, barbershop } = validatedData;
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Criar cliente com service role para operações privilegiadas
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -24,15 +44,42 @@ serve(async (req) => {
       }
     });
 
-    const { owner, barbershop } = await req.json();
+    // Validate registration code
+    const { data: codeData, error: codeError } = await supabaseAdmin
+      .from('registration_codes')
+      .select('*')
+      .eq('code', code)
+      .eq('is_used', false)
+      .maybeSingle();
+
+    if (codeError || !codeData) {
+      return new Response(
+        JSON.stringify({ error: 'Código de acesso inválido ou já utilizado' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Check if code is expired
+    if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: 'Código de acesso expirado' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
 
     console.log('Starting barbershop registration for:', owner.email);
 
-    // 1. Criar usuário no Auth
+    // 1. Create user in Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: owner.email,
       password: owner.password,
-      email_confirm: true, // Auto-confirmar email
+      email_confirm: true,
       user_metadata: {
         full_name: owner.full_name,
         phone: owner.phone,
@@ -50,7 +97,7 @@ serve(async (req) => {
     const userId = authData.user.id;
     console.log('User created:', userId);
 
-    // 2. Atualizar profile para admin
+    // 2. Update profile to admin
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({ role: 'admin' })
@@ -58,10 +105,9 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Error updating profile:', profileError);
-      // Continuar mesmo com erro, o trigger já deve ter criado o profile
     }
 
-    // 3. Criar barbearia
+    // 3. Create barbershop
     const { data: barbershopData, error: barbershopError } = await supabaseAdmin
       .from('barbershops')
       .insert({
@@ -86,7 +132,7 @@ serve(async (req) => {
     const barbershopId = barbershopData.id;
     console.log('Barbershop created:', barbershopId);
 
-    // 4. Criar user_role (admin)
+    // 4. Create user_role (admin)
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
@@ -97,10 +143,9 @@ serve(async (req) => {
 
     if (roleError) {
       console.error('Error creating user role:', roleError);
-      // Continuar, o trigger pode já ter criado
     }
 
-    // 5. Criar notification_settings padrão
+    // 5. Create default notification_settings
     const { error: notificationError } = await supabaseAdmin
       .from('notification_settings')
       .insert({
@@ -115,7 +160,20 @@ serve(async (req) => {
 
     if (notificationError) {
       console.error('Error creating notification settings:', notificationError);
-      // Continuar, o trigger pode já ter criado
+    }
+
+    // 6. Mark registration code as used
+    const { error: codeUpdateError } = await supabaseAdmin
+      .from('registration_codes')
+      .update({ 
+        is_used: true,
+        used_by: userId,
+        used_at: new Date().toISOString()
+      })
+      .eq('code', code);
+
+    if (codeUpdateError) {
+      console.error('Error updating registration code:', codeUpdateError);
     }
 
     console.log('Barbershop registration completed successfully');
@@ -131,6 +189,15 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Error in register-barbershop function:', error);
+    
+    // Handle zod validation errors
+    if (error.name === 'ZodError') {
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos: ' + error.errors[0].message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message || 'Erro desconhecido' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

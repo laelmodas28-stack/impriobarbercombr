@@ -8,10 +8,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import imperioLogo from "@/assets/imperio-logo.webp";
+import { z } from "zod";
 import { Crown, Store, User } from "lucide-react";
+
+// Validation schema
+const formSchema = z.object({
+  accessCode: z.string().min(6, "Código de acesso deve ter pelo menos 6 caracteres"),
+  email: z.string().email("Email inválido").max(255),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").max(100),
+  fullName: z.string().min(2, "Nome muito curto").max(100),
+  phone: z.string().regex(/^\d{10,15}$/, "Telefone inválido (10-15 dígitos)").optional().or(z.literal("")),
+  barbershopName: z.string().min(2, "Nome da barbearia muito curto").max(100),
+  address: z.string().max(200).optional(),
+  description: z.string().max(500).optional()
+});
 
 const RegisterBarbershop = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
   
   // Dados do Proprietário
   const [ownerName, setOwnerName] = useState("");
@@ -24,8 +39,6 @@ const RegisterBarbershop = () => {
   const [barbershopName, setBarbershopName] = useState("");
   const [barbershopAddress, setBarbershopAddress] = useState("");
   const [barbershopDescription, setBarbershopDescription] = useState("");
-  
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,14 +49,23 @@ const RegisterBarbershop = () => {
       return;
     }
     
-    if (ownerPassword.length < 6) {
-      toast.error("A senha deve ter no mínimo 6 caracteres");
-      return;
-    }
-    
-    if (!ownerName || !ownerEmail || !ownerPhone || !barbershopName) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
+    // Validação com zod
+    try {
+      formSchema.parse({
+        accessCode,
+        email: ownerEmail,
+        password: ownerPassword,
+        fullName: ownerName,
+        phone: ownerPhone,
+        barbershopName,
+        address: barbershopAddress,
+        description: barbershopDescription
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
     }
     
     setLoading(true);
@@ -52,6 +74,7 @@ const RegisterBarbershop = () => {
       // Chamar edge function para criar tudo
       const { data, error } = await supabase.functions.invoke('register-barbershop', {
         body: {
+          code: accessCode,
           owner: {
             full_name: ownerName,
             email: ownerEmail,
@@ -126,8 +149,27 @@ const RegisterBarbershop = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Dados do Proprietário */}
+              {/* Código de Acesso */}
               <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Código de Acesso</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="accessCode">Código de Acesso *</Label>
+                  <Input
+                    id="accessCode"
+                    type="text"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    placeholder="Digite o código de acesso"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Você precisa de um código de acesso para registrar uma barbearia
+                  </p>
+                </div>
+              </div>
+
+              {/* Dados do Proprietário */}
+              <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2 text-lg font-semibold">
                   <User className="w-5 h-5 text-primary" />
                   <h3>Dados do Proprietário</h3>

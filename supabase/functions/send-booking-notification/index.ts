@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -9,18 +10,43 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface NotificationRequest {
-  bookingId: string;
-  barbershopId: string;
-  clientEmail: string;
-  clientName: string;
-  clientPhone?: string;
-  date: string;
-  time: string;
-  service: string;
-  professional: string;
-  price: number;
-}
+// Função para enviar SMS usando Vonage
+// async function sendVonageSMS(apiKey: string, from: string, to: string, message: string): Promise<void> {
+//   const response = await fetch('https://rest.nexmo.com/sms/json', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({
+//       api_key: apiKey.split(':')[0],
+//       api_secret: apiKey.split(':')[1],
+//       from,
+//       to: to.replace(/\D/g, ''),
+//       text: message,
+//     }),
+//   });
+//   const data = await response.json();
+//   if (data.messages[0].status !== '0') {
+//     throw new Error(`Vonage SMS failed: ${data.messages[0]['error-text']}`);
+//   }
+// }
+
+// Função para enviar SMS usando MessageBird
+// async function sendMessageBirdSMS(apiKey: string, from: string, to: string, message: string): Promise<void> {
+//   const response = await fetch('https://rest.messagebird.com/messages', {
+//     method: 'POST',
+//     headers: {
+//       'Authorization': `AccessKey ${apiKey}`,
+//       'Content-Type': 'application/json',
+//     },
+//     body: JSON.stringify({
+//       originator: from,
+//       recipients: [to.replace(/\D/g, '')],
+//       body: message,
+//     }),
+//   });
+//   if (!response.ok) {
+//     throw new Error(`MessageBird SMS failed: ${response.statusText}`);
+//   }
+// }
 
 // Função para enviar SMS usando diferentes provedores
 async function sendSMS(
@@ -65,7 +91,6 @@ async function sendSMS(
       throw new Error(`MessageBird SMS failed: ${response.statusText}`);
     }
   }
-  // Adicione mais provedores conforme necessário
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -74,22 +99,44 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Schema validation
+    const notificationSchema = z.object({
+      bookingId: z.string().uuid()
+    });
+
+    const body = await req.json();
+    const { bookingId } = notificationSchema.parse(body);
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const {
-      bookingId,
-      barbershopId,
-      clientEmail,
-      clientName,
-      clientPhone,
-      date,
-      time,
-      service,
-      professional,
-      price,
-    }: NotificationRequest = await req.json();
+    // Fetch booking with all related data
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select(`
+        *,
+        services (name, price),
+        professionals (name),
+        profiles (full_name, phone, email),
+        barbershops (id, name, address, whatsapp, mensagem_personalizada)
+      `)
+      .eq("id", bookingId)
+      .single();
+
+    if (bookingError || !booking) {
+      throw new Error("Booking not found");
+    }
+
+    const barbershopId = booking.barbershop_id;
+    const clientEmail = booking.profiles.email;
+    const clientName = booking.profiles.full_name;
+    const clientPhone = booking.profiles.phone;
+    const date = booking.booking_date;
+    const time = booking.booking_time;
+    const service = booking.services.name;
+    const professional = booking.professionals.name;
+    const price = booking.services.price;
 
     console.log("Processing notification for:", clientEmail, "Barbershop:", barbershopId);
     
@@ -192,14 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
       barberMessage = `Novo agendamento: ${clientName} - ${service} - ${formattedDate} às ${time}`;
     }
 
-    // Buscar client_id do booking
-    const { data: booking } = await supabase
-      .from("bookings")
-      .select("client_id")
-      .eq("id", bookingId)
-      .single();
-    
-    const clientUserId = booking?.client_id;
+    const clientUserId = booking.client_id;
     
     // Salvar notificação de confirmação no banco (sempre funciona)
     if (clientUserId && notificationSettings.send_to_client) {
@@ -212,7 +252,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
     
     // Enviar email para o cliente
-    if (notificationSettings.send_to_client) {
+    if (notificationSettings.send_to_client && clientEmail) {
       try {
         const emailHtml = `
         <!DOCTYPE html>
@@ -268,7 +308,7 @@ const handler = async (req: Request): Promise<Response> => {
               ${barbershop?.whatsapp ? `
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="https://wa.me/${(() => {
-                    let clean = barbershop.whatsapp.replace(/\\D/g, '');
+                    let clean = barbershop.whatsapp.replace(/\D/g, '');
                     if (clean.startsWith('55') && clean.length > 11) clean = clean.substring(2);
                     return '55' + clean;
                   })()}" 
@@ -303,13 +343,11 @@ const handler = async (req: Request): Promise<Response> => {
         console.log("✅ Email enviado para cliente:", clientEmail, "Response:", JSON.stringify(emailResponse));
       } catch (emailError: any) {
         console.error("❌ ERRO ao enviar email para cliente:", clientEmail, "Error:", emailError.message);
-        throw emailError; // Re-throw para capturar no catch principal
       }
     }
 
     // Salvar e enviar notificação para o admin/barbeiro
     if (notificationSettings.admin_email) {
-      // Buscar owner_id da barbearia para salvar notificação
       const { data: barbershopData } = await supabase
         .from('barbershops')
         .select('owner_id')
@@ -367,17 +405,16 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-        const adminEmailResponse = await resend.emails.send({
+        await resend.emails.send({
           from: "Notificações <onboarding@resend.dev>",
           to: [notificationSettings.admin_email],
           subject: `Novo Agendamento - ${clientName} - ${formattedDate}`,
           html: adminEmailHtml,
         });
 
-        console.log("✅ Email enviado para admin:", notificationSettings.admin_email, "Response:", JSON.stringify(adminEmailResponse));
+        console.log("✅ Email enviado para admin:", notificationSettings.admin_email);
       } catch (adminEmailError: any) {
-        console.error("❌ ERRO ao enviar email para admin:", notificationSettings.admin_email, "Error:", adminEmailError.message);
-        // Não fazer throw aqui, continuar com SMS se configurado
+        console.error("❌ ERRO ao enviar email para admin:", adminEmailError.message);
       }
     }
 
@@ -387,10 +424,10 @@ const handler = async (req: Request): Promise<Response> => {
       const messagebirdOriginator = Deno.env.get("MESSAGEBIRD_ORIGINATOR");
       
       if (!messagebirdApiKey || !messagebirdOriginator) {
-        console.warn("⚠️ SMS está habilitado mas as credenciais do MessageBird não estão configuradas nos secrets da plataforma");
+        console.warn("⚠️ SMS está habilitado mas as credenciais do MessageBird não estão configuradas");
       } else {
         try {
-          const smsMessage = customMessage.substring(0, 160); // Limitar a 160 caracteres
+          const smsMessage = customMessage.substring(0, 160);
           await sendSMS(
             "messagebird",
             messagebirdApiKey,
@@ -401,7 +438,6 @@ const handler = async (req: Request): Promise<Response> => {
           console.log("✅ SMS enviado para cliente:", clientPhone);
         } catch (smsError: any) {
           console.error("❌ ERRO ao enviar SMS:", smsError.message);
-          // Não falhar toda a notificação se SMS falhar
         }
       }
     }
@@ -415,6 +451,18 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error: any) {
     console.error("Error sending notification:", error);
+    
+    // Handle zod validation errors
+    if (error.name === 'ZodError') {
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos: ' + error.errors[0].message }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       {
