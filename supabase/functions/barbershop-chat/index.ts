@@ -1,10 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Rate limiting map
+const rateLimitMap = new Map<string, number[]>();
+
+function checkRateLimit(identifier: string, maxRequests = 20, windowMs = 60000): boolean {
+  const now = Date.now();
+  const requests = rateLimitMap.get(identifier) || [];
+  const recentRequests = requests.filter(t => now - t < windowMs);
+  
+  if (recentRequests.length >= maxRequests) {
+    return false;
+  }
+  
+  recentRequests.push(now);
+  rateLimitMap.set(identifier, recentRequests);
+  return true;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,7 +30,30 @@ serve(async (req) => {
   }
 
   try {
-    const { message, history, userId } = await req.json();
+    // Schema validation
+    const chatSchema = z.object({
+      message: z.string().min(1).max(2000),
+      history: z.array(z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().max(5000)
+      })).max(50).optional().default([]),
+      userId: z.string().uuid().optional()
+    });
+
+    const body = await req.json();
+    const { message, history, userId } = chatSchema.parse(body);
+
+    // Rate limiting
+    const rateLimitId = userId || 'anonymous';
+    if (!checkRateLimit(rateLimitId)) {
+      return new Response(
+        JSON.stringify({ error: 'Muitas requisições. Aguarde um momento.' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 429 
+        }
+      );
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -124,7 +165,6 @@ IMPORTANTE:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages,
-        temperature: 0.7,
       }),
     });
 
@@ -195,8 +235,23 @@ IMPORTANTE:
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Chat function error:", error);
+    
+    // Handle zod validation errors
+    if (error.name === 'ZodError') {
+      return new Response(
+        JSON.stringify({
+          response: "Mensagem inválida. Por favor, tente novamente.",
+          bookingCreated: false,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({
         response: "Desculpe, tive um problema técnico. Por favor, tente novamente.",

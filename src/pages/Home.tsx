@@ -61,6 +61,30 @@ const Home = () => {
   const { data: barbershop } = useQuery({
     queryKey: ["barbershop-home"],
     queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (user?.user) {
+        // Try to get admin's barbershop
+        const { data: userRoles } = await supabase
+          .from("user_roles")
+          .select("barbershop_id")
+          .eq("user_id", user.user.id)
+          .eq("role", "admin")
+          .not("barbershop_id", "is", null)
+          .limit(1)
+          .maybeSingle();
+        
+        if (userRoles?.barbershop_id) {
+          const { data } = await supabase
+            .from("barbershops")
+            .select("*")
+            .eq("id", userRoles.barbershop_id)
+            .single();
+          return data;
+        }
+      }
+      
+      // Fallback: first barbershop
       const { data, error } = await supabase
         .from("barbershops")
         .select("*")
