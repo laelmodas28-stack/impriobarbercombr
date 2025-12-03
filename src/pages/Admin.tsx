@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -27,6 +27,7 @@ import ServiceForm from "@/components/admin/ServiceForm";
 import { SubscriptionPlanForm } from "@/components/admin/SubscriptionPlanForm";
 import { useSubscriptions } from "@/hooks/useSubscriptions";
 import { BarberInviteForm } from "@/components/admin/BarberInviteForm";
+import { UserManagement } from "@/components/admin/UserManagement";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -595,7 +596,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9 lg:grid-cols-9">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -607,6 +608,10 @@ const Admin = () => {
             <TabsTrigger value="clients">
               <User className="w-4 h-4 mr-2" />
               Clientes
+            </TabsTrigger>
+            <TabsTrigger value="users">
+              <UserCog className="w-4 h-4 mr-2" />
+              Usuários
             </TabsTrigger>
             <TabsTrigger value="professionals">
               <Users className="w-4 h-4 mr-2" />
@@ -782,6 +787,11 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Usuários */}
+          <TabsContent value="users" className="space-y-6">
+            {barbershop && <UserManagement barbershopId={barbershop.id} />}
           </TabsContent>
 
           {/* Profissionais */}
