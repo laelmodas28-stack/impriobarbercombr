@@ -155,24 +155,53 @@ IMPORTANTE:
       { role: "user", content: message },
     ];
 
-    // Call Lovable AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-      }),
-    });
+    // Call Lovable AI with retry logic
+    const callAI = async (retries = 3, delay = 1000): Promise<Response> => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          console.log(`AI call attempt ${attempt}/${retries}`);
+          
+          const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${lovableApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages,
+            }),
+          });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("Lovable AI error:", aiResponse.status, errorText);
-      throw new Error("AI service error");
-    }
+          if (response.ok) {
+            return response;
+          }
+
+          const errorText = await response.text();
+          console.error(`AI attempt ${attempt} failed:`, response.status, errorText);
+
+          // Only retry on 5xx errors (server errors)
+          if (response.status >= 500 && attempt < retries) {
+            console.log(`Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2; // Exponential backoff
+            continue;
+          }
+
+          throw new Error(`AI service error: ${response.status}`);
+        } catch (error: any) {
+          if (attempt === retries) {
+            throw error;
+          }
+          console.error(`AI attempt ${attempt} error:`, error.message);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+      throw new Error("AI service unavailable after retries");
+    };
+
+    const aiResponse = await callAI();
 
     const aiData = await aiResponse.json();
     const assistantMessage = aiData.choices[0].message.content;
