@@ -1,0 +1,396 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Search, UserCog, Shield, User, Building2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface UserManagementProps {
+  barbershopId: string;
+}
+
+type AppRole = "admin" | "barber" | "client";
+
+interface UserWithRole {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  created_at: string;
+  role: AppRole;
+  barbershop_id: string | null;
+}
+
+export const UserManagement = ({ barbershopId }: UserManagementProps) => {
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AppRole>("client");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Fetch all profiles with their roles
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["admin-users", barbershopId],
+    queryFn: async () => {
+      // Fetch all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("full_name");
+
+      if (profilesError) throw profilesError;
+
+      // Fetch all user roles
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("*");
+
+      if (rolesError) throw rolesError;
+
+      // Map profiles with their roles for current barbershop
+      const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
+        const userRole = roles.find(
+          (r) => r.user_id === profile.id && r.barbershop_id === barbershopId
+        );
+        
+        return {
+          id: profile.id,
+          full_name: profile.full_name,
+          phone: profile.phone,
+          created_at: profile.created_at,
+          role: userRole?.role || "client",
+          barbershop_id: userRole?.barbershop_id || null,
+        };
+      });
+
+      return usersWithRoles;
+    },
+  });
+
+  // Fetch all barbershops for association
+  const { data: barbershops } = useQuery({
+    queryKey: ["all-barbershops"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershops")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleEditUser = (user: UserWithRole) => {
+    setEditingUser(user);
+    setSelectedRole(user.role);
+    setIsDialogOpen(true);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!editingUser) return;
+
+    try {
+      // Check if user already has a role for this barbershop
+      const { data: existingRole } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", editingUser.id)
+        .eq("barbershop_id", barbershopId)
+        .maybeSingle();
+
+      if (existingRole) {
+        // Update existing role
+        const { error } = await supabase
+          .from("user_roles")
+          .update({ role: selectedRole })
+          .eq("id", existingRole.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new role
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: editingUser.id,
+            role: selectedRole,
+            barbershop_id: barbershopId,
+          });
+
+        if (error) throw error;
+      }
+
+      toast.success(`Função do usuário atualizada para ${getRoleLabel(selectedRole)}`);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setIsDialogOpen(false);
+      setEditingUser(null);
+    } catch (error: any) {
+      console.error("Error updating role:", error);
+      toast.error(error.message || "Erro ao atualizar função do usuário");
+    }
+  };
+
+  const handleRemoveFromBarbershop = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("barbershop_id", barbershopId);
+
+      if (error) throw error;
+
+      toast.success("Usuário removido da barbearia");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (error: any) {
+      console.error("Error removing user:", error);
+      toast.error(error.message || "Erro ao remover usuário");
+    }
+  };
+
+  const getRoleLabel = (role: AppRole) => {
+    switch (role) {
+      case "admin":
+        return "Administrador";
+      case "barber":
+        return "Barbeiro";
+      case "client":
+        return "Cliente";
+      default:
+        return role;
+    }
+  };
+
+  const getRoleBadgeColor = (role: AppRole) => {
+    switch (role) {
+      case "admin":
+        return "bg-primary/20 text-primary border-primary/30";
+      case "barber":
+        return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+      case "client":
+        return "bg-muted text-muted-foreground border-border";
+      default:
+        return "";
+    }
+  };
+
+  const filteredUsers = users?.filter(
+    (user) =>
+      user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone?.includes(searchTerm)
+  );
+
+  if (isLoading) {
+    return (
+      <Card className="border-border">
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground">Carregando usuários...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="w-5 h-5" />
+            Gerenciamento de Usuários
+          </CardTitle>
+          <CardDescription>
+            Gerencie os usuários e suas funções na barbearia
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou telefone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Users Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Função</TableHead>
+                  <TableHead>Cadastrado em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers && filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {user.role === "admin" ? (
+                            <Shield className="w-4 h-4 text-primary" />
+                          ) : (
+                            <User className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          {user.full_name || "Sem nome"}
+                        </div>
+                      </TableCell>
+                      <TableCell>{user.phone || "-"}</TableCell>
+                      <TableCell>
+                        <Badge className={getRoleBadgeColor(user.role)}>
+                          {getRoleLabel(user.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(user.created_at), "dd/MM/yyyy", {
+                          locale: ptBR,
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            Editar Função
+                          </Button>
+                          {user.barbershop_id === barbershopId && user.role !== "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleRemoveFromBarbershop(user.id)}
+                            >
+                              Remover
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        {searchTerm
+                          ? "Nenhum usuário encontrado"
+                          : "Nenhum usuário cadastrado"}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            <Card className="border-border bg-card/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-primary">
+                  {users?.filter((u) => u.role === "admin" && u.barbershop_id === barbershopId).length || 0}
+                </p>
+                <p className="text-sm text-muted-foreground">Administradores</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border bg-card/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-blue-500">
+                  {users?.filter((u) => u.role === "barber" && u.barbershop_id === barbershopId).length || 0}
+                </p>
+                <p className="text-sm text-muted-foreground">Barbeiros</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border bg-card/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold">
+                  {users?.length || 0}
+                </p>
+                <p className="text-sm text-muted-foreground">Total de Usuários</p>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Função do Usuário</DialogTitle>
+            <DialogDescription>
+              Altere a função de {editingUser?.full_name || "usuário"} nesta barbearia
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Usuário</Label>
+              <p className="text-sm text-muted-foreground">
+                {editingUser?.full_name} ({editingUser?.phone || "Sem telefone"})
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nova Função</Label>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Administrador
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="barber">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Barbeiro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="client">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Cliente
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedRole === "admin" && (
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  ⚠️ Administradores têm acesso total ao painel administrativo e podem gerenciar todos os dados da barbearia.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateRole}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
