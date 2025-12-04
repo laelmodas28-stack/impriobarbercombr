@@ -118,20 +118,24 @@ const handler = async (req: Request): Promise<Response> => {
         *,
         services (name, price),
         professionals (name),
-        profiles (full_name, phone, email),
+        profiles (full_name, phone),
         barbershops (id, name, address, whatsapp, mensagem_personalizada)
       `)
       .eq("id", bookingId)
       .single();
 
     if (bookingError || !booking) {
+      console.error("Booking query error:", bookingError);
       throw new Error("Booking not found");
     }
 
     const barbershopId = booking.barbershop_id;
-    const clientEmail = booking.profiles.email;
-    const clientName = booking.profiles.full_name;
-    const clientPhone = booking.profiles.phone;
+    const clientName = booking.profiles?.full_name || "Cliente";
+    const clientPhone = booking.profiles?.phone;
+    
+    // Get client email from auth.users
+    const { data: userData } = await supabase.auth.admin.getUserById(booking.client_id);
+    const clientEmail = userData?.user?.email;
     const date = booking.booking_date;
     const time = booking.booking_time;
     const service = booking.services.name;
