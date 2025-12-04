@@ -5,11 +5,11 @@ import { Calendar, Crown, Scissors, Star, Users, User, Edit } from "lucide-react
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ChatWidget } from "@/components/ChatWidget";
-import { SocialLinks } from "@/components/SocialLinks";
 import { BusinessHours } from "@/components/BusinessHours";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useBarbershop } from "@/hooks/useBarbershop";
 import { useState } from "react";
 import {
   Dialog,
@@ -26,48 +26,10 @@ import { toast } from "sonner";
 const Home = () => {
   const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
+  const { barbershop } = useBarbershop();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-
-  // Buscar barbearia primeiro (prioriza admin logado)
-  const { data: barbershop } = useQuery({
-    queryKey: ["barbershop-home"],
-    queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      
-      if (user?.user) {
-        // Try to get admin's barbershop
-        const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select("barbershop_id")
-          .eq("user_id", user.user.id)
-          .eq("role", "admin")
-          .not("barbershop_id", "is", null)
-          .limit(1)
-          .maybeSingle();
-        
-        if (userRoles?.barbershop_id) {
-          const { data } = await supabase
-            .from("barbershops")
-            .select("*")
-            .eq("id", userRoles.barbershop_id)
-            .single();
-          return data;
-        }
-      }
-      
-      // Fallback: first barbershop
-      const { data, error } = await supabase
-        .from("barbershops")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Buscar serviços filtrados pela barbearia
   const { data: services } = useQuery({
@@ -131,7 +93,7 @@ const Home = () => {
 
       toast.success("Informações atualizadas com sucesso!");
       setIsEditDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["barbershop-home"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
     } catch (error) {
       console.error("Erro ao atualizar:", error);
       toast.error("Erro ao atualizar informações");
