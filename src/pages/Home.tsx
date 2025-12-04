@@ -30,34 +30,7 @@ const Home = () => {
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
-  const { data: services } = useQuery({
-    queryKey: ["services"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .eq("is_active", true)
-        .limit(4);
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: professionals } = useQuery({
-    queryKey: ["professionals"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("professionals")
-        .select("*")
-        .eq("is_active", true)
-        .limit(3);
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  // Buscar barbearia primeiro (prioriza admin logado)
   const { data: barbershop } = useQuery({
     queryKey: ["barbershop-home"],
     queryFn: async () => {
@@ -94,6 +67,44 @@ const Home = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Buscar serviços filtrados pela barbearia
+  const { data: services } = useQuery({
+    queryKey: ["services-home", barbershop?.id],
+    queryFn: async () => {
+      if (!barbershop?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
+        .eq("is_active", true)
+        .limit(4);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barbershop?.id,
+  });
+
+  // Buscar profissionais filtrados pela barbearia
+  const { data: professionals } = useQuery({
+    queryKey: ["professionals-home", barbershop?.id],
+    queryFn: async () => {
+      if (!barbershop?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
+        .eq("is_active", true)
+        .limit(3);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barbershop?.id,
   });
 
   const handleOpenEditDialog = () => {
