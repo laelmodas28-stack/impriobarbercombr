@@ -24,6 +24,40 @@ function checkRateLimit(identifier: string, maxRequests = 20, windowMs = 60000):
   return true;
 }
 
+// Helper to get current date info in Brazil timezone
+function getCurrentDateInfo() {
+  const now = new Date();
+  // Ajustar para horário de Brasília (UTC-3)
+  const brasilOffset = -3 * 60;
+  const localOffset = now.getTimezoneOffset();
+  const brasilTime = new Date(now.getTime() + (localOffset + brasilOffset) * 60 * 1000);
+  
+  const year = brasilTime.getFullYear();
+  const month = String(brasilTime.getMonth() + 1).padStart(2, '0');
+  const day = String(brasilTime.getDate()).padStart(2, '0');
+  const currentDate = `${year}-${month}-${day}`;
+  
+  const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const currentDayOfWeek = dayNames[brasilTime.getDay()];
+  
+  // Calcular amanhã
+  const tomorrow = new Date(brasilTime);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowYear = tomorrow.getFullYear();
+  const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
+  const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0');
+  const tomorrowDate = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`;
+  const tomorrowDayOfWeek = dayNames[tomorrow.getDay()];
+  
+  return {
+    currentDate,
+    currentDayOfWeek,
+    tomorrowDate,
+    tomorrowDayOfWeek,
+    currentTime: `${String(brasilTime.getHours()).padStart(2, '0')}:${String(brasilTime.getMinutes()).padStart(2, '0')}`
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -119,13 +153,16 @@ serve(async (req) => {
       userProfile = data;
     }
 
+    // Get current date info
+    const dateInfo = getCurrentDateInfo();
+
     // Build context for AI
     const servicesText = services && services.length > 0
       ? services.map((s) => `- ${s.name}: R$ ${s.price} (${s.duration_minutes} min)${s.description ? ' - ' + s.description : ''}`).join("\n")
       : "Nenhum serviço disponível no momento";
 
     const professionalsText = professionals && professionals.length > 0
-      ? professionals.map((p) => `- ${p.name}${p.specialties?.length ? ' (Especialidades: ' + p.specialties.join(', ') + ')' : ''}`).join("\n")
+      ? professionals.map((p) => `- ${p.name} (ID: ${p.id})${p.specialties?.length ? ' - Especialidades: ' + p.specialties.join(', ') : ''}`).join("\n")
       : "Nenhum profissional disponível no momento";
 
     const userInfo = userProfile
@@ -135,6 +172,14 @@ serve(async (req) => {
     const systemPrompt = `Você é o assistente oficial da barbearia "${barbershop.name}".
 
 ESTILO DE COMUNICAÇÃO: ${barbershop.mensagem_personalizada || 'Profissional e acolhedor'}
+
+📅 DATA E HORA ATUAL (MUITO IMPORTANTE):
+- HOJE é ${dateInfo.currentDayOfWeek}, ${dateInfo.currentDate}
+- AMANHÃ é ${dateInfo.tomorrowDayOfWeek}, ${dateInfo.tomorrowDate}
+- Hora atual: ${dateInfo.currentTime}
+- Quando o cliente disser "hoje", use a data ${dateInfo.currentDate}
+- Quando o cliente disser "amanhã", use a data ${dateInfo.tomorrowDate}
+- Para outros dias da semana, calcule a data correta baseado em hoje
 
 INFORMAÇÕES DA BARBEARIA:
 ${barbershop.description || ''}
@@ -162,6 +207,7 @@ REGRAS DE AGENDAMENTO:
 - Se o cliente NÃO está logado: informe que precisa fazer login primeiro
 - Se o cliente ESTÁ logado: colete as informações (serviço, data, horário, profissional opcional)
 - Sempre confirme antes de criar o agendamento
+- Use o formato de data YYYY-MM-DD (ex: ${dateInfo.currentDate})
 - Quando o cliente CONFIRMAR o agendamento, retorne no formato JSON:
 {
   "action": "create_booking",
@@ -209,11 +255,10 @@ IMPORTANTE:
           const errorText = await response.text();
           console.error(`AI attempt ${attempt} failed:`, response.status, errorText);
 
-          // Only retry on 5xx errors (server errors)
           if (response.status >= 500 && attempt < retries) {
             console.log(`Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2; // Exponential backoff
+            delay *= 2;
             continue;
           }
 
@@ -240,7 +285,6 @@ IMPORTANTE:
     } catch (aiError: any) {
       console.error("AI service error, using fallback:", aiError.message);
       
-      // Fallback response when AI is unavailable
       const fallbackMessages = [
         `Olá! Sou o assistente da ${barbershop.name}. 💈`,
         "",
@@ -299,21 +343,82 @@ IMPORTANTE:
         }
 
         if (service && professionalId && barbershop) {
+          // Check for booking conflicts
+          const { data: conflictBooking } = await supabase
+            .from("bookings")
+            .select("id")
+            .eq("professional_id", professionalId)
+            .eq("booking_date", bookingData.date)
+            .eq("booking_time", bookingData.time + ":00")
+            .in("status", ["pending", "confirmed"])
+            .maybeSingle();
+
+          if (conflictBooking) {
+            console.log("Booking conflict detected:", conflictBooking.id);
+            // Remove JSON from response and add conflict message
+            const cleanResponse = assistantMessage.replace(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/, "").trim();
+            
+            return new Response(
+              JSON.stringify({
+                response: cleanResponse + `\n\n⚠️ Desculpe, o horário ${bookingData.time} do dia ${bookingData.date} já está ocupado para este profissional. Por favor, escolha outro horário.`,
+                bookingCreated: false,
+              }),
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
+          }
+
           // Create booking
-          const { error: bookingError } = await supabase.from("bookings").insert({
+          const { data: newBooking, error: bookingError } = await supabase.from("bookings").insert({
             client_id: userId,
             service_id: service.id,
             professional_id: professionalId,
             barbershop_id: barbershop.id,
             booking_date: bookingData.date,
-            booking_time: bookingData.time,
+            booking_time: bookingData.time + ":00",
             total_price: service.price,
             status: "pending",
-          });
+          }).select().single();
 
-          if (!bookingError) {
+          if (!bookingError && newBooking) {
             bookingCreated = true;
-            console.log("Booking created successfully for barbershop:", barbershop.name);
+            console.log("Booking created successfully:", newBooking.id);
+
+            // Create notification for the client
+            const professional = professionals?.find(p => p.id === professionalId);
+            const { error: notifError } = await supabase.from("notifications").insert({
+              user_id: userId,
+              barbershop_id: barbershop.id,
+              type: "booking_confirmation",
+              title: "Agendamento Confirmado! ✅",
+              message: `Seu agendamento de ${service.name} foi confirmado para ${bookingData.date} às ${bookingData.time} com ${professional?.name || 'nosso profissional'}.`,
+              booking_id: newBooking.id,
+              read: false,
+            });
+
+            if (notifError) {
+              console.error("Error creating notification:", notifError);
+            } else {
+              console.log("Notification created for booking:", newBooking.id);
+            }
+
+            // Optionally call send-booking-notification for email/SMS
+            try {
+              await fetch(`${supabaseUrl}/functions/v1/send-booking-notification`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  bookingId: newBooking.id,
+                  barbershopId: barbershop.id,
+                }),
+              });
+            } catch (notifFetchError) {
+              console.error("Error calling send-booking-notification:", notifFetchError);
+            }
           } else {
             console.error("Booking creation error:", bookingError);
           }

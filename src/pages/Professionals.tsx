@@ -6,20 +6,27 @@ import { Star, User } from "lucide-react";
 import Header from "@/components/Header";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Professionals = () => {
+  const { barbershop } = useBarbershopContext();
+
   const { data: professionals, isLoading } = useQuery({
-    queryKey: ["professionals"],
+    queryKey: ["professionals", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop?.id) return [];
+      
       const { data, error } = await supabase
         .from("professionals")
         .select("*")
+        .eq("barbershop_id", barbershop.id)
         .eq("is_active", true)
         .order("rating", { ascending: false });
       
       if (error) throw error;
       return data;
     },
+    enabled: !!barbershop?.id,
   });
 
   return (
@@ -34,7 +41,7 @@ const Professionals = () => {
           </p>
         </div>
 
-        {isLoading ? (
+        {isLoading || !barbershop ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Carregando profissionais...</p>
           </div>

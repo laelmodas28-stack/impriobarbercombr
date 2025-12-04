@@ -11,14 +11,15 @@ import Header from "@/components/Header";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, startOfDay, isToday, getHours, getMinutes, parse } from "date-fns";
+import { format, startOfDay, isToday, getHours, getMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { User } from "lucide-react";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Booking = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { barbershop } = useBarbershopContext();
   
   const [selectedService, setSelectedService] = useState(location.state?.selectedService?.id || "");
   const [selectedProfessional, setSelectedProfessional] = useState(location.state?.selectedProfessional?.id || "");
@@ -27,27 +28,35 @@ const Booking = () => {
   const [notes, setNotes] = useState("");
 
   const { data: services } = useQuery({
-    queryKey: ["services"],
+    queryKey: ["booking-services", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop?.id) return [];
+      
       const { data, error } = await supabase
         .from("services")
-        .select("*, barbershop:barbershops(id, name)")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
         .eq("is_active", true);
       if (error) throw error;
       return data;
     },
+    enabled: !!barbershop?.id,
   });
 
   const { data: professionals } = useQuery({
-    queryKey: ["professionals"],
+    queryKey: ["booking-professionals", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop?.id) return [];
+      
       const { data, error } = await supabase
         .from("professionals")
-        .select("*, barbershop:barbershops(id, name)")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
         .eq("is_active", true);
       if (error) throw error;
       return data;
     },
+    enabled: !!barbershop?.id,
   });
 
   const { data: existingBookings } = useQuery({
@@ -68,20 +77,6 @@ const Booking = () => {
     enabled: !!selectedProfessional && !!selectedDate,
   });
 
-  const { data: barbershopHours } = useQuery({
-    queryKey: ["barbershop-hours"],
-    queryFn: async () => {
-      // Buscar dados de horário da primeira barbearia (para simplificar)
-      const { data, error } = await supabase
-        .from("barbershops")
-        .select("opening_time, closing_time")
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
   if (!user) {
     navigate("/auth");
     return null;
@@ -90,8 +85,8 @@ const Booking = () => {
   // Gerar slots de horário dinamicamente baseado nos horários do banco
   const generateTimeSlots = () => {
     const slots: string[] = [];
-    const openTime = barbershopHours?.opening_time || "08:00:00";
-    const closeTime = barbershopHours?.closing_time || "19:00:00";
+    const openTime = barbershop?.opening_time || "08:00:00";
+    const closeTime = barbershop?.closing_time || "19:00:00";
     
     const [openHour] = openTime.split(':').map(Number);
     const [closeHour] = closeTime.split(':').map(Number);
@@ -145,7 +140,7 @@ const Booking = () => {
   const availableTimeSlots = getAvailableTimeSlots();
 
   const handleBooking = async () => {
-    if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime) {
+    if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime || !barbershop) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
@@ -155,20 +150,12 @@ const Booking = () => {
     
     if (!service || !professional) return;
 
-    // Obter barbershop_id do profissional ou serviço selecionado
-    const barbershopId = professional.barbershop_id || service.barbershop_id;
-    
-    if (!barbershopId) {
-      toast.error("Erro ao identificar a barbearia");
-      return;
-    }
-
     try {
       const { data: booking, error } = await supabase.from("bookings").insert({
         client_id: user.id,
         service_id: selectedService,
         professional_id: selectedProfessional,
-        barbershop_id: barbershopId,
+        barbershop_id: barbershop.id,
         booking_date: format(selectedDate, "yyyy-MM-dd"),
         booking_time: selectedTime,
         total_price: service.price,
@@ -190,7 +177,7 @@ const Booking = () => {
         await supabase.functions.invoke("send-booking-notification", {
           body: {
             bookingId: booking?.id,
-            barbershopId: barbershopId,
+            barbershopId: barbershop.id,
             clientEmail: user.email,
             clientName: profile?.full_name || "Cliente",
             clientPhone: profile?.phone,
@@ -203,7 +190,6 @@ const Booking = () => {
         });
       } catch (notifError) {
         console.error("Erro ao enviar notificação:", notifError);
-        // Não bloquear o agendamento se a notificação falhar
       }
 
       toast.success("Agendamento realizado com sucesso!");
@@ -215,6 +201,17 @@ const Booking = () => {
   };
 
   const selectedServiceData = services?.find(s => s.id === selectedService);
+
+  if (!barbershop) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
