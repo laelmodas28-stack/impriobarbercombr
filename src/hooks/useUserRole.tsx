@@ -31,10 +31,15 @@ export const useUserRole = (barbershopId?: string) => {
     if (!userRole) return false;
     if (barbershopId) {
       return userRole.some(
-        role => role.role === 'admin' && role.barbershop_id === barbershopId
+        role => (role.role === 'admin' || role.role === 'super_admin') && role.barbershop_id === barbershopId
       );
     }
-    return userRole.some(role => role.role === 'admin');
+    return userRole.some(role => role.role === 'admin' || role.role === 'super_admin');
+  };
+
+  const isSuperAdmin = () => {
+    if (!userRole) return false;
+    return userRole.some(role => role.role === 'super_admin');
   };
 
   const isBarbershopOwner = (barbershopId: string) => {
@@ -46,6 +51,7 @@ export const useUserRole = (barbershopId?: string) => {
     isLoading, 
     error, 
     isAdmin: isAdmin(), 
+    isSuperAdmin: isSuperAdmin(),
     isBarbershopOwner 
   };
 };

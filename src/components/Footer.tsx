@@ -1,36 +1,21 @@
 import { Link } from "react-router-dom";
 import { Crown } from "lucide-react";
 import { SocialLinks } from "./SocialLinks";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
+
 const Footer = () => {
-  const {
-    data: info
-  } = useQuery({
-    queryKey: ["barbershop-info-footer"],
-    queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("barbershop_info").select("*").single();
-      if (error) throw error;
-      return data;
-    }
-  });
-  const formatTime = (time: string | null) => {
-    if (!time) return "";
-    return time.substring(0, 5);
-  };
+  const { barbershop: info } = useBarbershopContext();
+
   return <footer className="border-t border-border bg-card/50 mt-20">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Crown className="text-primary" />
-              <span className="font-bold text-lg">IMPÉRIO BARBER</span>
+              <span className="font-bold text-lg">{info?.name || "IMPÉRIO BARBER"}</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Barbearia premium com atendimento de excelência
+              {info?.mensagem_personalizada || "Barbearia premium com atendimento de excelência"}
             </p>
             <SocialLinks whatsapp={info?.whatsapp} instagram={info?.instagram} tiktok={info?.tiktok} />
           </div>
@@ -57,7 +42,7 @@ const Footer = () => {
         </div>
         
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} IMPÉRIO BARBER. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {info?.name || "IMPÉRIO BARBER"}. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>;
