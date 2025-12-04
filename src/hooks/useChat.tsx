@@ -8,7 +8,7 @@ interface Message {
   content: string;
 }
 
-export const useChat = () => {
+export const useChat = (barbershopId?: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
@@ -27,6 +27,7 @@ export const useChat = () => {
           message: content,
           history: messages,
           userId: user?.id,
+          barbershopId: barbershopId,
         },
       });
 
