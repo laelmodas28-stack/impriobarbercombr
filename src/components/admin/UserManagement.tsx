@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Search, UserCog, Shield, User, Building2, Loader2, AlertTriangle } from "lucide-react";
+import { Search, UserCog, Shield, User, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -38,56 +38,59 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
-  // Fetch all profiles with their roles
+  // Fetch only users related to THIS barbershop
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["admin-users", barbershopId],
     queryFn: async () => {
-      // Fetch all profiles
+      // 1. Fetch clients from barbershop_clients table
+      const { data: barbershopClients, error: clientsError } = await supabase
+        .from("barbershop_clients")
+        .select("client_id")
+        .eq("barbershop_id", barbershopId);
+
+      if (clientsError) throw clientsError;
+
+      // 2. Fetch users with roles in this barbershop
+      const { data: rolesInBarbershop, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("barbershop_id", barbershopId);
+
+      if (rolesError) throw rolesError;
+
+      // Combine unique user IDs
+      const clientIds = barbershopClients?.map(c => c.client_id) || [];
+      const roleUserIds = rolesInBarbershop?.map(r => r.user_id) || [];
+      const uniqueUserIds = [...new Set([...clientIds, ...roleUserIds])];
+
+      if (uniqueUserIds.length === 0) {
+        return [];
+      }
+
+      // 3. Fetch profiles for these users only
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
+        .in("id", uniqueUserIds)
         .order("full_name");
 
       if (profilesError) throw profilesError;
 
-      // Fetch all user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
-
-      if (rolesError) throw rolesError;
-
       // Map profiles with their roles for current barbershop
       const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
-        const userRole = roles.find(
-          (r) => r.user_id === profile.id && r.barbershop_id === barbershopId
-        );
+        const userRole = rolesInBarbershop?.find(r => r.user_id === profile.id);
         
         return {
           id: profile.id,
           full_name: profile.full_name,
           phone: profile.phone,
           created_at: profile.created_at,
-          role: userRole?.role || "client",
-          barbershop_id: userRole?.barbershop_id || null,
+          role: (userRole?.role as AppRole) || "client",
+          barbershop_id: userRole ? barbershopId : null,
         };
       });
 
       return usersWithRoles;
-    },
-  });
-
-  // Fetch all barbershops for association
-  const { data: barbershops } = useQuery({
-    queryKey: ["all-barbershops"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershops")
-        .select("id, name")
-        .order("name");
-
-      if (error) throw error;
-      return data;
     },
   });
 
@@ -140,7 +143,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
       }
 
       toast.success(`Função do usuário atualizada para ${getRoleLabel(selectedRole)}`);
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users", barbershopId] });
       setIsDialogOpen(false);
       setEditingUser(null);
     } catch (error: any) {
@@ -168,7 +171,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
       if (error) throw error;
 
       toast.success("Usuário removido da barbearia");
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users", barbershopId] });
     } catch (error: any) {
       console.error("Error removing user:", error);
       toast.error(error.message || "Erro ao remover usuário");
@@ -177,7 +180,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
     }
   };
 
-const getRoleLabel = (role: AppRole) => {
+  const getRoleLabel = (role: AppRole) => {
     switch (role) {
       case "super_admin":
         return "Super Admin";
@@ -236,7 +239,7 @@ const getRoleLabel = (role: AppRole) => {
           <Button 
             variant="outline" 
             className="mt-4"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-users"] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-users", barbershopId] })}
           >
             Tentar novamente
           </Button>
@@ -340,7 +343,7 @@ const getRoleLabel = (role: AppRole) => {
                       <p className="text-muted-foreground">
                         {searchTerm
                           ? "Nenhum usuário encontrado"
-                          : "Nenhum usuário cadastrado"}
+                          : "Nenhum usuário cadastrado nesta barbearia"}
                       </p>
                     </TableCell>
                   </TableRow>
@@ -354,7 +357,7 @@ const getRoleLabel = (role: AppRole) => {
             <Card className="border-border bg-card/50">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-primary">
-                  {users?.filter((u) => u.role === "admin" && u.barbershop_id === barbershopId).length || 0}
+                  {users?.filter((u) => u.role === "admin").length || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Administradores</p>
               </CardContent>
@@ -362,7 +365,7 @@ const getRoleLabel = (role: AppRole) => {
             <Card className="border-border bg-card/50">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-blue-500">
-                  {users?.filter((u) => u.role === "barber" && u.barbershop_id === barbershopId).length || 0}
+                  {users?.filter((u) => u.role === "barber").length || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Barbeiros</p>
               </CardContent>

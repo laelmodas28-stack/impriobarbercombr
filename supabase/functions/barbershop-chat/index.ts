@@ -37,11 +37,14 @@ serve(async (req) => {
         role: z.enum(['user', 'assistant']),
         content: z.string().max(5000)
       })).max(50).optional().default([]),
-      userId: z.string().uuid().optional()
+      userId: z.string().uuid().optional(),
+      barbershopId: z.string().uuid().optional()
     });
 
     const body = await req.json();
-    const { message, history, userId } = chatSchema.parse(body);
+    const { message, history, userId, barbershopId } = chatSchema.parse(body);
+
+    console.log("Chat request received:", { userId, barbershopId, messageLength: message.length });
 
     // Rate limiting
     const rateLimitId = userId || 'anonymous';
@@ -61,23 +64,49 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch barbershop data
-    const { data: barbershop } = await supabase
-      .from("barbershops")
-      .select("*")
-      .single();
+    // Fetch barbershop data - filter by barbershopId if provided
+    let barbershopQuery = supabase.from("barbershops").select("*");
+    
+    if (barbershopId) {
+      barbershopQuery = barbershopQuery.eq("id", barbershopId);
+    }
+    
+    const { data: barbershop } = await barbershopQuery.single();
 
-    // Fetch services
+    if (!barbershop) {
+      console.error("Barbershop not found:", barbershopId);
+      return new Response(
+        JSON.stringify({
+          response: "Desculpe, não encontrei informações da barbearia. Tente novamente mais tarde.",
+          bookingCreated: false,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log("Fetching data for barbershop:", barbershop.name, barbershop.id);
+
+    // Fetch services - filtered by barbershop
     const { data: services } = await supabase
       .from("services")
       .select("*")
+      .eq("barbershop_id", barbershop.id)
       .eq("is_active", true);
 
-    // Fetch professionals
+    // Fetch professionals - filtered by barbershop
     const { data: professionals } = await supabase
       .from("professionals")
       .select("*")
+      .eq("barbershop_id", barbershop.id)
       .eq("is_active", true);
+
+    console.log("Data fetched:", { 
+      barbershopName: barbershop.name,
+      servicesCount: services?.length || 0, 
+      professionalsCount: professionals?.length || 0 
+    });
 
     // Get user profile if logged in
     let userProfile = null;
@@ -91,29 +120,29 @@ serve(async (req) => {
     }
 
     // Build context for AI
-    const servicesText = services
-      ?.map((s) => `- ${s.name}: R$ ${s.price} (${s.duration_minutes} min)${s.description ? ' - ' + s.description : ''}`)
-      .join("\n") || "Nenhum serviço disponível";
+    const servicesText = services && services.length > 0
+      ? services.map((s) => `- ${s.name}: R$ ${s.price} (${s.duration_minutes} min)${s.description ? ' - ' + s.description : ''}`).join("\n")
+      : "Nenhum serviço disponível no momento";
 
-    const professionalsText = professionals
-      ?.map((p) => `- ${p.name}${p.specialties?.length ? ' (Especialidades: ' + p.specialties.join(', ') + ')' : ''}`)
-      .join("\n") || "Nenhum profissional disponível";
+    const professionalsText = professionals && professionals.length > 0
+      ? professionals.map((p) => `- ${p.name}${p.specialties?.length ? ' (Especialidades: ' + p.specialties.join(', ') + ')' : ''}`).join("\n")
+      : "Nenhum profissional disponível no momento";
 
     const userInfo = userProfile
       ? `Cliente logado: ${userProfile.full_name}${userProfile.phone ? ' - Tel: ' + userProfile.phone : ''}`
       : "Cliente não está logado";
 
-    const systemPrompt = `Você é o assistente oficial da barbearia "${barbershop?.name || 'Império Barber'}".
+    const systemPrompt = `Você é o assistente oficial da barbearia "${barbershop.name}".
 
-ESTILO DE COMUNICAÇÃO: ${barbershop?.mensagem_personalizada || 'Profissional e acolhedor'}
+ESTILO DE COMUNICAÇÃO: ${barbershop.mensagem_personalizada || 'Profissional e acolhedor'}
 
 INFORMAÇÕES DA BARBEARIA:
-${barbershop?.description || ''}
-Endereço: ${barbershop?.address || 'Não informado'}
-Telefone: ${barbershop?.phone || 'Não informado'}
-WhatsApp: ${barbershop?.whatsapp || 'Não informado'}
-Horário: ${barbershop?.opening_time || '09:00'} às ${barbershop?.closing_time || '19:00'}
-Dias: ${barbershop?.opening_days?.join(', ') || 'Segunda a Sábado'}
+${barbershop.description || ''}
+Endereço: ${barbershop.address || 'Não informado'}
+Telefone: ${barbershop.phone || 'Não informado'}
+WhatsApp: ${barbershop.whatsapp || 'Não informado'}
+Horário: ${barbershop.opening_time || '09:00'} às ${barbershop.closing_time || '19:00'}
+Dias: ${barbershop.opening_days?.join(', ') || 'Segunda a Sábado'}
 
 SERVIÇOS DISPONÍVEIS:
 ${servicesText}
@@ -213,20 +242,20 @@ IMPORTANTE:
       
       // Fallback response when AI is unavailable
       const fallbackMessages = [
-        `Olá! Sou o assistente da ${barbershop?.name || 'barbearia'}. 💈`,
+        `Olá! Sou o assistente da ${barbershop.name}. 💈`,
         "",
         "No momento estou com dificuldades técnicas, mas posso te ajudar com informações básicas:",
         "",
-        "📍 **Endereço:** " + (barbershop?.address || "Consulte nosso WhatsApp"),
-        "⏰ **Horário:** " + (barbershop?.opening_time || "09:00") + " às " + (barbershop?.closing_time || "19:00"),
-        "📅 **Dias:** " + (barbershop?.opening_days?.join(", ") || "Segunda a Sábado"),
+        "📍 **Endereço:** " + (barbershop.address || "Consulte nosso WhatsApp"),
+        "⏰ **Horário:** " + (barbershop.opening_time || "09:00") + " às " + (barbershop.closing_time || "19:00"),
+        "📅 **Dias:** " + (barbershop.opening_days?.join(", ") || "Segunda a Sábado"),
         "",
         "**Nossos Serviços:**",
         servicesText,
         "",
         "**Para agendar:**",
         userProfile 
-          ? "Use a página de agendamento ou entre em contato pelo WhatsApp: " + (barbershop?.whatsapp || "")
+          ? "Use a página de agendamento ou entre em contato pelo WhatsApp: " + (barbershop.whatsapp || "")
           : "Faça login primeiro e depois acesse a página de agendamento.",
         "",
         "Em breve estarei funcionando normalmente! 🙏"
@@ -284,6 +313,9 @@ IMPORTANTE:
 
           if (!bookingError) {
             bookingCreated = true;
+            console.log("Booking created successfully for barbershop:", barbershop.name);
+          } else {
+            console.error("Booking creation error:", bookingError);
           }
         }
       } catch (e) {

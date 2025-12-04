@@ -5,13 +5,17 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { cn } from "@/lib/utils";
 
 export const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const { messages, isLoading, sendMessage } = useChat();
+  const { barbershop } = useBarbershopContext();
+  const { messages, isLoading, sendMessage } = useChat(barbershop?.id);
   const { user } = useAuth();
+
+  const barbershopName = barbershop?.name || "Barbearia";
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -48,7 +52,7 @@ export const ChatWidget = () => {
             <div className="flex items-center gap-3">
               <MessageCircle className="h-5 w-5 text-primary-foreground" />
               <div>
-                <h3 className="font-bold text-primary-foreground">Império Barber</h3>
+                <h3 className="font-bold text-primary-foreground">{barbershopName}</h3>
                 <p className="text-xs text-primary-foreground/80">Assistente Virtual</p>
               </div>
             </div>
