@@ -18,7 +18,7 @@ interface UserManagementProps {
   barbershopId: string;
 }
 
-type AppRole = "admin" | "barber" | "client";
+type AppRole = "admin" | "barber" | "client" | "super_admin";
 
 interface UserWithRole {
   id: string;
@@ -177,8 +177,10 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
     }
   };
 
-  const getRoleLabel = (role: AppRole) => {
+const getRoleLabel = (role: AppRole) => {
     switch (role) {
+      case "super_admin":
+        return "Super Admin";
       case "admin":
         return "Administrador";
       case "barber":
@@ -192,6 +194,8 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
 
   const getRoleBadgeColor = (role: AppRole) => {
     switch (role) {
+      case "super_admin":
+        return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
       case "admin":
         return "bg-primary/20 text-primary border-primary/30";
       case "barber":

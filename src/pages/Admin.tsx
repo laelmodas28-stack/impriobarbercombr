@@ -71,7 +71,7 @@ const Admin = () => {
   const { barbershop } = useBarbershop();
   
   // Check if user is admin
-  const { isAdmin, isBarbershopOwner, isLoading: roleLoading } = useUserRole(barbershop?.id);
+  const { isAdmin, isSuperAdmin, isBarbershopOwner, isLoading: roleLoading } = useUserRole(barbershop?.id);
   
   // Get barbershop clients
   const { clients, getInactiveClients } = useBarbershopClients(barbershop?.id);
@@ -325,6 +325,7 @@ const Admin = () => {
 
       toast.success("Logo atualizada com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["barbershop"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop-context"] });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao fazer upload da logo");
@@ -344,6 +345,7 @@ const Admin = () => {
 
       toast.success("Nome atualizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["barbershop"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop-context"] });
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar nome");
@@ -633,10 +635,12 @@ const Admin = () => {
             <TabsTrigger value="notifications">
               🔔 Notificações
             </TabsTrigger>
-            <TabsTrigger value="codes">
-              <Key className="w-4 h-4 mr-2" />
-              Códigos
-            </TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="codes">
+                <Key className="w-4 h-4 mr-2" />
+                Códigos
+              </TabsTrigger>
+            )}
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
               Configurações
@@ -799,10 +803,12 @@ const Admin = () => {
             {barbershop && <UserManagement barbershopId={barbershop.id} />}
           </TabsContent>
 
-          {/* Códigos de Acesso */}
-          <TabsContent value="codes" className="space-y-6">
-            <RegistrationCodeManager />
-          </TabsContent>
+          {/* Códigos de Acesso - Apenas Super Admin */}
+          {isSuperAdmin && (
+            <TabsContent value="codes" className="space-y-6">
+              <RegistrationCodeManager />
+            </TabsContent>
+          )}
 
           {/* Profissionais */}
           <TabsContent value="professionals" className="space-y-6">

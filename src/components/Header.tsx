@@ -9,26 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "./NotificationBell";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Header = () => {
   const { user, signOut } = useAuth();
-
-  const { data: barbershopInfo } = useQuery({
-    queryKey: ["barbershop-header"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershops")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { barbershop: barbershopInfo } = useBarbershopContext();
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
