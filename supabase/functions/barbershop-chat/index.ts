@@ -198,16 +198,55 @@ IMPORTANTE:
           delay *= 2;
         }
       }
-      throw new Error("AI service unavailable after retries");
+      throw new Error("AI_UNAVAILABLE");
     };
 
-    const aiResponse = await callAI();
+    let assistantMessage = "";
+    let bookingCreated = false;
 
-    const aiData = await aiResponse.json();
-    const assistantMessage = aiData.choices[0].message.content;
+    try {
+      const aiResponse = await callAI();
+      const aiData = await aiResponse.json();
+      assistantMessage = aiData.choices[0].message.content;
+    } catch (aiError: any) {
+      console.error("AI service error, using fallback:", aiError.message);
+      
+      // Fallback response when AI is unavailable
+      const fallbackMessages = [
+        `Olá! Sou o assistente da ${barbershop?.name || 'barbearia'}. 💈`,
+        "",
+        "No momento estou com dificuldades técnicas, mas posso te ajudar com informações básicas:",
+        "",
+        "📍 **Endereço:** " + (barbershop?.address || "Consulte nosso WhatsApp"),
+        "⏰ **Horário:** " + (barbershop?.opening_time || "09:00") + " às " + (barbershop?.closing_time || "19:00"),
+        "📅 **Dias:** " + (barbershop?.opening_days?.join(", ") || "Segunda a Sábado"),
+        "",
+        "**Nossos Serviços:**",
+        servicesText,
+        "",
+        "**Para agendar:**",
+        userProfile 
+          ? "Use a página de agendamento ou entre em contato pelo WhatsApp: " + (barbershop?.whatsapp || "")
+          : "Faça login primeiro e depois acesse a página de agendamento.",
+        "",
+        "Em breve estarei funcionando normalmente! 🙏"
+      ];
+      
+      assistantMessage = fallbackMessages.join("\n");
+      
+      return new Response(
+        JSON.stringify({
+          response: assistantMessage,
+          bookingCreated: false,
+          fallbackMode: true,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Check if AI wants to create a booking
-    let bookingCreated = false;
     const jsonMatch = assistantMessage.match(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/);
     
     if (jsonMatch && userId) {
