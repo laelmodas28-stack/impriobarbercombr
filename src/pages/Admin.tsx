@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -28,6 +28,7 @@ import { SubscriptionPlanForm } from "@/components/admin/SubscriptionPlanForm";
 import { useSubscriptions } from "@/hooks/useSubscriptions";
 import { BarberInviteForm } from "@/components/admin/BarberInviteForm";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { RegistrationCodeManager } from "@/components/admin/RegistrationCodeManager";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -632,6 +633,10 @@ const Admin = () => {
             <TabsTrigger value="notifications">
               🔔 Notificações
             </TabsTrigger>
+            <TabsTrigger value="codes">
+              <Key className="w-4 h-4 mr-2" />
+              Códigos
+            </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
               Configurações
@@ -792,6 +797,11 @@ const Admin = () => {
           {/* Usuários */}
           <TabsContent value="users" className="space-y-6">
             {barbershop && <UserManagement barbershopId={barbershop.id} />}
+          </TabsContent>
+
+          {/* Códigos de Acesso */}
+          <TabsContent value="codes" className="space-y-6">
+            <RegistrationCodeManager />
           </TabsContent>
 
           {/* Profissionais */}

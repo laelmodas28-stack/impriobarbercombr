@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Search, UserCog, Shield, User, Building2 } from "lucide-react";
+import { Search, UserCog, Shield, User, Building2, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -35,9 +35,11 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>("client");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
   // Fetch all profiles with their roles
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, error } = useQuery({
     queryKey: ["admin-users", barbershopId],
     queryFn: async () => {
       // Fetch all profiles
@@ -98,6 +100,15 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
   const handleUpdateRole = async () => {
     if (!editingUser) return;
 
+    // Confirmation for admin role
+    if (selectedRole === "admin") {
+      const confirmed = confirm(
+        `Tem certeza que deseja dar permissão de ADMINISTRADOR para ${editingUser.full_name}?\n\nAdministradores têm acesso total ao painel e podem gerenciar todos os dados da barbearia.`
+      );
+      if (!confirmed) return;
+    }
+
+    setIsUpdating(true);
     try {
       // Check if user already has a role for this barbershop
       const { data: existingRole } = await supabase
@@ -135,10 +146,18 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
     } catch (error: any) {
       console.error("Error updating role:", error);
       toast.error(error.message || "Erro ao atualizar função do usuário");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleRemoveFromBarbershop = async (userId: string) => {
+  const handleRemoveFromBarbershop = async (userId: string, userName: string) => {
+    const confirmed = confirm(
+      `Tem certeza que deseja remover ${userName} da barbearia?\n\nEsta ação pode ser revertida adicionando o usuário novamente.`
+    );
+    if (!confirmed) return;
+
+    setIsRemoving(userId);
     try {
       const { error } = await supabase
         .from("user_roles")
@@ -153,6 +172,8 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
     } catch (error: any) {
       console.error("Error removing user:", error);
       toast.error(error.message || "Erro ao remover usuário");
+    } finally {
+      setIsRemoving(null);
     }
   };
 
@@ -192,7 +213,29 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
     return (
       <Card className="border-border">
         <CardContent className="p-8 text-center">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
           <p className="text-muted-foreground">Carregando usuários...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-border">
+        <CardContent className="p-8 text-center">
+          <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-destructive" />
+          <p className="text-destructive font-medium">Erro ao carregar usuários</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {(error as any).message || "Tente novamente mais tarde"}
+          </p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-users"] })}
+          >
+            Tentar novamente
+          </Button>
         </CardContent>
       </Card>
     );
@@ -273,9 +316,14 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => handleRemoveFromBarbershop(user.id)}
+                              onClick={() => handleRemoveFromBarbershop(user.id, user.full_name)}
+                              disabled={isRemoving === user.id}
                             >
-                              Remover
+                              {isRemoving === user.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                "Remover"
+                              )}
                             </Button>
                           )}
                         </div>
@@ -384,10 +432,13 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isUpdating}>
               Cancelar
             </Button>
-            <Button onClick={handleUpdateRole}>Salvar Alterações</Button>
+            <Button onClick={handleUpdateRole} disabled={isUpdating}>
+              {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Salvar Alterações
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

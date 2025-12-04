@@ -1,20 +1,30 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Header from "@/components/Header";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, User } from "lucide-react";
+import { Calendar, Clock, Scissors, User, Edit2, Save, X, Loader2, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 const Account = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -23,6 +33,23 @@ const Account = () => {
         .select("*")
         .eq("id", user.id)
         .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Get user role
+  const { data: userRole } = useQuery({
+    queryKey: ["user-role", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role, barbershop_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -51,10 +78,53 @@ const Account = () => {
     enabled: !!user,
   });
 
+  // Set form values when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || "");
+      setPhone(profile.phone || "");
+    }
+  }, [profile]);
+
   if (!user) {
     navigate("/auth");
     return null;
   }
+
+  const handleSave = async () => {
+    if (!fullName.trim()) {
+      toast.error("O nome é obrigatório");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName.trim(),
+          phone: phone.trim() || null,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast.success("Perfil atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error(error.message || "Erro ao atualizar perfil");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFullName(profile?.full_name || "");
+    setPhone(profile?.phone || "");
+    setIsEditing(false);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,6 +156,32 @@ const Account = () => {
     }
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "Administrador";
+      case "barber":
+        return "Barbeiro";
+      case "client":
+        return "Cliente";
+      default:
+        return role;
+    }
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-primary/20 text-primary border-primary/30";
+      case "barber":
+        return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+      case "client":
+        return "bg-muted text-muted-foreground border-border";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -100,24 +196,97 @@ const Account = () => {
           {/* Profile Card */}
           <Card className="border-border mb-8">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="text-primary" />
-                Informações Pessoais
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <User className="text-primary" />
+                  Informações Pessoais
+                </CardTitle>
+                {!isEditing ? (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
+                      <X className="w-4 h-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Salvar
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Nome</p>
-                <p className="text-lg font-semibold">{profile?.full_name || "Não informado"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="text-lg">{user.email}</p>
-              </div>
-              {profile?.phone && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Telefone</p>
-                  <p className="text-lg">{profile.phone}</p>
+            <CardContent className="space-y-4">
+              {profileLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : isEditing ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Nome *</Label>
+                    <Input
+                      id="fullName"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Seu nome completo"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      value={user.email || ""}
+                      disabled
+                      className="opacity-50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      O email não pode ser alterado
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nome</p>
+                    <p className="text-lg font-semibold">{profile?.full_name || "Não informado"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="text-lg">{user.email}</p>
+                  </div>
+                  {profile?.phone && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Telefone</p>
+                      <p className="text-lg">{profile.phone}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Função</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {userRole?.role === "admin" && <Shield className="w-4 h-4 text-primary" />}
+                      <Badge className={getRoleBadgeColor(userRole?.role || "client")}>
+                        {getRoleLabel(userRole?.role || "client")}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
