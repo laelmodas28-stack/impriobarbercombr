@@ -38,6 +38,11 @@ const Services = () => {
           <p className="text-muted-foreground text-lg">
             Conheça todos os serviços premium que oferecemos
           </p>
+          {barbershop && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Mostrando serviços de: <span className="font-semibold text-primary">{barbershop.name}</span>
+            </p>
+          )}
         </div>
 
         {isLoading || !barbershop ? (
