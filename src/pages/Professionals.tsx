@@ -39,6 +39,11 @@ const Professionals = () => {
           <p className="text-muted-foreground text-lg">
             Conheça nossa equipe de barbeiros especializados
           </p>
+          {barbershop && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Mostrando profissionais de: <span className="font-semibold text-primary">{barbershop.name}</span>
+            </p>
+          )}
         </div>
 
         {isLoading || !barbershop ? (
