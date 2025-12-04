@@ -24,6 +24,8 @@ import DashboardMetrics from "@/components/admin/DashboardMetrics";
 import ThemeSelector from "@/components/admin/ThemeSelector";
 import ProfessionalForm from "@/components/admin/ProfessionalForm";
 import ServiceForm from "@/components/admin/ServiceForm";
+import { ProfessionalCard } from "@/components/admin/ProfessionalCard";
+import { ServiceCard } from "@/components/admin/ServiceCard";
 import { SubscriptionPlanForm } from "@/components/admin/SubscriptionPlanForm";
 import { useSubscriptions } from "@/hooks/useSubscriptions";
 import { BarberInviteForm } from "@/components/admin/BarberInviteForm";
@@ -832,36 +834,13 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                 <div className="grid gap-4">
+               <div className="grid gap-4">
                    {professionals?.map((professional) => (
-                     <Card key={professional.id} className="border-border">
-                       <CardContent className="p-4">
-                         <div className="flex gap-4 items-start">
-                           <div className="w-32">
-                             <ImageUpload
-                               label=""
-                               currentImageUrl={professional.photo_url}
-                               onImageSelect={(file) => handleProfessionalPhotoUpload(professional.id, file)}
-                               maxSizeMB={5}
-                               maxWidth={800}
-                               maxHeight={800}
-                               aspectRatio="square"
-                               className="w-full"
-                             />
-                           </div>
-                           <div className="flex-1">
-                             <p className="font-semibold text-lg">{professional.name}</p>
-                             <p className="text-sm text-muted-foreground mb-2">{professional.bio}</p>
-                             <div className="flex items-center gap-2">
-                               <span className="text-primary font-semibold">⭐ {professional.rating}</span>
-                               <Badge variant={professional.is_active ? "default" : "secondary"}>
-                                 {professional.is_active ? "Ativo" : "Inativo"}
-                               </Badge>
-                             </div>
-                           </div>
-                         </div>
-                       </CardContent>
-                     </Card>
+                     <ProfessionalCard
+                       key={professional.id}
+                       professional={professional}
+                       onUpdate={() => queryClient.invalidateQueries({ queryKey: ["admin-professionals"] })}
+                     />
                    ))}
                  </div>
               </CardContent>
@@ -884,39 +863,11 @@ const Admin = () => {
               <CardContent>
                  <div className="grid gap-4">
                    {services?.map((service) => (
-                     <Card key={service.id} className="border-border">
-                       <CardContent className="p-4">
-                         <div className="flex gap-4 items-start">
-                           <div className="w-32">
-                             <ImageUpload
-                               label=""
-                               currentImageUrl={service.image_url}
-                               onImageSelect={(file) => handleServiceImageUpload(service.id, file)}
-                               maxSizeMB={5}
-                               maxWidth={800}
-                               maxHeight={800}
-                               aspectRatio="square"
-                               className="w-full"
-                             />
-                           </div>
-                           <div className="flex-1">
-                             <div className="flex justify-between items-start">
-                               <div>
-                                 <p className="font-semibold text-lg">{service.name}</p>
-                                 <p className="text-sm text-muted-foreground mb-2">{service.description}</p>
-                                 <p className="text-sm">
-                                   <span className="text-primary font-bold">R$ {service.price}</span>
-                                   <span className="text-muted-foreground ml-2">• {service.duration_minutes} min</span>
-                                 </p>
-                               </div>
-                               <Badge variant={service.is_active ? "default" : "secondary"}>
-                                 {service.is_active ? "Ativo" : "Inativo"}
-                               </Badge>
-                             </div>
-                           </div>
-                         </div>
-                       </CardContent>
-                     </Card>
+                     <ServiceCard
+                       key={service.id}
+                       service={service}
+                       onUpdate={() => queryClient.invalidateQueries({ queryKey: ["admin-services"] })}
+                     />
                    ))}
                  </div>
               </CardContent>
