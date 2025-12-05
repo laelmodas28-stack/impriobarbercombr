@@ -84,16 +84,19 @@ const FinancialDashboard = ({
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [customFilterType, setCustomFilterType] = useState<CustomFilterType>(null);
 
-  // Get available years from bookings
+  // Get available years - dynamic range from 2020 to current year + 5
   const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    bookings.forEach(b => {
-      years.add(new Date(b.booking_date).getFullYear());
-    });
-    // Add current year if not present
-    years.add(new Date().getFullYear());
-    return Array.from(years).sort((a, b) => b - a);
-  }, [bookings]);
+    const currentYear = new Date().getFullYear();
+    const startYear = 2020;
+    const endYear = currentYear + 5;
+    const years: number[] = [];
+    
+    for (let year = endYear; year >= startYear; year--) {
+      years.push(year);
+    }
+    
+    return years;
+  }, []);
 
   // Handle quick filter selection
   const handleQuickFilter = (p: PeriodFilter) => {
@@ -402,6 +405,9 @@ const FinancialDashboard = ({
                       initialFocus
                       className="p-3 pointer-events-auto"
                       locale={ptBR}
+                      captionLayout="dropdown-buttons"
+                      fromYear={2020}
+                      toYear={new Date().getFullYear() + 5}
                     />
                   </PopoverContent>
                 </Popover>
