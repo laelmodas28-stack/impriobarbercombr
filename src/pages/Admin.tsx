@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -21,6 +21,7 @@ import { useBarbershopClients } from "@/hooks/useBarbershopClients";
 import ImageUpload from "@/components/ImageUpload";
 import { resizeImage } from "@/lib/imageUtils";
 import DashboardMetrics from "@/components/admin/DashboardMetrics";
+import FinancialDashboard from "@/components/admin/FinancialDashboard";
 import ThemeSelector from "@/components/admin/ThemeSelector";
 import ProfessionalForm from "@/components/admin/ProfessionalForm";
 import ServiceForm from "@/components/admin/ServiceForm";
@@ -601,10 +602,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-11 gap-1">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="financial">
+              <Wallet className="w-4 h-4 mr-2" />
+              Financeiro
             </TabsTrigger>
             <TabsTrigger value="bookings">
               <Calendar className="w-4 h-4 mr-2" />
@@ -657,6 +662,17 @@ const Admin = () => {
             </div>
             
             {bookings && <DashboardMetrics bookings={bookings} />}
+          </TabsContent>
+
+          {/* Financeiro */}
+          <TabsContent value="financial" className="space-y-6">
+            {bookings && professionals && services && (
+              <FinancialDashboard 
+                bookings={bookings} 
+                professionals={professionals} 
+                services={services} 
+              />
+            )}
           </TabsContent>
 
           {/* Agendamentos */}
