@@ -801,6 +801,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_profile: {
+        Args: { _profile_id: string; _viewer_id: string }
+        Returns: boolean
+      }
       expire_subscriptions: { Args: never; Returns: undefined }
       has_active_subscription: {
         Args: {
