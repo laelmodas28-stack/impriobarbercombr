@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,48 +12,39 @@ export const useBarbershopContext = () => {
   const params = useParams<{ slug?: string }>();
   const location = useLocation();
   
-  // Tentar usar o contexto do BarbershopProvider
+  // Tentar usar o contexto do BarbershopProvider (pode ser undefined)
   const contextValue = useContext(BarbershopContext);
-  
-  // Se estamos dentro de um BarbershopProvider com dados, usar esses dados
-  if (contextValue?.barbershop) {
-    return { 
-      barbershop: contextValue.barbershop, 
-      isLoading: contextValue.isLoading, 
-      error: contextValue.error,
-      baseUrl: contextValue.baseUrl
-    };
-  }
 
-  // Verificar slug na URL
-  const urlSlug = params.slug;
-  
-  // Verificar localStorage
-  const savedSlug = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+  // Verificar slug na URL ou localStorage de forma síncrona
+  const resolvedSlug = useMemo(() => {
+    const urlSlug = params.slug;
+    if (urlSlug) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, urlSlug);
+      }
+      return urlSlug;
+    }
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEY);
+    }
+    return null;
+  }, [params.slug, location.pathname]);
 
-  const { data: barbershop, isLoading, error } = useQuery({
-    queryKey: ["barbershop-context", user?.id, urlSlug, savedSlug],
+  // Query para buscar barbearia - sempre executa mas pode usar dados do contexto
+  const { data: queriedBarbershop, isLoading: queryLoading, error: queryError } = useQuery({
+    queryKey: ["barbershop-context-fallback", user?.id, resolvedSlug],
     queryFn: async () => {
-      // PRIORIDADE 1: Slug na URL
-      if (urlSlug) {
-        const { data, error } = await supabase
-          .from("barbershops")
-          .select("*")
-          .eq("slug", urlSlug)
-          .maybeSingle();
-        
-        if (!error && data) {
-          localStorage.setItem(STORAGE_KEY, data.slug);
-          return data;
-        }
+      // Se já temos dados do contexto, não precisamos buscar novamente
+      if (contextValue?.barbershop) {
+        return null;
       }
 
-      // PRIORIDADE 2: Slug salvo no localStorage
-      if (savedSlug) {
+      // PRIORIDADE 1: Slug na URL ou localStorage
+      if (resolvedSlug) {
         const { data, error } = await supabase
           .from("barbershops")
           .select("*")
-          .eq("slug", savedSlug)
+          .eq("slug", resolvedSlug)
           .maybeSingle();
         
         if (!error && data) {
@@ -78,7 +69,7 @@ export const useBarbershopContext = () => {
         return data;
       }
 
-      // PRIORIDADE 3: Verificar se o usuário é admin de alguma barbearia
+      // PRIORIDADE 2: Verificar se o usuário é admin de alguma barbearia
       const { data: adminRole, error: adminError } = await supabase
         .from("user_roles")
         .select("barbershop_id")
@@ -104,7 +95,7 @@ export const useBarbershopContext = () => {
         return data;
       }
 
-      // PRIORIDADE 4: Verificar se é super_admin ou barber
+      // PRIORIDADE 3: Verificar se é super_admin ou barber
       const { data: otherRole, error: roleError } = await supabase
         .from("user_roles")
         .select("barbershop_id, role")
@@ -130,7 +121,7 @@ export const useBarbershopContext = () => {
         return data;
       }
 
-      // PRIORIDADE 5: Verificar se é dono de alguma barbearia
+      // PRIORIDADE 4: Verificar se é dono de alguma barbearia
       const { data: ownedBarbershop, error: ownedError } = await supabase
         .from("barbershops")
         .select("*")
@@ -145,7 +136,7 @@ export const useBarbershopContext = () => {
         return ownedBarbershop;
       }
 
-      // PRIORIDADE 6: Se é cliente, verificar último agendamento
+      // PRIORIDADE 5: Se é cliente, verificar último agendamento
       const { data: lastBooking, error: bookingError } = await supabase
         .from("bookings")
         .select("barbershop_id")
@@ -186,8 +177,13 @@ export const useBarbershopContext = () => {
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
+    enabled: !contextValue?.barbershop, // Só executa se não tiver dados do contexto
   });
 
+  // Priorizar dados do contexto se disponíveis
+  const barbershop = contextValue?.barbershop || queriedBarbershop;
+  const isLoading = contextValue ? contextValue.isLoading : queryLoading;
+  const error = contextValue?.error || queryError;
   const baseUrl = barbershop?.slug ? `/b/${barbershop.slug}` : "";
 
   return { barbershop, isLoading, error, baseUrl };
