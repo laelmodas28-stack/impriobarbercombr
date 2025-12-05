@@ -1,13 +1,66 @@
+import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { BarbershopContext } from "@/contexts/BarbershopContext";
+
+const STORAGE_KEY = "last_barbershop_slug";
 
 export const useBarbershopContext = () => {
   const { user } = useAuth();
+  const params = useParams<{ slug?: string }>();
+  const location = useLocation();
+  
+  // Tentar usar o contexto do BarbershopProvider
+  const contextValue = useContext(BarbershopContext);
+  
+  // Se estamos dentro de um BarbershopProvider com dados, usar esses dados
+  if (contextValue?.barbershop) {
+    return { 
+      barbershop: contextValue.barbershop, 
+      isLoading: contextValue.isLoading, 
+      error: contextValue.error,
+      baseUrl: contextValue.baseUrl
+    };
+  }
+
+  // Verificar slug na URL
+  const urlSlug = params.slug;
+  
+  // Verificar localStorage
+  const savedSlug = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
 
   const { data: barbershop, isLoading, error } = useQuery({
-    queryKey: ["barbershop-context", user?.id],
+    queryKey: ["barbershop-context", user?.id, urlSlug, savedSlug],
     queryFn: async () => {
+      // PRIORIDADE 1: Slug na URL
+      if (urlSlug) {
+        const { data, error } = await supabase
+          .from("barbershops")
+          .select("*")
+          .eq("slug", urlSlug)
+          .maybeSingle();
+        
+        if (!error && data) {
+          localStorage.setItem(STORAGE_KEY, data.slug);
+          return data;
+        }
+      }
+
+      // PRIORIDADE 2: Slug salvo no localStorage
+      if (savedSlug) {
+        const { data, error } = await supabase
+          .from("barbershops")
+          .select("*")
+          .eq("slug", savedSlug)
+          .maybeSingle();
+        
+        if (!error && data) {
+          return data;
+        }
+      }
+
       if (!user) {
         // Se não logado, retorna a primeira barbearia (padrão)
         const { data, error } = await supabase
@@ -17,10 +70,15 @@ export const useBarbershopContext = () => {
           .maybeSingle();
         
         if (error) throw error;
+        
+        if (data?.slug) {
+          localStorage.setItem(STORAGE_KEY, data.slug);
+        }
+        
         return data;
       }
 
-      // PRIORIDADE 1: Verificar se o usuário é admin de alguma barbearia
+      // PRIORIDADE 3: Verificar se o usuário é admin de alguma barbearia
       const { data: adminRole, error: adminError } = await supabase
         .from("user_roles")
         .select("barbershop_id")
@@ -38,10 +96,15 @@ export const useBarbershopContext = () => {
           .single();
         
         if (error) throw error;
+        
+        if (data?.slug) {
+          localStorage.setItem(STORAGE_KEY, data.slug);
+        }
+        
         return data;
       }
 
-      // PRIORIDADE 2: Verificar se é super_admin ou barber
+      // PRIORIDADE 4: Verificar se é super_admin ou barber
       const { data: otherRole, error: roleError } = await supabase
         .from("user_roles")
         .select("barbershop_id, role")
@@ -59,10 +122,15 @@ export const useBarbershopContext = () => {
           .single();
         
         if (error) throw error;
+        
+        if (data?.slug) {
+          localStorage.setItem(STORAGE_KEY, data.slug);
+        }
+        
         return data;
       }
 
-      // PRIORIDADE 3: Verificar se é dono de alguma barbearia
+      // PRIORIDADE 5: Verificar se é dono de alguma barbearia
       const { data: ownedBarbershop, error: ownedError } = await supabase
         .from("barbershops")
         .select("*")
@@ -71,10 +139,13 @@ export const useBarbershopContext = () => {
         .maybeSingle();
 
       if (!ownedError && ownedBarbershop) {
+        if (ownedBarbershop.slug) {
+          localStorage.setItem(STORAGE_KEY, ownedBarbershop.slug);
+        }
         return ownedBarbershop;
       }
 
-      // PRIORIDADE 4: Se é cliente, verificar último agendamento
+      // PRIORIDADE 6: Se é cliente, verificar último agendamento
       const { data: lastBooking, error: bookingError } = await supabase
         .from("bookings")
         .select("barbershop_id")
@@ -91,6 +162,11 @@ export const useBarbershopContext = () => {
           .single();
         
         if (error) throw error;
+        
+        if (data?.slug) {
+          localStorage.setItem(STORAGE_KEY, data.slug);
+        }
+        
         return data;
       }
 
@@ -102,10 +178,17 @@ export const useBarbershopContext = () => {
         .maybeSingle();
       
       if (error) throw error;
+      
+      if (data?.slug) {
+        localStorage.setItem(STORAGE_KEY, data.slug);
+      }
+      
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
-  return { barbershop, isLoading, error };
+  const baseUrl = barbershop?.slug ? `/b/${barbershop.slug}` : "";
+
+  return { barbershop, isLoading, error, baseUrl };
 };
