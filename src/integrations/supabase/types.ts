@@ -144,6 +144,7 @@ export type Database = {
           owner_id: string
           phone: string | null
           primary_color: string
+          slug: string
           tiktok: string | null
           updated_at: string
           whatsapp: string | null
@@ -163,6 +164,7 @@ export type Database = {
           owner_id: string
           phone?: string | null
           primary_color?: string
+          slug: string
           tiktok?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -182,6 +184,7 @@ export type Database = {
           owner_id?: string
           phone?: string | null
           primary_color?: string
+          slug?: string
           tiktok?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -806,6 +809,7 @@ export type Database = {
         Returns: boolean
       }
       expire_subscriptions: { Args: never; Returns: undefined }
+      generate_barbershop_slug: { Args: { name: string }; Returns: string }
       has_active_subscription: {
         Args: {
           _barbershop_id: string

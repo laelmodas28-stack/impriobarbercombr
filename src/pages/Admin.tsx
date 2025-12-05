@@ -32,6 +32,7 @@ import { useSubscriptions } from "@/hooks/useSubscriptions";
 import { BarberInviteForm } from "@/components/admin/BarberInviteForm";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { RegistrationCodeManager } from "@/components/admin/RegistrationCodeManager";
+import { ShareableLink } from "@/components/admin/ShareableLink";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -895,6 +896,15 @@ const Admin = () => {
 
           {/* Configurações */}
           <TabsContent value="settings" className="space-y-6">
+            {/* Link Compartilhável */}
+            {barbershop?.slug && (
+              <ShareableLink
+                barbershopId={barbershop.id}
+                currentSlug={barbershop.slug}
+                barbershopName={barbershop.name}
+              />
+            )}
+
             {/* Tema */}
             <ThemeSelector 
               currentTheme={barbershop?.primary_color || "#D4AF37"}

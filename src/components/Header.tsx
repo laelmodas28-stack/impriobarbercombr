@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Crown, LogOut, User } from "lucide-react";
@@ -14,12 +14,26 @@ import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Header = () => {
   const { user, signOut } = useAuth();
-  const { barbershop: barbershopInfo } = useBarbershopContext();
+  const { barbershop: barbershopInfo, baseUrl } = useBarbershopContext();
+  const location = useLocation();
+
+  // Verificar se estamos em uma rota /b/:slug
+  const isInBarbershopRoute = location.pathname.startsWith("/b/");
+
+  // Usar baseUrl para links se estiver em rota de barbearia
+  const getLink = (path: string) => {
+    if (isInBarbershopRoute && baseUrl) {
+      return `${baseUrl}${path}`;
+    }
+    return path;
+  };
+
+  const homeLink = isInBarbershopRoute && baseUrl ? baseUrl : "/";
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
+        <Link to={homeLink} className="flex items-center gap-3 group">
           <img 
             src={barbershopInfo?.logo_url || imperioLogo} 
             alt={barbershopInfo?.name || "IMPÉRIO BARBER"} 
@@ -36,7 +50,7 @@ const Header = () => {
         <nav className="flex items-center gap-4">
           {user ? (
             <>
-              <Link to="/booking">
+              <Link to={getLink("/booking")}>
                 <Button variant="premium" size="lg">
                   Agendar
                 </Button>

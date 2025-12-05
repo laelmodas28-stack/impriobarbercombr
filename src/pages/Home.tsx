@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Crown, Scissors, Star, Users, User, Edit } from "lucide-react";
@@ -9,7 +9,7 @@ import { BusinessHours } from "@/components/BusinessHours";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useBarbershop } from "@/hooks/useBarbershop";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useState } from "react";
 import {
   Dialog,
@@ -26,10 +26,22 @@ import { toast } from "sonner";
 const Home = () => {
   const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
-  const { barbershop } = useBarbershop();
+  const { barbershop, baseUrl } = useBarbershopContext();
+  const location = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+
+  // Verificar se estamos em uma rota /b/:slug
+  const isInBarbershopRoute = location.pathname.startsWith("/b/");
+  
+  // Função para gerar links dinâmicos
+  const getLink = (path: string) => {
+    if (isInBarbershopRoute && baseUrl) {
+      return `${baseUrl}${path}`;
+    }
+    return path;
+  };
 
   // Buscar serviços filtrados pela barbearia
   const { data: services } = useQuery({
@@ -127,7 +139,7 @@ const Home = () => {
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             {barbershop?.mensagem_personalizada || "Barbearia premium com atendimento de excelência. Agende seu horário com os melhores profissionais."}
           </p>
-          <Link to="/booking">
+          <Link to={getLink("/booking")}>
             <Button variant="premium" size="xl" className="shadow-elevation">
               <Calendar className="mr-2" />
               Agendar Agora
@@ -140,7 +152,7 @@ const Home = () => {
       <section className="py-12 px-4 bg-card/30">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link to="/booking">
+            <Link to={getLink("/booking")}>
               <Card className="hover:shadow-gold transition-all cursor-pointer h-full border-border">
                 <CardHeader>
                   <Calendar className="w-12 h-12 text-primary mb-4" />
@@ -149,7 +161,7 @@ const Home = () => {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/professionals">
+            <Link to={getLink("/professionals")}>
               <Card className="hover:shadow-gold transition-all cursor-pointer h-full border-border">
                 <CardHeader>
                   <Users className="w-12 h-12 text-primary mb-4" />
@@ -158,7 +170,7 @@ const Home = () => {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/services">
+            <Link to={getLink("/services")}>
               <Card className="hover:shadow-gold transition-all cursor-pointer h-full border-border">
                 <CardHeader>
                   <Scissors className="w-12 h-12 text-primary mb-4" />
@@ -232,7 +244,7 @@ const Home = () => {
                   <p className="text-center text-muted-foreground mb-4">
                     {professional.bio || "Profissional especializado"}
                   </p>
-                  <Link to={`/professionals/${professional.id}`}>
+                  <Link to={getLink(`/professionals/${professional.id}`)}>
                     <Button variant="imperial" className="w-full">
                       Ver Perfil
                     </Button>
@@ -254,7 +266,7 @@ const Home = () => {
             </p>
           </div>
           <div className="text-center">
-            <Link to="/gallery">
+            <Link to={getLink("/gallery")}>
               <Button variant="premium" size="lg">
                 Ver Galeria Completa
               </Button>
@@ -267,7 +279,7 @@ const Home = () => {
       <section className="py-16 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Link to="/subscriptions">
+            <Link to={getLink("/subscriptions")}>
               <Card className="border-border hover:shadow-gold transition-all cursor-pointer h-full">
                 <CardHeader>
                   <Crown className="w-12 h-12 text-primary mb-4" />
