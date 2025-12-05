@@ -41,6 +41,7 @@ const Admin = () => {
   const [instagram, setInstagram] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [tiktok, setTiktok] = useState("");
+  const [address, setAddress] = useState("");
   const [openingTime, setOpeningTime] = useState("09:00");
   const [closingTime, setClosingTime] = useState("19:00");
   const [selectedDays, setSelectedDays] = useState<string[]>([
@@ -89,6 +90,7 @@ const Admin = () => {
       setInstagram(barbershop.instagram || "");
       setWhatsapp(barbershop.whatsapp || "");
       setTiktok(barbershop.tiktok || "");
+      setAddress(barbershop.address || "");
       setOpeningTime(barbershop.opening_time?.substring(0, 5) || "09:00");
       setClosingTime(barbershop.closing_time?.substring(0, 5) || "19:00");
       setMensagemPersonalizada(barbershop.mensagem_personalizada || "Profissional e acolhedor");
@@ -519,6 +521,7 @@ const Admin = () => {
           instagram,
           whatsapp,
           tiktok,
+          address,
           opening_time: openingTime + ":00",
           closing_time: closingTime + ":00",
           opening_days: selectedDays,
@@ -983,6 +986,20 @@ const Admin = () => {
                     onChange={(e) => setTiktok(e.target.value)}
                     placeholder="@suabarbearia"
                   />
+                </div>
+
+                {/* Endereço */}
+                <div className="space-y-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Rua Exemplo, 123 - Bairro, Cidade - UF"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Endereço completo da barbearia para facilitar a localização dos clientes
+                  </p>
                 </div>
 
                 {/* Horários */}
