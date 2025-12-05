@@ -3,6 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DollarSign,
   TrendingUp,
@@ -13,9 +22,12 @@ import {
   Clock,
   BarChart3,
   XCircle,
+  CalendarIcon,
+  Filter,
 } from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, isSameDay, isSameMonth, isSameYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import RevenueCharts from "./RevenueCharts";
 import ProfessionalPerformance from "./ProfessionalPerformance";
 import ServiceAnalysis from "./ServiceAnalysis";
@@ -53,7 +65,13 @@ interface FinancialDashboardProps {
   services: Service[];
 }
 
-type PeriodFilter = "7d" | "30d" | "month" | "3m" | "year";
+type PeriodFilter = "7d" | "30d" | "month" | "3m" | "year" | "custom";
+type CustomFilterType = "day" | "month" | "year" | null;
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
 
 const FinancialDashboard = ({
   bookings,
@@ -61,12 +79,89 @@ const FinancialDashboard = ({
   services,
 }: FinancialDashboardProps) => {
   const [period, setPeriod] = useState<PeriodFilter>("month");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [customFilterType, setCustomFilterType] = useState<CustomFilterType>(null);
+
+  // Get available years from bookings
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    bookings.forEach(b => {
+      years.add(new Date(b.booking_date).getFullYear());
+    });
+    // Add current year if not present
+    years.add(new Date().getFullYear());
+    return Array.from(years).sort((a, b) => b - a);
+  }, [bookings]);
+
+  // Handle quick filter selection
+  const handleQuickFilter = (p: PeriodFilter) => {
+    setPeriod(p);
+    setCustomFilterType(null);
+    setSelectedDate(undefined);
+  };
+
+  // Handle custom day filter
+  const handleDaySelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      setPeriod("custom");
+      setCustomFilterType("day");
+    }
+  };
+
+  // Handle custom month filter
+  const handleMonthSelect = (month: string) => {
+    setSelectedMonth(parseInt(month));
+    setPeriod("custom");
+    setCustomFilterType("month");
+  };
+
+  // Handle custom year filter
+  const handleYearSelect = (year: string) => {
+    setSelectedYear(parseInt(year));
+    setPeriod("custom");
+    setCustomFilterType("year");
+  };
+
+  // Clear custom filters
+  const clearCustomFilters = () => {
+    setSelectedDate(undefined);
+    setCustomFilterType(null);
+    setPeriod("month");
+  };
 
   // Filtrar bookings por período
   const filteredBookings = useMemo(() => {
     const now = new Date();
-    let startDate: Date;
 
+    // Custom filters
+    if (period === "custom" && customFilterType) {
+      switch (customFilterType) {
+        case "day":
+          if (selectedDate) {
+            return bookings.filter((b) => 
+              isSameDay(new Date(b.booking_date), selectedDate)
+            );
+          }
+          break;
+        case "month":
+          return bookings.filter((b) => {
+            const bookingDate = new Date(b.booking_date);
+            return bookingDate.getMonth() === selectedMonth && 
+                   bookingDate.getFullYear() === selectedYear;
+          });
+        case "year":
+          return bookings.filter((b) => {
+            const bookingDate = new Date(b.booking_date);
+            return bookingDate.getFullYear() === selectedYear;
+          });
+      }
+    }
+
+    // Quick filters
+    let startDate: Date;
     switch (period) {
       case "7d":
         startDate = subDays(now, 7);
@@ -81,14 +176,14 @@ const FinancialDashboard = ({
         startDate = subMonths(now, 3);
         break;
       case "year":
-        startDate = subMonths(now, 12);
+        startDate = startOfYear(now);
         break;
       default:
         startDate = startOfMonth(now);
     }
 
     return bookings.filter((b) => new Date(b.booking_date) >= startDate);
-  }, [bookings, period]);
+  }, [bookings, period, customFilterType, selectedDate, selectedMonth, selectedYear]);
 
   // Calcular métricas do período atual
   const currentMetrics = useMemo(() => {
@@ -219,6 +314,18 @@ const FinancialDashboard = ({
       : 0;
 
   const getPeriodLabel = () => {
+    if (period === "custom" && customFilterType) {
+      switch (customFilterType) {
+        case "day":
+          return selectedDate 
+            ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+            : "dia selecionado";
+        case "month":
+          return `${MONTHS[selectedMonth]} de ${selectedYear}`;
+        case "year":
+          return `ano ${selectedYear}`;
+      }
+    }
     switch (period) {
       case "7d":
         return "últimos 7 dias";
@@ -229,36 +336,137 @@ const FinancialDashboard = ({
       case "3m":
         return "últimos 3 meses";
       case "year":
-        return "último ano";
+        return `ano ${new Date().getFullYear()}`;
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header com filtros */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold">Dashboard Financeiro</h2>
-          <p className="text-muted-foreground">
-            Análise completa de {getPeriodLabel()}
-          </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold">Dashboard Financeiro</h2>
+            <p className="text-muted-foreground">
+              Análise completa de {getPeriodLabel()}
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {(["7d", "30d", "month", "3m", "year"] as PeriodFilter[]).map((p) => (
+              <Button
+                key={p}
+                variant={period === p && !customFilterType ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleQuickFilter(p)}
+              >
+                {p === "7d" && "7 dias"}
+                {p === "30d" && "30 dias"}
+                {p === "month" && "Mês"}
+                {p === "3m" && "3 meses"}
+                {p === "year" && "Ano"}
+              </Button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {(["7d", "30d", "month", "3m", "year"] as PeriodFilter[]).map((p) => (
-            <Button
-              key={p}
-              variant={period === p ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPeriod(p)}
-            >
-              {p === "7d" && "7 dias"}
-              {p === "30d" && "30 dias"}
-              {p === "month" && "Mês"}
-              {p === "3m" && "3 meses"}
-              {p === "year" && "Ano"}
-            </Button>
-          ))}
-        </div>
+
+        {/* Filtros Avançados */}
+        <Card className="border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Filtros Avançados</span>
+            </div>
+            <div className="flex flex-wrap gap-4 items-end">
+              {/* Filtro por Dia */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Dia Específico</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={customFilterType === "day" ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "w-[160px] justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Selecionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDaySelect}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Filtro por Mês */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Mês</label>
+                <Select 
+                  value={customFilterType === "month" ? selectedMonth.toString() : ""} 
+                  onValueChange={handleMonthSelect}
+                >
+                  <SelectTrigger className={cn(
+                    "w-[140px]",
+                    customFilterType === "month" && "border-primary"
+                  )}>
+                    <SelectValue placeholder="Selecionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, index) => (
+                      <SelectItem key={index} value={index.toString()}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Ano */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Ano</label>
+                <Select 
+                  value={customFilterType === "year" || customFilterType === "month" ? selectedYear.toString() : ""} 
+                  onValueChange={handleYearSelect}
+                >
+                  <SelectTrigger className={cn(
+                    "w-[120px]",
+                    customFilterType === "year" && "border-primary"
+                  )}>
+                    <SelectValue placeholder="Selecionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Limpar Filtros */}
+              {customFilterType && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={clearCustomFilters}
+                  className="text-muted-foreground"
+                >
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Cards de Métricas Principais */}
