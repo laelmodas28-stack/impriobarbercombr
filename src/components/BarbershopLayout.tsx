@@ -1,25 +1,29 @@
 import { Outlet, useParams, Navigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarbershopProvider } from "@/contexts/BarbershopContext";
 import { Loader2 } from "lucide-react";
 
-const STORAGE_KEY = "last_barbershop_slug";
-
 const BarbershopLayout = () => {
   const { slug } = useParams<{ slug: string }>();
   const queryClient = useQueryClient();
+  const lastSlugRef = useRef<string | null>(null);
 
-  // Invalidar cache quando o slug muda para garantir dados frescos
+  // RESET completo quando o slug muda
   useEffect(() => {
-    if (slug) {
-      // Limpar caches antigos antes de buscar novos dados
-      queryClient.removeQueries({ queryKey: ["barbershop-by-slug"] });
-      queryClient.removeQueries({ queryKey: ["barbershop-context-fallback"] });
+    if (slug && slug !== lastSlugRef.current) {
+      // Resetar TODAS as queries para forçar busca fresca
+      queryClient.resetQueries({ queryKey: ["barbershop-by-slug"] });
+      queryClient.resetQueries({ queryKey: ["barbershop-exists"] });
       
-      // Atualizar localStorage
-      localStorage.setItem(STORAGE_KEY, slug);
+      // Remover cache do slug anterior
+      if (lastSlugRef.current) {
+        queryClient.removeQueries({ queryKey: ["barbershop-exists", lastSlugRef.current] });
+        queryClient.removeQueries({ queryKey: ["barbershop-by-slug", lastSlugRef.current] });
+      }
+      
+      lastSlugRef.current = slug;
     }
   }, [slug, queryClient]);
 
@@ -38,7 +42,9 @@ const BarbershopLayout = () => {
       return data;
     },
     enabled: !!slug,
-    staleTime: 0, // Sempre buscar dados frescos
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   if (isLoading) {

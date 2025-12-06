@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Crown, LogOut, User } from "lucide-react";
@@ -16,9 +16,10 @@ const Header = () => {
   const { user, signOut } = useAuth();
   const { barbershop: barbershopInfo, baseUrl } = useBarbershopContext();
   const location = useLocation();
+  const params = useParams<{ slug?: string }>();
 
-  // Verificar se estamos em uma rota /b/:slug
-  const isInBarbershopRoute = location.pathname.startsWith("/b/");
+  // Verificar se estamos em uma rota /b/:slug usando o params diretamente
+  const isInBarbershopRoute = !!params.slug && location.pathname.startsWith("/b/");
 
   // Usar baseUrl para links se estiver em rota de barbearia
   const getLink = (path: string) => {
