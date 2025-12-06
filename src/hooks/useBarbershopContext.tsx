@@ -1,5 +1,4 @@
 import { useContext } from "react";
-import { useParams, useLocation } from "react-router-dom";
 import { BarbershopContext } from "@/contexts/BarbershopContext";
 
 /**
@@ -10,17 +9,11 @@ import { BarbershopContext } from "@/contexts/BarbershopContext";
  * - Se está em rota global → retorna null (cada página global gerencia seu próprio contexto)
  */
 export const useBarbershopContext = () => {
-  const params = useParams<{ slug?: string }>();
-  const location = useLocation();
-  
   // Verificar se estamos dentro de um BarbershopProvider
   const contextValue = useContext(BarbershopContext);
   
-  // Se estamos em uma rota /b/:slug, DEVE haver um BarbershopProvider
-  const isInBarbershopRoute = location.pathname.startsWith("/b/");
-  
-  if (isInBarbershopRoute && contextValue) {
-    // Usar dados do Provider (que vem do slug da URL)
+  // SEMPRE usar o contexto quando disponível
+  if (contextValue) {
     return {
       barbershop: contextValue.barbershop,
       isLoading: contextValue.isLoading,
@@ -29,7 +22,7 @@ export const useBarbershopContext = () => {
     };
   }
   
-  // Para rotas globais, retornar null - cada página gerencia seu contexto
+  // Só retorna null se não houver contexto (rotas sem BarbershopProvider)
   return {
     barbershop: null,
     isLoading: false,
