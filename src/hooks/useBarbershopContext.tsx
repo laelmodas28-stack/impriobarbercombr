@@ -15,17 +15,6 @@ export const useBarbershopContext = () => {
   // Tentar usar o contexto do BarbershopProvider (pode ser undefined)
   const contextValue = useContext(BarbershopContext);
 
-  // Se estamos dentro de um BarbershopProvider com dados válidos, retornar imediatamente
-  // Isso PRIORIZA os dados do contexto sobre qualquer cache
-  if (contextValue?.barbershop) {
-    return { 
-      barbershop: contextValue.barbershop, 
-      isLoading: contextValue.isLoading, 
-      error: contextValue.error,
-      baseUrl: contextValue.baseUrl
-    };
-  }
-
   // Verificar slug na URL ou localStorage de forma síncrona
   const resolvedSlug = useMemo(() => {
     const urlSlug = params.slug;
@@ -42,7 +31,7 @@ export const useBarbershopContext = () => {
   }, [params.slug, location.pathname]);
 
   // Query para buscar barbearia - SÓ executa se NÃO tivermos dados do contexto
-  const { data: barbershop, isLoading, error } = useQuery({
+  const { data: queriedBarbershop, isLoading: queryLoading, error: queryError } = useQuery({
     queryKey: ["barbershop-context-fallback", user?.id, resolvedSlug],
     queryFn: async () => {
       // PRIORIDADE 1: Slug na URL ou localStorage
@@ -170,12 +159,11 @@ export const useBarbershopContext = () => {
     enabled: !contextValue?.barbershop, // SÓ executa se não tiver dados do contexto
   });
 
-  const baseUrl = barbershop?.slug ? `/b/${barbershop.slug}` : "";
+  // Priorizar dados do contexto sobre a query
+  const barbershop = contextValue?.barbershop || queriedBarbershop;
+  const isLoading = contextValue?.barbershop ? contextValue.isLoading : queryLoading;
+  const error = contextValue?.barbershop ? contextValue.error : queryError;
+  const baseUrl = contextValue?.barbershop ? contextValue.baseUrl : (barbershop?.slug ? `/b/${barbershop.slug}` : "");
 
-  return { 
-    barbershop, 
-    isLoading: contextValue ? contextValue.isLoading : isLoading, 
-    error: contextValue?.error || error, 
-    baseUrl 
-  };
+  return { barbershop, isLoading, error, baseUrl };
 };
