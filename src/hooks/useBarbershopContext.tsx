@@ -15,6 +15,17 @@ export const useBarbershopContext = () => {
   // Tentar usar o contexto do BarbershopProvider (pode ser undefined)
   const contextValue = useContext(BarbershopContext);
 
+  // Se estamos dentro de um BarbershopProvider com dados válidos, retornar imediatamente
+  // Isso PRIORIZA os dados do contexto sobre qualquer cache
+  if (contextValue?.barbershop) {
+    return { 
+      barbershop: contextValue.barbershop, 
+      isLoading: contextValue.isLoading, 
+      error: contextValue.error,
+      baseUrl: contextValue.baseUrl
+    };
+  }
+
   // Verificar slug na URL ou localStorage de forma síncrona
   const resolvedSlug = useMemo(() => {
     const urlSlug = params.slug;
@@ -30,15 +41,10 @@ export const useBarbershopContext = () => {
     return null;
   }, [params.slug, location.pathname]);
 
-  // Query para buscar barbearia - sempre executa mas pode usar dados do contexto
-  const { data: queriedBarbershop, isLoading: queryLoading, error: queryError } = useQuery({
+  // Query para buscar barbearia - SÓ executa se NÃO tivermos dados do contexto
+  const { data: barbershop, isLoading, error } = useQuery({
     queryKey: ["barbershop-context-fallback", user?.id, resolvedSlug],
     queryFn: async () => {
-      // Se já temos dados do contexto, não precisamos buscar novamente
-      if (contextValue?.barbershop) {
-        return null;
-      }
-
       // PRIORIDADE 1: Slug na URL ou localStorage
       if (resolvedSlug) {
         const { data, error } = await supabase
@@ -52,20 +58,17 @@ export const useBarbershopContext = () => {
         }
       }
 
+      // Se não tiver usuário logado e não tiver slug, buscar primeira barbearia
       if (!user) {
-        // Se não logado, retorna a primeira barbearia (padrão)
         const { data, error } = await supabase
           .from("barbershops")
           .select("*")
           .limit(1)
           .maybeSingle();
         
-        if (error) throw error;
-        
-        if (data?.slug) {
+        if (!error && data) {
           localStorage.setItem(STORAGE_KEY, data.slug);
         }
-        
         return data;
       }
 
@@ -84,15 +87,12 @@ export const useBarbershopContext = () => {
           .from("barbershops")
           .select("*")
           .eq("id", adminRole.barbershop_id)
-          .single();
+          .maybeSingle();
         
-        if (error) throw error;
-        
-        if (data?.slug) {
+        if (!error && data) {
           localStorage.setItem(STORAGE_KEY, data.slug);
+          return data;
         }
-        
-        return data;
       }
 
       // PRIORIDADE 3: Verificar se é super_admin ou barber
@@ -110,15 +110,12 @@ export const useBarbershopContext = () => {
           .from("barbershops")
           .select("*")
           .eq("id", otherRole.barbershop_id)
-          .single();
+          .maybeSingle();
         
-        if (error) throw error;
-        
-        if (data?.slug) {
+        if (!error && data) {
           localStorage.setItem(STORAGE_KEY, data.slug);
+          return data;
         }
-        
-        return data;
       }
 
       // PRIORIDADE 4: Verificar se é dono de alguma barbearia
@@ -130,9 +127,7 @@ export const useBarbershopContext = () => {
         .maybeSingle();
 
       if (!ownedError && ownedBarbershop) {
-        if (ownedBarbershop.slug) {
-          localStorage.setItem(STORAGE_KEY, ownedBarbershop.slug);
-        }
+        localStorage.setItem(STORAGE_KEY, ownedBarbershop.slug);
         return ownedBarbershop;
       }
 
@@ -150,41 +145,37 @@ export const useBarbershopContext = () => {
           .from("barbershops")
           .select("*")
           .eq("id", lastBooking.barbershop_id)
-          .single();
+          .maybeSingle();
         
-        if (error) throw error;
-        
-        if (data?.slug) {
+        if (!error && data) {
           localStorage.setItem(STORAGE_KEY, data.slug);
+          return data;
         }
-        
-        return data;
       }
 
-      // Fallback: primeira barbearia disponível
-      const { data, error } = await supabase
+      // FALLBACK: Primeira barbearia disponível
+      const { data, error: fallbackError } = await supabase
         .from("barbershops")
         .select("*")
         .limit(1)
         .maybeSingle();
-      
-      if (error) throw error;
-      
-      if (data?.slug) {
+
+      if (!fallbackError && data) {
         localStorage.setItem(STORAGE_KEY, data.slug);
       }
-      
+
       return data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    enabled: !contextValue?.barbershop, // Só executa se não tiver dados do contexto
+    staleTime: 0, // Não usar cache stale
+    enabled: !contextValue?.barbershop, // SÓ executa se não tiver dados do contexto
   });
 
-  // Priorizar dados do contexto se disponíveis
-  const barbershop = contextValue?.barbershop || queriedBarbershop;
-  const isLoading = contextValue ? contextValue.isLoading : queryLoading;
-  const error = contextValue?.error || queryError;
   const baseUrl = barbershop?.slug ? `/b/${barbershop.slug}` : "";
 
-  return { barbershop, isLoading, error, baseUrl };
+  return { 
+    barbershop, 
+    isLoading: contextValue ? contextValue.isLoading : isLoading, 
+    error: contextValue?.error || error, 
+    baseUrl 
+  };
 };
