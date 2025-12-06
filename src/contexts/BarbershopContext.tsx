@@ -1,6 +1,6 @@
-import React, { createContext, useContext, ReactNode, useMemo } from "react";
+import React, { createContext, useContext, ReactNode, useMemo, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Barbershop {
@@ -38,29 +38,27 @@ const STORAGE_KEY = "last_barbershop_slug";
 
 export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }> = ({ children, slug: propSlug }) => {
   const params = useParams<{ slug?: string }>();
-  const location = useLocation();
+  const queryClient = useQueryClient();
 
-  // Determinar slug de forma síncrona: prop > URL > localStorage
-  const resolvedSlug = useMemo(() => {
-    const urlSlug = propSlug || params.slug;
-    if (urlSlug) {
-      // Salvar no localStorage para visitas futuras
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, urlSlug);
-      }
-      return urlSlug;
+  // Slug da URL tem prioridade absoluta
+  const currentSlug = propSlug || params.slug;
+
+  // Invalidar cache quando o slug muda
+  useEffect(() => {
+    if (currentSlug) {
+      // Salvar novo slug no localStorage
+      localStorage.setItem(STORAGE_KEY, currentSlug);
+      
+      // Invalidar queries antigas para garantir dados frescos
+      queryClient.invalidateQueries({ queryKey: ["barbershop-by-slug"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop-context-fallback"] });
     }
-    // Verificar localStorage
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY);
-    }
-    return null;
-  }, [propSlug, params.slug, location.pathname]);
+  }, [currentSlug, queryClient]);
 
   const { data: barbershop, isLoading, error } = useQuery({
-    queryKey: ["barbershop-by-slug", resolvedSlug],
+    queryKey: ["barbershop-by-slug", currentSlug],
     queryFn: async () => {
-      if (!resolvedSlug) {
+      if (!currentSlug) {
         // Fallback: primeira barbearia
         const { data, error } = await supabase
           .from("barbershops")
@@ -81,19 +79,15 @@ export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }
       const { data, error: fetchError } = await supabase
         .from("barbershops")
         .select("*")
-        .eq("slug", resolvedSlug)
+        .eq("slug", currentSlug)
         .maybeSingle();
       
       if (fetchError) throw fetchError;
       
-      // Salvar slug se encontrou
-      if (data?.slug) {
-        localStorage.setItem(STORAGE_KEY, data.slug);
-      }
-      
       return data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 0, // Sempre buscar dados frescos quando o slug muda
+    refetchOnMount: true,
   });
 
   const baseUrl = barbershop?.slug ? `/b/${barbershop.slug}` : "";
