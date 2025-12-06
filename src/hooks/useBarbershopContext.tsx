@@ -1,16 +1,32 @@
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { BarbershopContext } from "@/contexts/BarbershopContext";
+import { User } from "@supabase/supabase-js";
 
 const STORAGE_KEY = "last_barbershop_slug";
 
 export const useBarbershopContext = () => {
-  const { user } = useAuth();
   const params = useParams<{ slug?: string }>();
   const location = useLocation();
+  
+  // Gerenciar o usuário internamente para evitar dependência do AuthProvider
+  const [user, setUser] = useState<User | null>(null);
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+    
+    return () => subscription.unsubscribe();
+  }, []);
   
   // Tentar usar o contexto do BarbershopProvider (pode ser undefined)
   const contextValue = useContext(BarbershopContext);
