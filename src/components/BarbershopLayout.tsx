@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarbershopProvider } from "@/contexts/BarbershopContext";
 import { Loader2 } from "lucide-react";
+import BarbershopMetaTags from "./BarbershopMetaTags";
 
 const BarbershopLayout = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -61,6 +62,7 @@ const BarbershopLayout = () => {
 
   return (
     <BarbershopProvider slug={slug}>
+      <BarbershopMetaTags />
       <Outlet />
     </BarbershopProvider>
   );
