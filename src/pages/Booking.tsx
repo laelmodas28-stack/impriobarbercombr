@@ -14,12 +14,13 @@ import { toast } from "sonner";
 import { format, startOfDay, isToday, getHours, getMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
+import { Loader2 } from "lucide-react";
 
 const Booking = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { barbershop } = useBarbershopContext();
+  const { barbershop, isLoading: isBarbershopLoading } = useBarbershopContext();
   
   const [selectedService, setSelectedService] = useState(location.state?.selectedService?.id || "");
   const [selectedProfessional, setSelectedProfessional] = useState(location.state?.selectedProfessional?.id || "");
@@ -77,8 +78,21 @@ const Booking = () => {
     enabled: !!selectedProfessional && !!selectedDate,
   });
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading || isBarbershopLoading || !barbershop) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) {
-    navigate("/auth");
     return null;
   }
 
@@ -202,16 +216,6 @@ const Booking = () => {
 
   const selectedServiceData = services?.find(s => s.id === selectedService);
 
-  if (!barbershop) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-12 text-center">
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -15,7 +15,7 @@ import { Calendar, Clock, Scissors, User, Edit2, Save, X, Loader2, Shield } from
 import { toast } from "sonner";
 
 const Account = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
@@ -86,8 +86,21 @@ const Account = () => {
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) {
-    navigate("/auth");
     return null;
   }
 
