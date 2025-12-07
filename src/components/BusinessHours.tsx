@@ -1,22 +1,9 @@
 import { Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 export const BusinessHours = () => {
-  const { data: barbershop } = useQuery({
-    queryKey: ["barbershop-hours"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershops")
-        .select("opening_time, closing_time, opening_days")
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { barbershop } = useBarbershopContext();
 
   const formatTime = (time: string | null) => {
     if (!time) return "";

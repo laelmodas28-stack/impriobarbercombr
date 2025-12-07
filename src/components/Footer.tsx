@@ -12,7 +12,7 @@ const Footer = () => {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Crown className="text-primary" />
-              <span className="font-bold text-lg">{info?.name || "IMPÉRIO BARBER"}</span>
+              <span className="font-bold text-lg">{info?.name || "Barbearia"}</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
               {info?.mensagem_personalizada || "Barbearia premium com atendimento de excelência"}
@@ -42,7 +42,7 @@ const Footer = () => {
         </div>
         
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} {info?.name || "IMPÉRIO BARBER"}. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {info?.name || "Barbearia"}. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>;
