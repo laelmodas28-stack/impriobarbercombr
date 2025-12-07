@@ -58,10 +58,10 @@ const Header = () => {
     return "/auth";
   };
 
-  // Handle auth click to save origin
+  // Handle auth click to save origin (usar chave unificada)
   const handleAuthClick = () => {
     if (isInBarbershopRoute && params.slug) {
-      sessionStorage.setItem("auth_origin_slug", params.slug);
+      sessionStorage.setItem("origin_barbershop_slug", params.slug);
     }
   };
 
