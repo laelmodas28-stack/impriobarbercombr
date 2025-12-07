@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.barbershop-chat]
 verify_jwt = false
+
+[functions.register-barbershop]
+verify_jwt = false
+
+[functions.og-meta]
+verify_jwt = false

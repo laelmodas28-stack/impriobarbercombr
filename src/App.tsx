@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { BarbershopProvider } from "@/contexts/BarbershopContext";
 import BarbershopLayout from "@/components/BarbershopLayout";
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
@@ -90,18 +89,11 @@ const App = () => (
                 <Route path="auth" element={<BarbershopAuth />} />
               </Route>
 
-              {/* Rotas padrão (compatibilidade) */}
+              {/* Rotas padrão */}
               <Route path="/splash" element={<Splash />} />
-              <Route path="/" element={<BarbershopProvider><Home /></BarbershopProvider>} />
+              <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/services" element={<BarbershopProvider><Services /></BarbershopProvider>} />
-              <Route path="/professionals" element={<BarbershopProvider><Professionals /></BarbershopProvider>} />
-              <Route path="/professionals/:id" element={<BarbershopProvider><ProfessionalDetail /></BarbershopProvider>} />
-              <Route path="/booking" element={<BarbershopProvider><Booking /></BarbershopProvider>} />
               <Route path="/account" element={<Account />} />
-              <Route path="/about" element={<BarbershopProvider><About /></BarbershopProvider>} />
-              <Route path="/gallery" element={<BarbershopProvider><Gallery /></BarbershopProvider>} />
-              <Route path="/subscriptions" element={<BarbershopProvider><Subscriptions /></BarbershopProvider>} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/registro-barbeiro" element={<RegisterBarbershop />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
