@@ -120,7 +120,7 @@ const Home = () => {
           <Crown className="w-16 h-16 mx-auto mb-6 text-primary animate-pulse" />
           <div className="flex items-center justify-center gap-3 mb-6">
             <h1 className="text-5xl md:text-6xl font-bold">
-              Bem-vindo ao <span className="text-primary">{barbershop?.name || "IMPÉRIO BARBER"}</span>
+              Bem-vindo ao <span className="text-primary">{barbershop?.name || "Barbearia"}</span>
             </h1>
             {isAdmin && (
               <Button
