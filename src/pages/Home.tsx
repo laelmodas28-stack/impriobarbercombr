@@ -25,7 +25,7 @@ import { toast } from "sonner";
 
 const Home = () => {
   // 1. TODOS os hooks primeiro - OBRIGATÓRIO (Rules of Hooks)
-  const { isAdmin, isLoading: isRoleLoading } = useUserRole();
+  const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
   const { barbershop, baseUrl, isLoading: isBarbershopLoading } = useBarbershopContext();
   const location = useLocation();
@@ -66,15 +66,7 @@ const Home = () => {
     enabled: !!barbershop?.id,
   });
 
-  // 3. AGORA SIM - verificação de loading DEPOIS de todos os hooks
-  // Nota: isRoleLoading removido para não bloquear - não é crítico para renderizar a página
-  if (isBarbershopLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // 3. NÃO bloquear a renderização - permitir valores padrão
 
   // 4. Funções auxiliares
   const isInBarbershopRoute = location.pathname.startsWith("/b/");
