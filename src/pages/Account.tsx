@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, User, Edit2, Save, X, Loader2, Shield } from "lucide-react";
+import { Calendar, Clock, Scissors, User, Edit2, Save, X, Loader2, Shield, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 const Account = () => {
@@ -23,6 +23,9 @@ const Account = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Recuperar slug de origem para navegação
+  const originSlug = sessionStorage.getItem("origin_barbershop_slug");
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile", user?.id],
@@ -139,6 +142,23 @@ const Account = () => {
     setIsEditing(false);
   };
 
+  const handleBack = () => {
+    if (originSlug) {
+      navigate(`/b/${originSlug}`);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleBookingClick = () => {
+    if (originSlug) {
+      navigate(`/b/${originSlug}/booking`);
+    } else {
+      toast.info("Selecione uma barbearia para fazer um agendamento");
+      navigate("/");
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -201,6 +221,16 @@ const Account = () => {
       
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
+          {/* Botão Voltar */}
+          <Button 
+            variant="ghost" 
+            onClick={handleBack}
+            className="mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">Minha Conta</h1>
             <p className="text-muted-foreground">Gerencie seus dados e agendamentos</p>
@@ -369,7 +399,7 @@ const Account = () => {
                   <p className="text-muted-foreground mb-4">
                     Você ainda não tem agendamentos
                   </p>
-                  <Button variant="premium" onClick={() => navigate("/booking")}>
+                  <Button variant="premium" onClick={handleBookingClick}>
                     Fazer Primeiro Agendamento
                   </Button>
                 </div>

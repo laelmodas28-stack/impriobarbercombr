@@ -1,7 +1,7 @@
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Crown, LogOut, User } from "lucide-react";
+import { Crown, LogOut, User, ArrowLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,15 +10,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "./NotificationBell";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const { barbershop: barbershopInfo, baseUrl } = useBarbershopContext();
   const location = useLocation();
   const params = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
 
   // Verificar se estamos em uma rota /b/:slug usando o params diretamente
   const isInBarbershopRoute = !!params.slug && location.pathname.startsWith("/b/");
+
+  // Verificar se o usuário é admin da barbearia atual
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id, barbershopInfo?.id],
+    queryFn: async () => {
+      if (!user || !barbershopInfo) return false;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("barbershop_id", barbershopInfo.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user && !!barbershopInfo?.id,
+  });
 
   // Usar baseUrl para links se estiver em rota de barbearia
   const getLink = (path: string) => {
@@ -42,6 +62,23 @@ const Header = () => {
   const handleAuthClick = () => {
     if (isInBarbershopRoute && params.slug) {
       sessionStorage.setItem("auth_origin_slug", params.slug);
+    }
+  };
+
+  // Salvar contexto da barbearia antes de navegar para páginas globais
+  const handleAccountClick = () => {
+    if (isInBarbershopRoute && params.slug) {
+      sessionStorage.setItem("origin_barbershop_slug", params.slug);
+    }
+    navigate("/account");
+  };
+
+  const handleAdminClick = () => {
+    if (isInBarbershopRoute && params.slug) {
+      sessionStorage.setItem("origin_barbershop_slug", params.slug);
+      navigate(`/b/${params.slug}/admin`);
+    } else {
+      navigate("/admin");
     }
   };
 
@@ -71,11 +108,14 @@ const Header = () => {
         <nav className="flex items-center gap-4">
           {user ? (
             <>
-              <Link to={getLink("/booking")}>
-                <Button variant="premium" size="lg">
-                  Agendar
-                </Button>
-              </Link>
+              {/* Só mostrar botão Agendar se estiver em rota de barbearia */}
+              {isInBarbershopRoute && (
+                <Link to={getLink("/booking")}>
+                  <Button variant="premium" size="lg">
+                    Agendar
+                  </Button>
+                </Link>
+              )}
               <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -84,12 +124,15 @@ const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link to="/account">Minha Conta</Link>
+                  <DropdownMenuItem onClick={handleAccountClick}>
+                    Minha Conta
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin">Admin</Link>
-                  </DropdownMenuItem>
+                  {/* Só mostrar Admin se o usuário for admin */}
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={handleAdminClick}>
+                      Admin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sair
