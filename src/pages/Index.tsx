@@ -1,15 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Loader2 } from "lucide-react";
+import { Crown, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  
+  // Verificar se há um slug de origem salvo
+  const [originSlug, setOriginSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedSlug = sessionStorage.getItem("origin_barbershop_slug");
+    if (savedSlug) {
+      setOriginSlug(savedSlug);
+    }
+  }, []);
 
   // Buscar barbearia do usuário (se for admin)
   const { data: userBarbershop, isLoading: barbershopLoading } = useQuery({
@@ -48,6 +58,12 @@ const Index = () => {
     }
   }, [authLoading, barbershopLoading, userBarbershop, navigate]);
 
+  const handleBackToBarbershop = () => {
+    if (originSlug) {
+      navigate(`/b/${originSlug}`);
+    }
+  };
+
   if (authLoading || barbershopLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -59,6 +75,18 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
+        {/* Botão Voltar se houver origem */}
+        {originSlug && (
+          <Button 
+            variant="ghost" 
+            onClick={handleBackToBarbershop}
+            className="mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar para Barbearia
+          </Button>
+        )}
+
         <Crown className="w-16 h-16 mx-auto mb-6 text-primary" />
         <h1 className="text-4xl font-bold mb-4">Sistema de Barbearias</h1>
         <p className="text-muted-foreground mb-8">
@@ -108,6 +136,16 @@ const Index = () => {
                 >
                   Minha Conta
                 </Button>
+                {originSlug && (
+                  <Button 
+                    variant="secondary" 
+                    className="w-full"
+                    onClick={handleBackToBarbershop}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Voltar para Barbearia
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
