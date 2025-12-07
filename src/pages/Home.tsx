@@ -67,7 +67,8 @@ const Home = () => {
   });
 
   // 3. AGORA SIM - verificação de loading DEPOIS de todos os hooks
-  if (isBarbershopLoading || isRoleLoading) {
+  // Nota: isRoleLoading removido para não bloquear - não é crítico para renderizar a página
+  if (isBarbershopLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
