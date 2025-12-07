@@ -68,11 +68,11 @@ export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }
     }
   }, [currentSlug, queryClient]);
 
-  // Query para buscar barbearia - com fallback quando não há slug
+  // Query para buscar barbearia - SEM fallback para evitar mistura de contextos
   const { data: barbershop, isLoading, error } = useQuery({
     queryKey: ["barbershop-by-slug", currentSlug, user?.id],
     queryFn: async () => {
-      // 1. Se tem slug, buscar por slug
+      // 1. Se tem slug, buscar por slug (prioridade absoluta)
       if (currentSlug) {
         const { data, error: fetchError } = await supabase
           .from("barbershops")
@@ -106,15 +106,9 @@ export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }
         }
       }
 
-      // 3. Fallback: buscar primeira barbearia disponível
-      const { data, error: fetchError } = await supabase
-        .from("barbershops")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      
-      if (fetchError) throw fetchError;
-      return data;
+      // 3. SEM FALLBACK - retorna null se não há slug e usuário não é admin
+      // Isso evita mostrar dados de outra barbearia
+      return null;
     },
     staleTime: 0,
     gcTime: 0,
