@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 const Home = () => {
+  // 1. TODOS os hooks primeiro - OBRIGATÓRIO (Rules of Hooks)
   const { isAdmin, isLoading: isRoleLoading } = useUserRole();
   const queryClient = useQueryClient();
   const { barbershop, baseUrl, isLoading: isBarbershopLoading } = useBarbershopContext();
@@ -32,8 +33,41 @@ const Home = () => {
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
-  // Show loading while context is loading
-  if (isBarbershopLoading) {
+  // 2. Queries ANTES de qualquer return condicional
+  const { data: services } = useQuery({
+    queryKey: ["services-home", barbershop?.id],
+    queryFn: async () => {
+      if (!barbershop?.id) return [];
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
+        .eq("is_active", true)
+        .limit(4);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barbershop?.id,
+  });
+
+  const { data: professionals } = useQuery({
+    queryKey: ["professionals-home", barbershop?.id],
+    queryFn: async () => {
+      if (!barbershop?.id) return [];
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("*")
+        .eq("barbershop_id", barbershop.id)
+        .eq("is_active", true)
+        .limit(3);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barbershop?.id,
+  });
+
+  // 3. AGORA SIM - verificação de loading DEPOIS de todos os hooks
+  if (isBarbershopLoading || isRoleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -41,54 +75,15 @@ const Home = () => {
     );
   }
 
-  // Verificar se estamos em uma rota /b/:slug
+  // 4. Funções auxiliares
   const isInBarbershopRoute = location.pathname.startsWith("/b/");
   
-  // Função para gerar links dinâmicos
   const getLink = (path: string) => {
     if (isInBarbershopRoute && baseUrl) {
       return `${baseUrl}${path}`;
     }
     return path;
   };
-
-  // Buscar serviços filtrados pela barbearia
-  const { data: services } = useQuery({
-    queryKey: ["services-home", barbershop?.id],
-    queryFn: async () => {
-      if (!barbershop?.id) return [];
-      
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .eq("barbershop_id", barbershop.id)
-        .eq("is_active", true)
-        .limit(4);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!barbershop?.id,
-  });
-
-  // Buscar profissionais filtrados pela barbearia
-  const { data: professionals } = useQuery({
-    queryKey: ["professionals-home", barbershop?.id],
-    queryFn: async () => {
-      if (!barbershop?.id) return [];
-      
-      const { data, error } = await supabase
-        .from("professionals")
-        .select("*")
-        .eq("barbershop_id", barbershop.id)
-        .eq("is_active", true)
-        .limit(3);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!barbershop?.id,
-  });
 
   const handleOpenEditDialog = () => {
     if (barbershop) {
