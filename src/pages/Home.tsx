@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Crown, Scissors, Star, Users, User, Edit } from "lucide-react";
+import { Calendar, Crown, Scissors, Star, Users, User, Edit, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ChatWidget } from "@/components/ChatWidget";
@@ -24,13 +24,22 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 const Home = () => {
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isLoading: isRoleLoading } = useUserRole();
   const queryClient = useQueryClient();
-  const { barbershop, baseUrl } = useBarbershopContext();
+  const { barbershop, baseUrl, isLoading: isBarbershopLoading } = useBarbershopContext();
   const location = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+
+  // Show loading while context is loading
+  if (isBarbershopLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Verificar se estamos em uma rota /b/:slug
   const isInBarbershopRoute = location.pathname.startsWith("/b/");
