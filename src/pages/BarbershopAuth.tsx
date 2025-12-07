@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBarbershop } from "@/contexts/BarbershopContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Crown, Loader2 } from "lucide-react";
 
-const Auth = () => {
+const BarbershopAuth = () => {
   const { signIn, signUp, user, loading } = useAuth();
+  const { barbershop, isLoading: barbershopLoading, baseUrl } = useBarbershop();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   
   const [loginEmail, setLoginEmail] = useState("");
@@ -22,38 +23,22 @@ const Auth = () => {
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
 
-  // Check if user came from a barbershop route
-  const originSlug = sessionStorage.getItem("auth_origin_slug");
+  // Store origin barbershop in session
+  useEffect(() => {
+    if (slug) {
+      sessionStorage.setItem("auth_origin_slug", slug);
+    }
+  }, [slug]);
 
-  // Fetch barbershop info if we have an origin slug
-  const { data: originBarbershop } = useQuery({
-    queryKey: ["auth-origin-barbershop", originSlug],
-    queryFn: async () => {
-      if (!originSlug) return null;
-      const { data } = await supabase
-        .from("barbershops")
-        .select("name, logo_url, slug")
-        .eq("slug", originSlug)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!originSlug,
-  });
-
-  // Redirect if already logged in - back to origin barbershop if available
+  // Redirect if already logged in - back to the barbershop
   useEffect(() => {
     if (user && !loading) {
-      if (originSlug) {
-        sessionStorage.removeItem("auth_origin_slug");
-        navigate(`/b/${originSlug}`);
-      } else {
-        navigate("/");
-      }
+      navigate(baseUrl || `/b/${slug}`);
     }
-  }, [user, loading, navigate, originSlug]);
+  }, [user, loading, navigate, baseUrl, slug]);
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth or barbershop
+  if (loading || barbershopLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -80,10 +65,10 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          {originBarbershop?.logo_url ? (
+          {barbershop?.logo_url ? (
             <img 
-              src={originBarbershop.logo_url} 
-              alt={originBarbershop.name} 
+              src={barbershop.logo_url} 
+              alt={barbershop.name} 
               className="w-32 h-32 mx-auto mb-4 object-contain drop-shadow-[0_0_20px_rgba(212,175,55,0.4)]"
             />
           ) : (
@@ -93,7 +78,7 @@ const Auth = () => {
           )}
           <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
             <Crown className="text-primary" />
-            {originBarbershop?.name || "Barbearia"}
+            {barbershop?.name || "Barbearia"}
           </h1>
         </div>
 
@@ -200,23 +185,9 @@ const Auth = () => {
             </Card>
           </TabsContent>
         </Tabs>
-        
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground mb-2">
-            É barbeiro?
-          </p>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/registro-barbeiro")}
-            className="w-full"
-          >
-            <Crown className="w-4 h-4 mr-2" />
-            Criar Barbearia
-          </Button>
-        </div>
       </div>
     </div>
   );
 };
 
-export default Auth;
+export default BarbershopAuth;

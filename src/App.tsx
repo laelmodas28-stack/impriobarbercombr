@@ -10,6 +10,7 @@ import BarbershopLayout from "@/components/BarbershopLayout";
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import BarbershopAuth from "./pages/BarbershopAuth";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
 import Professionals from "./pages/Professionals";
@@ -86,6 +87,7 @@ const App = () => (
                 <Route path="gallery" element={<Gallery />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="about" element={<About />} />
+                <Route path="auth" element={<BarbershopAuth />} />
               </Route>
 
               {/* Rotas padrão (compatibilidade) */}
