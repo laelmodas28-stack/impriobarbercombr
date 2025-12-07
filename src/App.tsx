@@ -85,8 +85,9 @@ const App = () => (
                 <Route path="booking" element={<Booking />} />
                 <Route path="gallery" element={<Gallery />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
-                <Route path="about" element={<About />} />
-                <Route path="auth" element={<BarbershopAuth />} />
+              <Route path="about" element={<About />} />
+              <Route path="auth" element={<BarbershopAuth />} />
+              <Route path="admin" element={<Admin />} />
               </Route>
 
               {/* Rotas padrão */}
