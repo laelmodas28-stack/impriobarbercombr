@@ -1,14 +1,14 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scissors } from "lucide-react";
+import { Scissors, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Services = () => {
-  const { barbershop } = useBarbershopContext();
+  const { barbershop, isLoading: isBarbershopLoading } = useBarbershopContext();
 
   const { data: services, isLoading } = useQuery({
     queryKey: ["services", barbershop?.id],
@@ -45,9 +45,9 @@ const Services = () => {
           )}
         </div>
 
-        {isLoading || !barbershop ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Carregando serviços...</p>
+        {isBarbershopLoading || isLoading || !barbershop ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
