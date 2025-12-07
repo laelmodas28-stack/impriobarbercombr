@@ -22,8 +22,8 @@ const Auth = () => {
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
 
-  // Check if user came from a barbershop route
-  const originSlug = sessionStorage.getItem("auth_origin_slug");
+  // Check if user came from a barbershop route (check both keys for compatibility)
+  const originSlug = sessionStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("auth_origin_slug");
 
   // Fetch barbershop info if we have an origin slug
   const { data: originBarbershop } = useQuery({
@@ -44,7 +44,9 @@ const Auth = () => {
   useEffect(() => {
     if (user && !loading) {
       if (originSlug) {
+        // Limpar ambas as chaves
         sessionStorage.removeItem("auth_origin_slug");
+        sessionStorage.removeItem("origin_barbershop_slug");
         navigate(`/b/${originSlug}`);
       } else {
         navigate("/");
