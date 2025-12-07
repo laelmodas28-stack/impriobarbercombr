@@ -1,8 +1,7 @@
-import React, { createContext, useContext, ReactNode, useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, ReactNode, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 
 interface Barbershop {
   id: string;
@@ -38,26 +37,12 @@ const BarbershopContext = createContext<BarbershopContextType | undefined>(undef
 export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }> = ({ children, slug: propSlug }) => {
   const params = useParams<{ slug?: string }>();
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<User | null>(null);
   
   // Slug da URL tem prioridade absoluta
   const currentSlug = propSlug || params.slug;
   
   // Ref para rastrear o último slug processado
   const lastSlugRef = useRef<string | null>(null);
-
-  // Buscar usuário atual
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // RESET completo do cache quando o slug muda
   useEffect(() => {
@@ -68,48 +53,25 @@ export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }
     }
   }, [currentSlug, queryClient]);
 
-  // Query para buscar barbearia - SEM fallback para evitar mistura de contextos
+  // Query para buscar barbearia - APENAS por slug, sem fallback
   const { data: barbershop, isLoading, error } = useQuery({
-    queryKey: ["barbershop-by-slug", currentSlug, user?.id],
+    queryKey: ["barbershop-by-slug", currentSlug],
     queryFn: async () => {
-      // 1. Se tem slug, buscar por slug (prioridade absoluta)
-      if (currentSlug) {
-        const { data, error: fetchError } = await supabase
-          .from("barbershops")
-          .select("*")
-          .eq("slug", currentSlug)
-          .maybeSingle();
-        
-        if (fetchError) throw fetchError;
-        return data;
+      // APENAS buscar por slug - sem fallback para evitar mistura de contextos
+      if (!currentSlug) {
+        return null;
       }
 
-      // 2. Se user está logado, buscar barbearia onde ele é admin
-      if (user) {
-        const { data: userRole } = await supabase
-          .from("user_roles")
-          .select("barbershop_id")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .not("barbershop_id", "is", null)
-          .maybeSingle();
-
-        if (userRole?.barbershop_id) {
-          const { data, error: fetchError } = await supabase
-            .from("barbershops")
-            .select("*")
-            .eq("id", userRole.barbershop_id)
-            .maybeSingle();
-          
-          if (fetchError) throw fetchError;
-          return data;
-        }
-      }
-
-      // 3. SEM FALLBACK - retorna null se não há slug e usuário não é admin
-      // Isso evita mostrar dados de outra barbearia
-      return null;
+      const { data, error: fetchError } = await supabase
+        .from("barbershops")
+        .select("*")
+        .eq("slug", currentSlug)
+        .maybeSingle();
+      
+      if (fetchError) throw fetchError;
+      return data;
     },
+    enabled: !!currentSlug,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
