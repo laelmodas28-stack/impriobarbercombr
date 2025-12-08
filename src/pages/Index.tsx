@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,15 +11,8 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
-  // Verificar se há um slug de origem salvo
-  const [originSlug, setOriginSlug] = useState<string | null>(null);
-
-  useEffect(() => {
-    const savedSlug = sessionStorage.getItem("origin_barbershop_slug");
-    if (savedSlug) {
-      setOriginSlug(savedSlug);
-    }
-  }, []);
+  // Ler slug de origem de forma síncrona para evitar race condition
+  const originSlug = sessionStorage.getItem("origin_barbershop_slug");
 
   // Buscar barbearia do usuário (se for admin)
   const { data: userBarbershop, isLoading: barbershopLoading } = useQuery({
