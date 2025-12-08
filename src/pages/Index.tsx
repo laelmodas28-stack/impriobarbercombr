@@ -51,12 +51,17 @@ const Index = () => {
     enabled: !!user,
   });
 
-  // Redirecionar admin para sua barbearia
+  // Redirecionar: admin para sua barbearia, ou cliente de volta para barbearia de origem
   useEffect(() => {
-    if (!authLoading && !barbershopLoading && userBarbershop?.slug) {
-      navigate(`/b/${userBarbershop.slug}`);
+    if (!authLoading && !barbershopLoading) {
+      if (userBarbershop?.slug) {
+        navigate(`/b/${userBarbershop.slug}`);
+      } else if (user && originSlug) {
+        // Cliente logado vindo de uma barbearia - voltar para ela
+        navigate(`/b/${originSlug}`);
+      }
     }
-  }, [authLoading, barbershopLoading, userBarbershop, navigate]);
+  }, [authLoading, barbershopLoading, userBarbershop, user, originSlug, navigate]);
 
   const handleBackToBarbershop = () => {
     if (originSlug) {
