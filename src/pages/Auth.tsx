@@ -44,12 +44,10 @@ const Auth = () => {
   useEffect(() => {
     if (user && !loading) {
       if (originSlug) {
-        // Limpar ambas as chaves
-        sessionStorage.removeItem("auth_origin_slug");
-        sessionStorage.removeItem("origin_barbershop_slug");
-        navigate(`/b/${originSlug}`);
+        // NÃO remover originSlug - manter para permitir re-login na mesma barbearia
+        navigate(`/b/${originSlug}`, { replace: true });
       } else {
-        navigate("/");
+        navigate("/", { replace: true });
       }
     }
   }, [user, loading, navigate, originSlug]);
