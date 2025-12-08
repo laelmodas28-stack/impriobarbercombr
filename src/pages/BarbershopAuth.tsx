@@ -10,38 +10,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Crown } from "lucide-react";
 
-const AuthSkeleton = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background p-4">
-    <div className="w-full max-w-md animate-fade-in">
-      {/* Logo skeleton */}
-      <div className="text-center mb-8">
-        <Skeleton className="w-32 h-32 mx-auto mb-4 rounded-full" />
-        <Skeleton className="h-9 w-48 mx-auto" />
-      </div>
+// Skeleton apenas para o formulário (mantém logo e nome visíveis)
+const FormSkeleton = () => (
+  <>
+    {/* Tabs skeleton */}
+    <Skeleton className="h-10 w-full mb-4 rounded-lg" />
 
-      {/* Tabs skeleton */}
-      <Skeleton className="h-10 w-full mb-4 rounded-lg" />
-
-      {/* Form skeleton */}
-      <Card className="border-border">
-        <CardHeader>
-          <Skeleton className="h-7 w-24 mb-2" />
-          <Skeleton className="h-5 w-40" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <Skeleton className="h-11 w-full rounded-md" />
-        </CardContent>
-      </Card>
-    </div>
-  </div>
+    {/* Form skeleton */}
+    <Card className="border-border">
+      <CardHeader>
+        <Skeleton className="h-7 w-24 mb-2" />
+        <Skeleton className="h-5 w-40" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <Skeleton className="h-11 w-full rounded-md" />
+      </CardContent>
+    </Card>
+  </>
 );
 
 const BarbershopAuth = () => {
@@ -72,13 +65,8 @@ const BarbershopAuth = () => {
     }
   }, [user, loading, navigate, baseUrl, slug]);
 
-  // Show elegant skeleton while checking auth or barbershop
-  if (loading || barbershopLoading) {
-    return <AuthSkeleton />;
-  }
-
-  // If user is logged in, show nothing while redirecting
-  if (user) {
+  // Se usuário logado, não mostrar nada enquanto redireciona
+  if (user && !loading) {
     return null;
   }
 
@@ -92,9 +80,13 @@ const BarbershopAuth = () => {
     await signUp(signupEmail, signupPassword, signupFullName, signupPhone);
   };
 
+  // Mostrar loading apenas se autenticação está carregando (sem barbershop ainda)
+  const showFormSkeleton = loading || barbershopLoading;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md animate-fade-in">
+        {/* Header com logo e nome - sempre visível */}
         <div className="text-center mb-8">
           {barbershop?.logo_url ? (
             <img 
@@ -113,11 +105,15 @@ const BarbershopAuth = () => {
           </h1>
         </div>
 
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Entrar</TabsTrigger>
-            <TabsTrigger value="signup">Cadastrar</TabsTrigger>
-          </TabsList>
+        {/* Formulário ou Skeleton */}
+        {showFormSkeleton ? (
+          <FormSkeleton />
+        ) : (
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Entrar</TabsTrigger>
+              <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="login">
             <Card className="border-border">
@@ -215,7 +211,8 @@ const BarbershopAuth = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        )}
       </div>
     </div>
   );
