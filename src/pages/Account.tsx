@@ -146,7 +146,8 @@ const Account = () => {
     if (originSlug) {
       navigate(`/b/${originSlug}`);
     } else {
-      navigate(-1);
+      // Navegar para página inicial ao invés de navigate(-1) que pode sair do site
+      navigate("/");
     }
   };
 

@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       toast.success("Cadastro realizado com sucesso!");
-      navigate("/");
+      // Não navegar automaticamente - deixar o componente decidir
       return { error: null };
     } catch (error: any) {
       toast.error("Erro ao criar conta");
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       toast.success("Login realizado com sucesso!");
-      navigate("/");
+      // Não navegar automaticamente - deixar o componente decidir
       return { error: null };
     } catch (error: any) {
       toast.error("Erro ao fazer login");
@@ -94,9 +94,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      // Preservar slug de origem antes do logout
+      const originSlug = sessionStorage.getItem("origin_barbershop_slug");
       await supabase.auth.signOut();
       toast.success("Logout realizado com sucesso");
-      navigate("/auth");
+      // Redirecionar para auth da barbearia se houver contexto
+      if (originSlug) {
+        navigate(`/b/${originSlug}/auth`);
+      } else {
+        navigate("/auth");
+      }
     } catch (error) {
       toast.error("Erro ao sair");
     }

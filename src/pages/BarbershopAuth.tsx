@@ -78,7 +78,7 @@ const BarbershopAuth = () => {
           )}
           <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
             <Crown className="text-primary" />
-            {barbershop?.name || "Barbearia"}
+            {barbershop?.name || "Carregando..."}
           </h1>
         </div>
 
