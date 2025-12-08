@@ -7,7 +7,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Crown, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Crown } from "lucide-react";
+
+const AuthSkeleton = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="w-full max-w-md animate-fade-in">
+      {/* Logo skeleton */}
+      <div className="text-center mb-8">
+        <Skeleton className="w-32 h-32 mx-auto mb-4 rounded-full" />
+        <Skeleton className="h-9 w-48 mx-auto" />
+      </div>
+
+      {/* Tabs skeleton */}
+      <Skeleton className="h-10 w-full mb-4 rounded-lg" />
+
+      {/* Form skeleton */}
+      <Card className="border-border">
+        <CardHeader>
+          <Skeleton className="h-7 w-24 mb-2" />
+          <Skeleton className="h-5 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <Skeleton className="h-11 w-full rounded-md" />
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
 
 const BarbershopAuth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -37,13 +72,9 @@ const BarbershopAuth = () => {
     }
   }, [user, loading, navigate, baseUrl, slug]);
 
-  // Show loading while checking auth or barbershop
+  // Show elegant skeleton while checking auth or barbershop
   if (loading || barbershopLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AuthSkeleton />;
   }
 
   // If user is logged in, show nothing while redirecting
