@@ -22,11 +22,11 @@ export const useChat = (barbershopId?: string) => {
     setIsLoading(true);
 
     try {
+      // SECURITY: Don't send userId in body - it's extracted from JWT token on the server
       const { data, error } = await supabase.functions.invoke("barbershop-chat", {
         body: {
           message: content,
           history: messages,
-          userId: user?.id,
           barbershopId: barbershopId,
         },
       });

@@ -64,23 +64,55 @@ serve(async (req) => {
   }
 
   try {
-    // Schema validation
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+
+    // SECURITY: Extract user from JWT token instead of trusting client-provided userId
+    const authHeader = req.headers.get("Authorization");
+    let authenticatedUserId: string | null = null;
+    
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      // Create a client with the anon key to verify the user's token
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false }
+      });
+      
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+      
+      if (!authError && user) {
+        authenticatedUserId = user.id;
+        console.log("Authenticated user:", authenticatedUserId);
+      } else {
+        console.log("No authenticated user or auth error:", authError?.message);
+      }
+    }
+
+    // Schema validation - userId is no longer accepted from body for security
     const chatSchema = z.object({
       message: z.string().min(1).max(2000),
       history: z.array(z.object({
         role: z.enum(['user', 'assistant']),
         content: z.string().max(5000)
       })).max(50).optional().default([]),
-      userId: z.string().uuid().optional(),
       barbershopId: z.string().uuid().optional()
     });
 
     const body = await req.json();
-    const { message, history, userId, barbershopId } = chatSchema.parse(body);
+    const { message, history, barbershopId } = chatSchema.parse(body);
 
-    console.log("Chat request received:", { userId, barbershopId, messageLength: message.length });
+    // Use authenticated user ID (from token) - cannot be spoofed
+    const userId = authenticatedUserId;
 
-    // Rate limiting
+    console.log("Chat request received:", { 
+      userId: userId ? "authenticated" : "anonymous", 
+      barbershopId, 
+      messageLength: message.length 
+    });
+
+    // Rate limiting - use authenticated userId if available, otherwise use IP or anonymous
     const rateLimitId = userId || 'anonymous';
     if (!checkRateLimit(rateLimitId)) {
       return new Response(
@@ -91,10 +123,6 @@ serve(async (req) => {
         }
       );
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -319,7 +347,7 @@ IMPORTANTE:
       );
     }
 
-    // Check if AI wants to create a booking
+    // Check if AI wants to create a booking - SECURITY: Only create if user is authenticated
     const jsonMatch = assistantMessage.match(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/);
     
     if (jsonMatch && userId) {
@@ -369,7 +397,7 @@ IMPORTANTE:
             );
           }
 
-          // Create booking
+          // Create booking - SECURITY: Using authenticated userId from token
           const { data: newBooking, error: bookingError } = await supabase.from("bookings").insert({
             client_id: userId,
             service_id: service.id,
@@ -426,6 +454,20 @@ IMPORTANTE:
       } catch (e) {
         console.error("Booking creation error:", e);
       }
+    } else if (jsonMatch && !userId) {
+      // User tried to book but is not authenticated
+      console.log("Booking attempt without authentication - rejected");
+      const cleanResponse = assistantMessage.replace(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/, "").trim();
+      
+      return new Response(
+        JSON.stringify({
+          response: cleanResponse + "\n\n⚠️ Para confirmar o agendamento, você precisa estar logado. Por favor, faça login primeiro.",
+          bookingCreated: false,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Remove JSON from response if present

@@ -16,7 +16,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.barbershop-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.register-barbershop]
 verify_jwt = false
