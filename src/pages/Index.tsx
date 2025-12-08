@@ -14,6 +14,14 @@ const Index = () => {
   // Ler slug de origem de forma síncrona para evitar race condition
   const originSlug = sessionStorage.getItem("origin_barbershop_slug");
 
+  // Redirecionamento imediato se usuário logado veio de uma barbearia
+  // Executar ANTES de qualquer outra lógica para evitar flash da tela genérica
+  useEffect(() => {
+    if (!authLoading && user && originSlug) {
+      navigate(`/b/${originSlug}`, { replace: true });
+    }
+  }, [authLoading, user, originSlug, navigate]);
+
   // Buscar barbearia do usuário (se for admin)
   const { data: userBarbershop, isLoading: barbershopLoading } = useQuery({
     queryKey: ["user-barbershop", user?.id],
@@ -44,23 +52,30 @@ const Index = () => {
     enabled: !!user,
   });
 
-  // Redirecionar: admin para sua barbearia, ou cliente de volta para barbearia de origem
+  // Redirecionar: admin para sua barbearia
+  // Cliente com originSlug já é tratado no useEffect acima
   useEffect(() => {
     if (!authLoading && !barbershopLoading) {
       if (userBarbershop?.slug) {
-        navigate(`/b/${userBarbershop.slug}`);
-      } else if (user && originSlug) {
-        // Cliente logado vindo de uma barbearia - voltar para ela
-        navigate(`/b/${originSlug}`);
+        navigate(`/b/${userBarbershop.slug}`, { replace: true });
       }
     }
-  }, [authLoading, barbershopLoading, userBarbershop, user, originSlug, navigate]);
+  }, [authLoading, barbershopLoading, userBarbershop, navigate]);
 
   const handleBackToBarbershop = () => {
     if (originSlug) {
       navigate(`/b/${originSlug}`);
     }
   };
+
+  // Se usuário logado com originSlug, não mostrar nada (já está redirecionando)
+  if (user && originSlug) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (authLoading || barbershopLoading) {
     return (
