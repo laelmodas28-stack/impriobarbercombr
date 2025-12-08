@@ -606,55 +606,56 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-11 gap-1">
-            <TabsTrigger value="dashboard">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Dashboard
+          <TabsList className="flex w-full overflow-x-auto scrollbar-hide gap-1 h-auto p-2 md:grid md:grid-cols-6 lg:grid-cols-12">
+            <TabsTrigger value="dashboard" className="flex-shrink-0 px-3 py-2" title="Dashboard">
+              <BarChart3 className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="financial">
-              <Wallet className="w-4 h-4 mr-2" />
-              Financeiro
+            <TabsTrigger value="financial" className="flex-shrink-0 px-3 py-2" title="Financeiro">
+              <Wallet className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Financeiro</span>
             </TabsTrigger>
-            <TabsTrigger value="bookings">
-              <Calendar className="w-4 h-4 mr-2" />
-              Agendamentos
+            <TabsTrigger value="bookings" className="flex-shrink-0 px-3 py-2" title="Agendamentos">
+              <Calendar className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Agendamentos</span>
             </TabsTrigger>
-            <TabsTrigger value="clients">
-              <User className="w-4 h-4 mr-2" />
-              Clientes
+            <TabsTrigger value="clients" className="flex-shrink-0 px-3 py-2" title="Clientes">
+              <User className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Clientes</span>
             </TabsTrigger>
-            <TabsTrigger value="users">
-              <UserCog className="w-4 h-4 mr-2" />
-              Usuários
+            <TabsTrigger value="users" className="flex-shrink-0 px-3 py-2" title="Usuários">
+              <UserCog className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Usuários</span>
             </TabsTrigger>
-            <TabsTrigger value="professionals">
-              <Users className="w-4 h-4 mr-2" />
-              Profissionais
+            <TabsTrigger value="professionals" className="flex-shrink-0 px-3 py-2" title="Profissionais">
+              <Users className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Profissionais</span>
             </TabsTrigger>
-            <TabsTrigger value="services">
-              <Scissors className="w-4 h-4 mr-2" />
-              Serviços
+            <TabsTrigger value="services" className="flex-shrink-0 px-3 py-2" title="Serviços">
+              <Scissors className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Serviços</span>
             </TabsTrigger>
-            <TabsTrigger value="gallery">
-              <ImageIcon className="w-4 h-4 mr-2" />
-              Galeria
+            <TabsTrigger value="gallery" className="flex-shrink-0 px-3 py-2" title="Galeria">
+              <ImageIcon className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Galeria</span>
             </TabsTrigger>
-            <TabsTrigger value="subscriptions">
-              <Crown className="w-4 h-4 mr-2" />
-              Assinaturas
+            <TabsTrigger value="subscriptions" className="flex-shrink-0 px-3 py-2" title="Assinaturas">
+              <Crown className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Assinaturas</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications">
-              🔔 Notificações
+            <TabsTrigger value="notifications" className="flex-shrink-0 px-3 py-2" title="Notificações">
+              <Bell className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Notificações</span>
             </TabsTrigger>
             {isSuperAdmin && (
-              <TabsTrigger value="codes">
-                <Key className="w-4 h-4 mr-2" />
-                Códigos
+              <TabsTrigger value="codes" className="flex-shrink-0 px-3 py-2" title="Códigos">
+                <Key className="w-4 h-4 md:mr-2" />
+                <span className="hidden md:inline">Códigos</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="settings">
-              <Settings className="w-4 h-4 mr-2" />
-              Configurações
+            <TabsTrigger value="settings" className="flex-shrink-0 px-3 py-2" title="Configurações">
+              <Settings className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Configurações</span>
             </TabsTrigger>
           </TabsList>
 
