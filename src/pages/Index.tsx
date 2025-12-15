@@ -68,7 +68,8 @@ const Index = () => {
     }
   };
 
-  // Se usuário logado com originSlug, não mostrar nada (já está redirecionando)
+  // BLOQUEIO ABSOLUTO: Se usuário logado com originSlug, SEMPRE mostra loader
+  // Nunca renderiza a página "Sistema de Barbearias" para clientes de barbearias
   if (user && originSlug) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -77,7 +78,17 @@ const Index = () => {
     );
   }
 
-  if (authLoading || barbershopLoading) {
+  // Loading state durante verificação de auth ou busca de barbearia do admin
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Se usuário está logado e é admin, esperar carregar dados da barbearia
+  if (user && barbershopLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

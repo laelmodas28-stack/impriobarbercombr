@@ -72,12 +72,22 @@ const BarbershopAuth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(loginEmail, loginPassword);
+    const { error } = await signIn(loginEmail, loginPassword);
+    
+    // Redirect IMEDIATO após login bem-sucedido
+    if (!error) {
+      navigate(baseUrl || `/b/${slug}`, { replace: true });
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signUp(signupEmail, signupPassword, signupFullName, signupPhone);
+    const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupPhone);
+    
+    // Redirect IMEDIATO após signup bem-sucedido
+    if (!error) {
+      navigate(baseUrl || `/b/${slug}`, { replace: true });
+    }
   };
 
   // Mostrar loading apenas se autenticação está carregando (sem barbershop ainda)
