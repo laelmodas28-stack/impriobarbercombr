@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Crown } from "lucide-react";
+import BarbershopLoader from "@/components/BarbershopLoader";
 
 // Skeleton apenas para o formulário (mantém logo e nome visíveis)
 const FormSkeleton = () => (
@@ -65,9 +66,15 @@ const BarbershopAuth = () => {
     }
   }, [user, loading, navigate, baseUrl, slug]);
 
-  // Se usuário logado, não mostrar nada enquanto redireciona
+  // Se usuário logado, mostrar loader bonito enquanto redireciona
   if (user && !loading) {
-    return null;
+    return (
+      <BarbershopLoader 
+        logoUrl={barbershop?.logo_url} 
+        name={barbershop?.name} 
+        message="Entrando..."
+      />
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
