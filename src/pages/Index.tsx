@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Loader2, ArrowLeft } from "lucide-react";
+import { Crown, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import BarbershopLoader from "@/components/BarbershopLoader";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -13,6 +14,21 @@ const Index = () => {
   
   // Ler slug de origem de forma síncrona para evitar race condition
   const originSlug = sessionStorage.getItem("origin_barbershop_slug");
+
+  // Buscar dados da barbearia de origem para o loader
+  const { data: originBarbershop } = useQuery({
+    queryKey: ["origin-barbershop-loader", originSlug],
+    queryFn: async () => {
+      if (!originSlug) return null;
+      const { data } = await supabase
+        .from("barbershops")
+        .select("name, logo_url")
+        .eq("slug", originSlug)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!originSlug,
+  });
 
   // Redirecionamento imediato se usuário logado veio de uma barbearia
   // Executar ANTES de qualquer outra lógica para evitar flash da tela genérica
@@ -72,27 +88,25 @@ const Index = () => {
   // Nunca renderiza a página "Sistema de Barbearias" para clientes de barbearias
   if (user && originSlug) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BarbershopLoader 
+        logoUrl={originBarbershop?.logo_url} 
+        name={originBarbershop?.name} 
+        message="Entrando..."
+      />
     );
   }
 
   // Loading state durante verificação de auth ou busca de barbearia do admin
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BarbershopLoader message="Carregando..." />
     );
   }
 
   // Se usuário está logado e é admin, esperar carregar dados da barbearia
   if (user && barbershopLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BarbershopLoader message="Carregando sua barbearia..." />
     );
   }
 

@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Crown, Loader2 } from "lucide-react";
+import { Crown } from "lucide-react";
+import BarbershopLoader from "@/components/BarbershopLoader";
 
 const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -55,15 +56,23 @@ const Auth = () => {
   // Show loading while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BarbershopLoader 
+        logoUrl={originBarbershop?.logo_url} 
+        name={originBarbershop?.name} 
+        message="Carregando..."
+      />
     );
   }
 
-  // If user is logged in, show nothing while redirecting
+  // If user is logged in, show loader while redirecting
   if (user) {
-    return null;
+    return (
+      <BarbershopLoader 
+        logoUrl={originBarbershop?.logo_url} 
+        name={originBarbershop?.name} 
+        message="Entrando..."
+      />
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
