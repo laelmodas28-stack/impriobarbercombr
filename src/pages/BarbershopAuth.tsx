@@ -52,9 +52,10 @@ const BarbershopAuth = () => {
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
 
-  // Store origin barbershop in session (usar chave unificada)
+  // Store origin barbershop em localStorage (persiste) e sessionStorage (imediato)
   useEffect(() => {
     if (slug) {
+      localStorage.setItem("origin_barbershop_slug", slug);
       sessionStorage.setItem("origin_barbershop_slug", slug);
     }
   }, [slug]);

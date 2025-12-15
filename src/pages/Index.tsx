@@ -12,8 +12,8 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
-  // Ler slug de origem de forma síncrona para evitar race condition
-  const originSlug = sessionStorage.getItem("origin_barbershop_slug");
+  // Ler slug de origem (localStorage para persistência, sessionStorage como fallback)
+  const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
 
   // Buscar dados da barbearia de origem para o loader
   const { data: originBarbershop } = useQuery({

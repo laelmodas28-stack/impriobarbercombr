@@ -58,9 +58,10 @@ const Header = () => {
     return "/auth";
   };
 
-  // Handle auth click to save origin (usar chave unificada)
+  // Handle auth click to save origin (localStorage para persistência)
   const handleAuthClick = () => {
     if (isInBarbershopRoute && params.slug) {
+      localStorage.setItem("origin_barbershop_slug", params.slug);
       sessionStorage.setItem("origin_barbershop_slug", params.slug);
     }
   };
@@ -68,6 +69,7 @@ const Header = () => {
   // Salvar contexto da barbearia antes de navegar para páginas globais
   const handleAccountClick = () => {
     if (isInBarbershopRoute && params.slug) {
+      localStorage.setItem("origin_barbershop_slug", params.slug);
       sessionStorage.setItem("origin_barbershop_slug", params.slug);
     }
     navigate("/account");
@@ -75,6 +77,7 @@ const Header = () => {
 
   const handleAdminClick = () => {
     if (isInBarbershopRoute && params.slug) {
+      localStorage.setItem("origin_barbershop_slug", params.slug);
       sessionStorage.setItem("origin_barbershop_slug", params.slug);
       navigate(`/b/${params.slug}/admin`);
     } else {

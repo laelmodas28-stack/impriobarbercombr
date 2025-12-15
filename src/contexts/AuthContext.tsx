@@ -43,8 +43,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string, phone: string) => {
     try {
-      // Usar slug de origem se disponível para redirect correto
-      const originSlug = sessionStorage.getItem("origin_barbershop_slug");
+      // Usar slug de origem se disponível para redirect correto (localStorage para persistência)
+      const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
       const redirectUrl = originSlug 
         ? `${window.location.origin}/b/${originSlug}`
         : `${window.location.origin}/`;
@@ -97,8 +97,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // Preservar slug de origem antes do logout
-      const originSlug = sessionStorage.getItem("origin_barbershop_slug");
+      // Preservar slug de origem antes do logout (localStorage para persistência)
+      const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
       await supabase.auth.signOut();
       toast.success("Logout realizado com sucesso");
       // Redirecionar para auth da barbearia se houver contexto

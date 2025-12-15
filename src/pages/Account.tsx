@@ -24,8 +24,8 @@ const Account = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Recuperar slug de origem para navegação
-  const originSlug = sessionStorage.getItem("origin_barbershop_slug");
+  // Recuperar slug de origem para navegação (localStorage para persistência, sessionStorage como fallback)
+  const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile", user?.id],
@@ -143,11 +143,12 @@ const Account = () => {
   };
 
   const handleBack = () => {
-    if (originSlug) {
-      navigate(`/b/${originSlug}`);
+    const savedSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
+    if (savedSlug) {
+      navigate(`/b/${savedSlug}`);
     } else {
-      // Navegar para página inicial ao invés de navigate(-1) que pode sair do site
-      navigate("/");
+      // NUNCA ir para "/" - usar history.back() como fallback seguro
+      navigate(-1);
     }
   };
 
