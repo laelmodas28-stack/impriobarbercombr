@@ -43,7 +43,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string, phone: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // Usar slug de origem se disponível para redirect correto
+      const originSlug = sessionStorage.getItem("origin_barbershop_slug");
+      const redirectUrl = originSlug 
+        ? `${window.location.origin}/b/${originSlug}`
+        : `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -63,7 +67,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       toast.success("Cadastro realizado com sucesso!");
-      // Não navegar automaticamente - deixar o componente decidir
       return { error: null };
     } catch (error: any) {
       toast.error("Erro ao criar conta");
