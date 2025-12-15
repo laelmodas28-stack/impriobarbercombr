@@ -54,8 +54,55 @@ function getCurrentDateInfo() {
     currentDayOfWeek,
     tomorrowDate,
     tomorrowDayOfWeek,
-    currentTime: `${String(brasilTime.getHours()).padStart(2, '0')}:${String(brasilTime.getMinutes()).padStart(2, '0')}`
+    currentTime: `${String(brasilTime.getHours()).padStart(2, '0')}:${String(brasilTime.getMinutes()).padStart(2, '0')}`,
+    brasilTime
   };
+}
+
+// Helper to generate available time slots
+function generateTimeSlots(openingTime: string, closingTime: string): string[] {
+  const slots: string[] = [];
+  const [openHour, openMin] = openingTime.split(':').map(Number);
+  const [closeHour, closeMin] = closingTime.split(':').map(Number);
+  
+  let currentHour = openHour;
+  let currentMin = openMin;
+  
+  while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
+    slots.push(`${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`);
+    currentMin += 30;
+    if (currentMin >= 60) {
+      currentMin = 0;
+      currentHour++;
+    }
+  }
+  
+  return slots;
+}
+
+// Helper to find nearest available slots
+function findNearestAvailableSlots(
+  requestedTime: string,
+  occupiedSlots: string[],
+  allSlots: string[],
+  count: number = 3
+): string[] {
+  const availableSlots = allSlots.filter(slot => !occupiedSlots.includes(slot));
+  
+  // Sort by distance from requested time
+  const requestedMinutes = timeToMinutes(requestedTime);
+  availableSlots.sort((a, b) => {
+    const distA = Math.abs(timeToMinutes(a) - requestedMinutes);
+    const distB = Math.abs(timeToMinutes(b) - requestedMinutes);
+    return distA - distB;
+  });
+  
+  return availableSlots.slice(0, count);
+}
+
+function timeToMinutes(time: string): number {
+  const [hours, mins] = time.split(':').map(Number);
+  return hours * 60 + mins;
 }
 
 serve(async (req) => {
@@ -184,6 +231,52 @@ serve(async (req) => {
     // Get current date info
     const dateInfo = getCurrentDateInfo();
 
+    // Fetch existing bookings for today and tomorrow to check availability
+    const { data: existingBookings } = await supabase
+      .from("bookings")
+      .select("booking_date, booking_time, professional_id")
+      .eq("barbershop_id", barbershop.id)
+      .in("booking_date", [dateInfo.currentDate, dateInfo.tomorrowDate])
+      .in("status", ["pending", "confirmed"]);
+
+    // Build occupied slots info by professional
+    const occupiedSlotsMap: Record<string, Record<string, string[]>> = {};
+    existingBookings?.forEach(booking => {
+      const profId = booking.professional_id;
+      const date = booking.booking_date;
+      const time = booking.booking_time.substring(0, 5); // Remove seconds
+      
+      if (!occupiedSlotsMap[profId]) {
+        occupiedSlotsMap[profId] = {};
+      }
+      if (!occupiedSlotsMap[profId][date]) {
+        occupiedSlotsMap[profId][date] = [];
+      }
+      occupiedSlotsMap[profId][date].push(time);
+    });
+
+    // Generate all possible time slots
+    const allTimeSlots = generateTimeSlots(
+      barbershop.opening_time || "09:00",
+      barbershop.closing_time || "19:00"
+    );
+
+    // Build occupied slots text for AI
+    let occupiedSlotsText = "";
+    professionals?.forEach(prof => {
+      const profSlots = occupiedSlotsMap[prof.id];
+      if (profSlots) {
+        occupiedSlotsText += `\n${prof.name}:\n`;
+        Object.entries(profSlots).forEach(([date, times]) => {
+          occupiedSlotsText += `  - ${date}: Horários OCUPADOS: ${times.sort().join(', ')}\n`;
+        });
+      }
+    });
+
+    if (!occupiedSlotsText) {
+      occupiedSlotsText = "Todos os horários estão disponíveis para hoje e amanhã.";
+    }
+
     // Build context for AI
     const servicesText = services && services.length > 0
       ? services.map((s) => `- ${s.name}: R$ ${s.price} (${s.duration_minutes} min)${s.description ? ' - ' + s.description : ''}`).join("\n")
@@ -223,6 +316,9 @@ ${servicesText}
 PROFISSIONAIS:
 ${professionalsText}
 
+⚠️ HORÁRIOS OCUPADOS (VERIFIQUE ANTES DE CONFIRMAR):
+${occupiedSlotsText}
+
 STATUS DO CLIENTE:
 ${userInfo}
 
@@ -231,12 +327,21 @@ SUAS FUNÇÕES:
 2. Ajudar o cliente a agendar serviços
 3. Ser sempre educado, prestativo e seguir o estilo de comunicação da barbearia
 
-REGRAS DE AGENDAMENTO:
+🚨 REGRAS CRÍTICAS DE AGENDAMENTO:
+- NUNCA confirme um agendamento sem verificar se o horário está livre na lista de "HORÁRIOS OCUPADOS" acima
 - Se o cliente NÃO está logado: informe que precisa fazer login primeiro
-- Se o cliente ESTÁ logado: colete as informações (serviço, data, horário, profissional opcional)
-- Sempre confirme antes de criar o agendamento
+- Se o cliente ESTÁ logado e pedir um horário:
+  1. PRIMEIRO verifique na lista de HORÁRIOS OCUPADOS se o horário solicitado está livre
+  2. Se o horário estiver OCUPADO:
+     - Informe educadamente que o horário não está disponível
+     - Sugira os 3 horários mais próximos que estão LIVRES
+     - Pergunte se deseja agendar em alguma das alternativas
+  3. SOMENTE se o horário estiver LIVRE:
+     - Confirme os detalhes com o cliente (serviço, profissional, data, hora)
+     - Depois que o cliente confirmar, retorne o JSON de agendamento
+
 - Use o formato de data YYYY-MM-DD (ex: ${dateInfo.currentDate})
-- Quando o cliente CONFIRMAR o agendamento, retorne no formato JSON:
+- Quando o cliente CONFIRMAR o agendamento de um horário LIVRE, retorne no formato JSON:
 {
   "action": "create_booking",
   "service_name": "nome do serviço",
@@ -249,7 +354,8 @@ IMPORTANTE:
 - Use emojis com moderação (💈 ✂️ ⏰ 📅 ✅)
 - Seja conciso mas completo
 - Se não souber algo, seja honesto
-- Sempre termine oferecendo ajuda adicional`;
+- Sempre termine oferecendo ajuda adicional
+- JAMAIS gere o JSON de booking para um horário que está na lista de OCUPADOS`;
 
     // Build messages for AI
     const messages = [
@@ -361,13 +467,15 @@ IMPORTANTE:
 
         // Find professional by name (optional)
         let professionalId = null;
+        let selectedProfessional = null;
         if (bookingData.professional_name) {
-          const professional = professionals?.find(
+          selectedProfessional = professionals?.find(
             (p) => p.name.toLowerCase().includes(bookingData.professional_name.toLowerCase())
           );
-          professionalId = professional?.id || professionals?.[0]?.id;
+          professionalId = selectedProfessional?.id || professionals?.[0]?.id;
         } else {
           professionalId = professionals?.[0]?.id;
+          selectedProfessional = professionals?.[0];
         }
 
         if (service && professionalId && barbershop) {
@@ -383,12 +491,29 @@ IMPORTANTE:
 
           if (conflictBooking) {
             console.log("Booking conflict detected:", conflictBooking.id);
-            // Remove JSON from response and add conflict message
+            
+            // Find occupied slots for this professional on this date
+            const occupiedOnDate = occupiedSlotsMap[professionalId]?.[bookingData.date] || [];
+            occupiedOnDate.push(bookingData.time); // Add the conflicting time
+            
+            // Find nearest available slots
+            const nearestAvailable = findNearestAvailableSlots(
+              bookingData.time,
+              occupiedOnDate,
+              allTimeSlots,
+              3
+            );
+            
+            const suggestionsText = nearestAvailable.length > 0
+              ? `\n\n💡 **Horários disponíveis mais próximos:** ${nearestAvailable.join(', ')}\n\nGostaria de agendar em algum desses horários?`
+              : "\n\nPor favor, escolha outro horário ou data.";
+            
+            // Remove JSON from response and add conflict message with suggestions
             const cleanResponse = assistantMessage.replace(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/, "").trim();
             
             return new Response(
               JSON.stringify({
-                response: cleanResponse + `\n\n⚠️ Desculpe, o horário ${bookingData.time} do dia ${bookingData.date} já está ocupado para este profissional. Por favor, escolha outro horário.`,
+                response: `⚠️ Desculpe, o horário ${bookingData.time} do dia ${bookingData.date} já está ocupado para ${selectedProfessional?.name || 'este profissional'}.${suggestionsText}`,
                 bookingCreated: false,
               }),
               {

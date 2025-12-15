@@ -1,10 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Crown } from "lucide-react";
 import { SocialLinks } from "./SocialLinks";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Footer = () => {
   const { barbershop: info } = useBarbershopContext();
+  const { slug } = useParams();
+  
+  // Construir URL base correta para links
+  const baseUrl = slug ? `/b/${slug}` : "";
 
   return <footer className="border-t border-border bg-card/50 mt-20">
       <div className="container mx-auto px-4 py-8">
@@ -23,16 +27,16 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold mb-4">Links Rápidos</h3>
             <div className="flex flex-col gap-2 text-sm">
-              <Link to="/services" className="text-muted-foreground hover:text-primary transition-colors">
+              <Link to={`${baseUrl}/services`} className="text-muted-foreground hover:text-primary transition-colors">
                 Serviços
               </Link>
-              <Link to="/professionals" className="text-muted-foreground hover:text-primary transition-colors">
+              <Link to={`${baseUrl}/professionals`} className="text-muted-foreground hover:text-primary transition-colors">
                 Profissionais
               </Link>
-              <Link to="/booking" className="text-muted-foreground hover:text-primary transition-colors">
+              <Link to={`${baseUrl}/booking`} className="text-muted-foreground hover:text-primary transition-colors">
                 Agendar
               </Link>
-              <Link to="/about" className="text-muted-foreground hover:text-primary transition-colors">
+              <Link to={`${baseUrl}/about`} className="text-muted-foreground hover:text-primary transition-colors">
                 Sobre Nós
               </Link>
             </div>
