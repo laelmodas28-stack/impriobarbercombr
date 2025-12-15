@@ -1,15 +1,26 @@
-import { Outlet, useParams, Navigate } from "react-router-dom";
+import { Outlet, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarbershopProvider } from "@/contexts/BarbershopContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import BarbershopMetaTags from "./BarbershopMetaTags";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 const BarbershopLayout = () => {
   const { slug } = useParams<{ slug: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const lastSlugRef = useRef<string | null>(null);
+
+  // Salvar slug atual em localStorage para persistência
+  useEffect(() => {
+    if (slug) {
+      localStorage.setItem("origin_barbershop_slug", slug);
+      sessionStorage.setItem("origin_barbershop_slug", slug);
+    }
+  }, [slug]);
 
   // RESET completo quando o slug muda
   useEffect(() => {
@@ -56,8 +67,38 @@ const BarbershopLayout = () => {
     );
   }
 
+  // Erro ou barbearia não encontrada - NUNCA redirecionar para "/"
   if (error || !barbershop) {
-    return <Navigate to="/" replace />;
+    // Tentar recuperar o último slug válido do localStorage
+    const lastValidSlug = localStorage.getItem("origin_barbershop_slug");
+    
+    // Se o slug atual é diferente do último válido, tentar navegar para o último válido
+    if (lastValidSlug && lastValidSlug !== slug) {
+      navigate(`/b/${lastValidSlug}`, { replace: true });
+      return null;
+    }
+    
+    // Se não há slug válido ou é o mesmo, mostrar erro amigável
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full border-border">
+          <CardContent className="pt-6 text-center">
+            <h2 className="text-2xl font-bold mb-4">Barbearia não encontrada</h2>
+            <p className="text-muted-foreground mb-6">
+              Não foi possível carregar os dados da barbearia.
+            </p>
+            <Button 
+              variant="premium" 
+              onClick={() => window.location.reload()}
+              className="w-full"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

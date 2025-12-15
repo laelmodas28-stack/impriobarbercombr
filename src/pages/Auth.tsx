@@ -23,8 +23,8 @@ const Auth = () => {
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
 
-  // Check if user came from a barbershop route (check both keys for compatibility)
-  const originSlug = sessionStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("auth_origin_slug");
+  // Check if user came from a barbershop route (localStorage para persistência)
+  const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
 
   // Fetch barbershop info if we have an origin slug
   const { data: originBarbershop } = useQuery({
