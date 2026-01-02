@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Search, UserCog, Shield, User, Loader2, AlertTriangle } from "lucide-react";
+import { WhatsAppButton } from "./WhatsAppButton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -298,7 +299,12 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
                           {user.full_name || "Sem nome"}
                         </div>
                       </TableCell>
-                      <TableCell>{user.phone || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <span>{user.phone || "-"}</span>
+                          <WhatsAppButton phone={user.phone} clientName={user.full_name} />
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge className={getRoleBadgeColor(user.role)}>
                           {getRoleLabel(user.role)}

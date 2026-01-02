@@ -33,6 +33,7 @@ import { BarberInviteForm } from "@/components/admin/BarberInviteForm";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { RegistrationCodeManager } from "@/components/admin/RegistrationCodeManager";
 import { ShareableLink } from "@/components/admin/ShareableLink";
+import { WhatsAppButton } from "@/components/admin/WhatsAppButton";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -698,7 +699,10 @@ const Admin = () => {
                           <div className="flex justify-between items-start mb-3">
                             <div>
                               <p className="font-semibold text-lg">{booking.client?.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{booking.client?.phone}</p>
+                              <div className="flex items-center gap-1">
+                                <p className="text-sm text-muted-foreground">{booking.client?.phone}</p>
+                                <WhatsAppButton phone={booking.client?.phone} clientName={booking.client?.full_name} />
+                              </div>
                             </div>
                             <Badge className={getStatusColor(booking.status)}>
                               {booking.status}
@@ -757,7 +761,10 @@ const Admin = () => {
                   {bookings?.map((booking) => (
                     <div key={booking.id} className="flex justify-between items-center p-3 bg-card/30 rounded-lg border border-border">
                       <div className="flex-1">
-                        <p className="font-semibold">{booking.client?.full_name}</p>
+                        <div className="flex items-center gap-1">
+                          <p className="font-semibold">{booking.client?.full_name}</p>
+                          <WhatsAppButton phone={booking.client?.phone} clientName={booking.client?.full_name} />
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(booking.booking_date), "dd/MM/yyyy", { locale: ptBR })} às {booking.booking_time}
                         </p>
@@ -792,7 +799,10 @@ const Admin = () => {
                               <div className="flex items-center gap-3 mb-2">
                                 <div>
                                   <p className="font-semibold text-lg">{client.client?.full_name}</p>
-                                  <p className="text-sm text-muted-foreground">{client.phone || client.client?.phone}</p>
+                                  <div className="flex items-center gap-1">
+                                    <p className="text-sm text-muted-foreground">{client.phone || client.client?.phone}</p>
+                                    <WhatsAppButton phone={client.phone || client.client?.phone} clientName={client.client?.full_name} />
+                                  </div>
                                 </div>
                                 {!client.is_active && (
                                   <Badge variant="secondary">Inativo</Badge>
