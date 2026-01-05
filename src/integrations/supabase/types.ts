@@ -767,6 +767,53 @@ export type Database = {
           },
         ]
       }
+      tutorial_images: {
+        Row: {
+          barbershop_id: string | null
+          category_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          step_order: number | null
+          title: string
+          tutorial_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          barbershop_id?: string | null
+          category_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          step_order?: number | null
+          title: string
+          tutorial_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          barbershop_id?: string | null
+          category_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          step_order?: number | null
+          title?: string
+          tutorial_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_images_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           barbershop_id: string | null
