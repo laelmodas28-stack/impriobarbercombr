@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key, Wallet } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key, Wallet, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -34,6 +34,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { RegistrationCodeManager } from "@/components/admin/RegistrationCodeManager";
 import { ShareableLink } from "@/components/admin/ShareableLink";
 import { WhatsAppButton } from "@/components/admin/WhatsAppButton";
+import { VideoTutorialManager } from "@/components/admin/VideoTutorialManager";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -654,6 +655,10 @@ const Admin = () => {
                 <span className="hidden md:inline">Códigos</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="tutorials" className="flex-shrink-0 px-3 py-2" title="Tutoriais">
+              <Video className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Tutoriais</span>
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex-shrink-0 px-3 py-2" title="Configurações">
               <Settings className="w-4 h-4 md:mr-2" />
               <span className="hidden md:inline">Configurações</span>
@@ -1547,6 +1552,11 @@ const Admin = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tutoriais em Vídeo */}
+          <TabsContent value="tutorials" className="space-y-6">
+            {barbershop && <VideoTutorialManager barbershopId={barbershop.id} />}
           </TabsContent>
         </Tabs>
       </div>
