@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Video, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, Video, GripVertical, Upload, Link, Loader2 } from "lucide-react";
 
 interface TutorialVideo {
   id: string;
@@ -43,6 +44,9 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<TutorialVideo | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [videoSource, setVideoSource] = useState<"upload" | "url">("upload");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Form state
   const [categoryId, setCategoryId] = useState("");
@@ -141,6 +145,48 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
     setVideoUrl("");
     setDuration("");
     setIsActive(true);
+    setVideoSource("upload");
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato de vídeo inválido. Use MP4, WebM, MOV ou AVI.");
+      return;
+    }
+
+    // Validate file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Vídeo muito grande. Máximo 100MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${barbershopId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('tutorial-videos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('tutorial-videos')
+        .getPublicUrl(fileName);
+
+      setVideoUrl(publicUrl);
+      toast.success("Vídeo enviado com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao enviar vídeo: " + error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleEdit = (video: TutorialVideo) => {
@@ -253,12 +299,70 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
               </div>
 
               <div className="space-y-2">
-                <Label>URL do Vídeo (YouTube/Vimeo)</Label>
-                <Input
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://youtube.com/watch?v=..."
-                />
+                <Label>Vídeo</Label>
+                <Tabs value={videoSource} onValueChange={(v) => setVideoSource(v as "upload" | "url")}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="upload" className="text-xs">
+                      <Upload className="h-3 w-3 mr-1" />
+                      Enviar
+                    </TabsTrigger>
+                    <TabsTrigger value="url" className="text-xs">
+                      <Link className="h-3 w-3 mr-1" />
+                      URL
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="upload" className="mt-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : videoUrl && videoSource === "upload" ? (
+                        <>
+                          <Video className="h-4 w-4 mr-2" />
+                          Trocar vídeo
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Selecionar vídeo
+                        </>
+                      )}
+                    </Button>
+                    {videoUrl && videoSource === "upload" && (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        ✓ Vídeo selecionado
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      MP4, WebM, MOV ou AVI (máx. 100MB)
+                    </p>
+                  </TabsContent>
+                  <TabsContent value="url" className="mt-2">
+                    <Input
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      YouTube, Vimeo ou link direto
+                    </p>
+                  </TabsContent>
+                </Tabs>
               </div>
 
               <div className="space-y-2">
