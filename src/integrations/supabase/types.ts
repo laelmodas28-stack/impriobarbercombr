@@ -814,6 +814,62 @@ export type Database = {
           },
         ]
       }
+      tutorial_videos: {
+        Row: {
+          barbershop_id: string | null
+          category_icon: string
+          category_id: string
+          category_title: string
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          duration: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          barbershop_id?: string | null
+          category_icon?: string
+          category_id: string
+          category_title: string
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          duration?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          barbershop_id?: string | null
+          category_icon?: string
+          category_id?: string
+          category_title?: string
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          duration?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_videos_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           barbershop_id: string | null
