@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key, Wallet, Video } from "lucide-react";
+import { Calendar, Users, Scissors, Settings, Image as ImageIcon, User, Trash2, Upload, BarChart3, Plus, Crown, Bell, Send, UserCog, Key, Wallet, Video, Percent } from "lucide-react";
 import { toast } from "sonner";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -35,6 +35,8 @@ import { RegistrationCodeManager } from "@/components/admin/RegistrationCodeMana
 import { ShareableLink } from "@/components/admin/ShareableLink";
 import { WhatsAppButton } from "@/components/admin/WhatsAppButton";
 import { VideoTutorialManager } from "@/components/admin/VideoTutorialManager";
+import { AdminBookingForm } from "@/components/admin/AdminBookingForm";
+import { CommissionDashboard } from "@/components/admin/CommissionDashboard";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -677,17 +679,47 @@ const Admin = () => {
 
           {/* Financeiro */}
           <TabsContent value="financial" className="space-y-6">
-            {bookings && professionals && services && (
-              <FinancialDashboard 
-                bookings={bookings} 
-                professionals={professionals} 
-                services={services} 
-              />
-            )}
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+                <TabsTrigger value="commissions" className="flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  Comissões
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview">
+                {bookings && professionals && services && (
+                  <FinancialDashboard 
+                    bookings={bookings} 
+                    professionals={professionals} 
+                    services={services} 
+                  />
+                )}
+              </TabsContent>
+              
+              <TabsContent value="commissions">
+                {barbershop && bookings && professionals && (
+                  <CommissionDashboard 
+                    barbershopId={barbershop.id}
+                    bookings={bookings} 
+                    professionals={professionals} 
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           {/* Agendamentos */}
           <TabsContent value="bookings" className="space-y-6">
+            {/* Formulário de novo agendamento */}
+            {barbershop && (
+              <AdminBookingForm 
+                barbershopId={barbershop.id} 
+                onSuccess={() => refetchBookings()} 
+              />
+            )}
+            
             <Card className="border-border">
               <CardHeader>
                 <CardTitle>Agendamentos de Hoje</CardTitle>

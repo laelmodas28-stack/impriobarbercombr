@@ -363,6 +363,69 @@ export type Database = {
           },
         ]
       }
+      commission_payments: {
+        Row: {
+          barbershop_id: string
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          gross_amount: number
+          id: string
+          notes: string | null
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          professional_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          commission_amount?: number
+          commission_rate: number
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          professional_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          professional_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payments_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gallery: {
         Row: {
           barbershop_id: string
@@ -510,6 +573,48 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_commissions: {
+        Row: {
+          barbershop_id: string
+          commission_rate: number
+          created_at: string
+          id: string
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          professional_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_commissions_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_commissions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
