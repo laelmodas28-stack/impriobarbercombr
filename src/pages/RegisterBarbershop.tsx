@@ -11,9 +11,9 @@ import imperioLogo from "@/assets/imperio-logo.webp";
 import { z } from "zod";
 import { Crown, Store, User } from "lucide-react";
 
-// Validation schema
+// Validation schema (accessCode temporarily optional)
 const formSchema = z.object({
-  accessCode: z.string().min(6, "Código de acesso deve ter pelo menos 6 caracteres"),
+  accessCode: z.string().optional(),
   email: z.string().email("Email inválido").max(255),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").max(100),
   fullName: z.string().min(2, "Nome muito curto").max(100),
@@ -26,7 +26,6 @@ const formSchema = z.object({
 const RegisterBarbershop = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [accessCode, setAccessCode] = useState("");
   
   // Dados do Proprietário
   const [ownerName, setOwnerName] = useState("");
@@ -52,7 +51,6 @@ const RegisterBarbershop = () => {
     // Validação com zod
     try {
       formSchema.parse({
-        accessCode,
         email: ownerEmail,
         password: ownerPassword,
         fullName: ownerName,
@@ -71,10 +69,9 @@ const RegisterBarbershop = () => {
     setLoading(true);
     
     try {
-      // Chamar edge function para criar tudo
+      // Chamar edge function para criar tudo (sem código de acesso temporariamente)
       const { data, error } = await supabase.functions.invoke('register-barbershop', {
         body: {
-          code: accessCode,
           owner: {
             full_name: ownerName,
             email: ownerEmail,
@@ -149,27 +146,8 @@ const RegisterBarbershop = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Código de Acesso */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Código de Acesso</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="accessCode">Código de Acesso *</Label>
-                  <Input
-                    id="accessCode"
-                    type="text"
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="Digite o código de acesso"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Você precisa de um código de acesso para registrar uma barbearia
-                  </p>
-                </div>
-              </div>
-
               {/* Dados do Proprietário */}
-              <div className="space-y-4 pt-4 border-t">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2 text-lg font-semibold">
                   <User className="w-5 h-5 text-primary" />
                   <h3>Dados do Proprietário</h3>
