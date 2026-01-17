@@ -30,7 +30,7 @@ const Index = () => {
     enabled: !!originSlug,
   });
 
-  // Redirecionamento imediato se usuário logado veio de uma barbearia
+  // Redirecionamento imediato se usuário logado veio de uma barbearia (não oficial)
   // Executar ANTES de qualquer outra lógica para evitar flash da tela genérica
   useEffect(() => {
     if (!authLoading && user && originSlug) {
@@ -56,7 +56,7 @@ const Index = () => {
       if (userRole?.barbershop_id) {
         const { data: barbershop } = await supabase
           .from("barbershops")
-          .select("slug")
+          .select("slug, is_official")
           .eq("id", userRole.barbershop_id)
           .maybeSingle();
         
@@ -71,12 +71,18 @@ const Index = () => {
   // Redirecionar: admin para sua barbearia
   // Cliente com originSlug já é tratado no useEffect acima
   useEffect(() => {
-    if (!authLoading && !barbershopLoading) {
-      if (userBarbershop?.slug) {
-        navigate(`/b/${userBarbershop.slug}`, { replace: true });
+    if (!authLoading && !barbershopLoading && !originSlug) {
+      if (userBarbershop) {
+        // Se for barbearia oficial, redireciona para "/"
+        if (userBarbershop.is_official) {
+          navigate("/", { replace: true });
+        } else if (userBarbershop.slug) {
+          // Se não for oficial, usa o slug
+          navigate(`/b/${userBarbershop.slug}`, { replace: true });
+        }
       }
     }
-  }, [authLoading, barbershopLoading, userBarbershop, navigate]);
+  }, [authLoading, barbershopLoading, userBarbershop, navigate, originSlug]);
 
   const handleBackToBarbershop = () => {
     if (originSlug) {

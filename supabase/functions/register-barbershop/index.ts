@@ -19,9 +19,9 @@ serve(async (req) => {
   }
 
   try {
-    // Schema validation (code temporarily optional)
+    // Schema validation (code is now required)
     const registerSchema = z.object({
-      code: z.string().min(6).max(50).optional(),
+      code: z.string().min(6, "Código de acesso é obrigatório").max(50, "Código muito longo"),
       owner: z.object({
         email: z.string().email().max(255),
         password: z.string().min(6).max(100),
@@ -49,42 +49,36 @@ serve(async (req) => {
       }
     });
 
-    // Validate registration code only if provided (temporarily optional)
-    let codeData = null;
-    if (code && code.length > 0) {
-      const { data, error: codeError } = await supabaseAdmin
-        .from('registration_codes')
-        .select('*')
-        .eq('code', code)
-        .eq('is_used', false)
-        .maybeSingle();
+    // Validate registration code (now required)
+    const { data: codeData, error: codeError } = await supabaseAdmin
+      .from('registration_codes')
+      .select('*')
+      .eq('code', code.toUpperCase().trim())
+      .eq('is_used', false)
+      .maybeSingle();
 
-      if (codeError || !data) {
-        return new Response(
-          JSON.stringify({ error: 'Código de acesso inválido ou já utilizado' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-
-      // Check if code is expired
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: 'Código de acesso expirado' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-      
-      codeData = data;
-      console.log('Registration with access code:', code);
-    } else {
-      console.log('Registration without access code (temporary mode)');
+    if (codeError || !codeData) {
+      return new Response(
+        JSON.stringify({ error: 'Código de acesso inválido ou já utilizado' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
     }
+
+    // Check if code is expired (only if expires_at is set)
+    if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: 'Código de acesso expirado' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+    
+    console.log('Registration with access code:', code);
 
     console.log('Starting barbershop registration for:', owner.email);
 
@@ -182,20 +176,18 @@ serve(async (req) => {
       console.error('Error creating notification settings:', notificationError);
     }
 
-    // 6. Mark registration code as used (only if code was provided)
-    if (code && code.length > 0 && codeData) {
-      const { error: codeUpdateError } = await supabaseAdmin
-        .from('registration_codes')
-        .update({ 
-          is_used: true,
-          used_by: userId,
-          used_at: new Date().toISOString()
-        })
-        .eq('code', code);
+    // 6. Mark registration code as used (code is now required)
+    const { error: codeUpdateError } = await supabaseAdmin
+      .from('registration_codes')
+      .update({ 
+        is_used: true,
+        used_by: userId,
+        used_at: new Date().toISOString()
+      })
+      .eq('code', code.toUpperCase().trim());
 
-      if (codeUpdateError) {
-        console.error('Error updating registration code:', codeUpdateError);
-      }
+    if (codeUpdateError) {
+      console.error('Error updating registration code:', codeUpdateError);
     }
 
     // Enviar webhook para n8n com dados de acesso

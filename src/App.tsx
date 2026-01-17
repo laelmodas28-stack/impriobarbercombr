@@ -22,6 +22,7 @@ import Gallery from "./pages/Gallery";
 import Subscriptions from "./pages/Subscriptions";
 import RegisterBarbershop from "./pages/RegisterBarbershop";
 import NotFound from "./pages/NotFound";
+import { EnsureOfficialBarbershop } from "./components/EnsureOfficialBarbershop";
 
 const queryClient = new QueryClient();
 
@@ -75,8 +76,23 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <EnsureOfficialBarbershop />
             <Routes>
-              {/* Rotas com slug da barbearia */}
+              {/* Rota oficial da Imperio Barber (sem slug) */}
+              <Route path="/" element={<BarbershopLayout isOfficial={true} />}>
+                <Route index element={<Home />} />
+                <Route path="services" element={<Services />} />
+                <Route path="professionals" element={<Professionals />} />
+                <Route path="professionals/:id" element={<ProfessionalDetail />} />
+                <Route path="booking" element={<Booking />} />
+                <Route path="gallery" element={<Gallery />} />
+                <Route path="subscriptions" element={<Subscriptions />} />
+                <Route path="about" element={<About />} />
+                <Route path="auth" element={<BarbershopAuth />} />
+                <Route path="admin" element={<Admin />} />
+              </Route>
+
+              {/* Rotas com slug da barbearia (outras barbearias) */}
               <Route path="/b/:slug" element={<BarbershopLayout />}>
                 <Route index element={<Home />} />
                 <Route path="services" element={<Services />} />
@@ -85,17 +101,15 @@ const App = () => (
                 <Route path="booking" element={<Booking />} />
                 <Route path="gallery" element={<Gallery />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
-              <Route path="about" element={<About />} />
-              <Route path="auth" element={<BarbershopAuth />} />
-              <Route path="admin" element={<Admin />} />
+                <Route path="about" element={<About />} />
+                <Route path="auth" element={<BarbershopAuth />} />
+                <Route path="admin" element={<Admin />} />
               </Route>
 
               {/* Rotas padrão */}
               <Route path="/splash" element={<Splash />} />
-              <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/account" element={<Account />} />
-              <Route path="/admin" element={<Admin />} />
               <Route path="/registro-barbeiro" element={<RegisterBarbershop />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

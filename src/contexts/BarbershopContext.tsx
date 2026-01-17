@@ -20,6 +20,7 @@ interface Barbershop {
   primary_color: string;
   mensagem_personalizada: string | null;
   owner_id: string;
+  is_official?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -34,50 +35,71 @@ interface BarbershopContextType {
 
 const BarbershopContext = createContext<BarbershopContextType | undefined>(undefined);
 
-export const BarbershopProvider: React.FC<{ children: ReactNode; slug?: string }> = ({ children, slug: propSlug }) => {
+interface BarbershopProviderProps {
+  children: ReactNode;
+  slug?: string;
+  isOfficial?: boolean;
+}
+
+export const BarbershopProvider: React.FC<BarbershopProviderProps> = ({ children, slug: propSlug, isOfficial = false }) => {
   const params = useParams<{ slug?: string }>();
   const queryClient = useQueryClient();
   
-  // Slug da URL tem prioridade absoluta
-  const currentSlug = propSlug || params.slug;
+  // Slug da URL tem prioridade absoluta (exceto se for oficial)
+  const currentSlug = isOfficial ? undefined : (propSlug || params.slug);
   
-  // Ref para rastrear o último slug processado
-  const lastSlugRef = useRef<string | null>(null);
+  // Ref para rastrear o último identificador processado
+  const lastIdentifierRef = useRef<string | null>(null);
 
-  // RESET completo do cache quando o slug muda
+  // RESET completo do cache quando o identificador muda
   useEffect(() => {
-    if (currentSlug && currentSlug !== lastSlugRef.current) {
+    const currentIdentifier = isOfficial ? "official" : currentSlug;
+    if (currentIdentifier && currentIdentifier !== lastIdentifierRef.current) {
       queryClient.resetQueries({ queryKey: ["barbershop-by-slug"] });
-      queryClient.removeQueries({ queryKey: ["barbershop-by-slug", lastSlugRef.current] });
-      lastSlugRef.current = currentSlug;
+      queryClient.resetQueries({ queryKey: ["barbershop-official"] });
+      queryClient.removeQueries({ queryKey: ["barbershop-by-slug", lastIdentifierRef.current] });
+      queryClient.removeQueries({ queryKey: ["barbershop-official"] });
+      lastIdentifierRef.current = currentIdentifier;
     }
-  }, [currentSlug, queryClient]);
+  }, [currentSlug, isOfficial, queryClient]);
 
-  // Query para buscar barbearia - APENAS por slug, sem fallback
+  // Query para buscar barbearia - oficial ou por slug
   const { data: barbershop, isLoading, error } = useQuery({
-    queryKey: ["barbershop-by-slug", currentSlug],
+    queryKey: isOfficial ? ["barbershop-official"] : ["barbershop-by-slug", currentSlug],
     queryFn: async () => {
-      // APENAS buscar por slug - sem fallback para evitar mistura de contextos
-      if (!currentSlug) {
-        return null;
-      }
+      if (isOfficial) {
+        // Buscar barbearia oficial
+        const { data, error: fetchError } = await supabase
+          .from("barbershops")
+          .select("*")
+          .eq("is_official", true)
+          .maybeSingle();
+        
+        if (fetchError) throw fetchError;
+        return data;
+      } else {
+        // Buscar por slug
+        if (!currentSlug) {
+          return null;
+        }
 
-      const { data, error: fetchError } = await supabase
-        .from("barbershops")
-        .select("*")
-        .eq("slug", currentSlug)
-        .maybeSingle();
-      
-      if (fetchError) throw fetchError;
-      return data;
+        const { data, error: fetchError } = await supabase
+          .from("barbershops")
+          .select("*")
+          .eq("slug", currentSlug)
+          .maybeSingle();
+        
+        if (fetchError) throw fetchError;
+        return data;
+      }
     },
-    enabled: !!currentSlug,
+    enabled: isOfficial || !!currentSlug,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
   });
 
-  const baseUrl = currentSlug ? `/b/${currentSlug}` : "";
+  const baseUrl = isOfficial ? "" : (currentSlug ? `/b/${currentSlug}` : "");
 
   return (
     <BarbershopContext.Provider 

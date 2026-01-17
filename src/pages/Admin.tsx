@@ -945,13 +945,11 @@ const Admin = () => {
           {/* Configurações */}
           <TabsContent value="settings" className="space-y-6">
             {/* Link Compartilhável */}
-            {barbershop?.slug && (
-              <ShareableLink
-                barbershopId={barbershop.id}
-                currentSlug={barbershop.slug}
-                barbershopName={barbershop.name}
-              />
-            )}
+            <ShareableLink
+              barbershopId={barbershop.id}
+              currentSlug={barbershop.slug || ""}
+              barbershopName={barbershop.name}
+            />
 
             {/* Tema */}
             <ThemeSelector 

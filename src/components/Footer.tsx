@@ -4,11 +4,7 @@ import { SocialLinks } from "./SocialLinks";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const Footer = () => {
-  const { barbershop: info } = useBarbershopContext();
-  const { slug } = useParams();
-  
-  // Construir URL base correta para links
-  const baseUrl = slug ? `/b/${slug}` : "";
+  const { barbershop: info, baseUrl } = useBarbershopContext();
 
   return <footer className="border-t border-border bg-card/50 mt-20">
       <div className="container mx-auto px-4 py-8">

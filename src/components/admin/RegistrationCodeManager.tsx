@@ -18,6 +18,7 @@ export const RegistrationCodeManager = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [expirationDays, setExpirationDays] = useState(30);
+  const [hasExpiration, setHasExpiration] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,12 +53,16 @@ export const RegistrationCodeManager = () => {
 
     setIsLoading(true);
     try {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + expirationDays);
+      // Calcular data de expiração apenas se hasExpiration for true
+      const expiresAt = hasExpiration ? (() => {
+        const date = new Date();
+        date.setDate(date.getDate() + expirationDays);
+        return date.toISOString();
+      })() : null;
 
       const { error } = await supabase.from("registration_codes").insert({
         code: newCode.toUpperCase().trim(),
-        expires_at: expiresAt.toISOString(),
+        expires_at: expiresAt,
       });
 
       if (error) {
@@ -73,6 +78,8 @@ export const RegistrationCodeManager = () => {
       queryClient.invalidateQueries({ queryKey: ["registration-codes"] });
       setIsDialogOpen(false);
       setNewCode("");
+      setHasExpiration(false);
+      setExpirationDays(30);
     } catch (error: any) {
       console.error("Error creating code:", error);
       toast.error(error.message || "Erro ao criar código");
@@ -177,18 +184,40 @@ export const RegistrationCodeManager = () => {
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Validade (dias)</Label>
-                    <Input
-                      type="number"
-                      value={expirationDays}
-                      onChange={(e) => setExpirationDays(parseInt(e.target.value) || 30)}
-                      min={1}
-                      max={365}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      O código expira após {expirationDays} dias
-                    </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="has-expiration"
+                        checked={hasExpiration}
+                        onChange={(e) => setHasExpiration(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="has-expiration" className="cursor-pointer">
+                        Definir data de expiração
+                      </Label>
+                    </div>
+                    {hasExpiration && (
+                      <div className="space-y-2 ml-6">
+                        <Label htmlFor="expiration-days">Validade (dias)</Label>
+                        <Input
+                          id="expiration-days"
+                          type="number"
+                          value={expirationDays}
+                          onChange={(e) => setExpirationDays(parseInt(e.target.value) || 30)}
+                          min={1}
+                          max={365}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          O código expira após {expirationDays} dias
+                        </p>
+                      </div>
+                    )}
+                    {!hasExpiration && (
+                      <p className="text-xs text-muted-foreground ml-6">
+                        O código não terá data de expiração
+                      </p>
+                    )}
                   </div>
                 </div>
 

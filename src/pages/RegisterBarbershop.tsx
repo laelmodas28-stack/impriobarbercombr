@@ -11,9 +11,9 @@ import imperioLogo from "@/assets/imperio-logo.webp";
 import { z } from "zod";
 import { Crown, Store, User } from "lucide-react";
 
-// Validation schema (accessCode temporarily optional)
+// Validation schema (accessCode is now required)
 const formSchema = z.object({
-  accessCode: z.string().optional(),
+  accessCode: z.string().min(6, "Código de acesso é obrigatório").max(50, "Código muito longo"),
   email: z.string().email("Email inválido").max(255),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").max(100),
   fullName: z.string().min(2, "Nome muito curto").max(100),
@@ -26,6 +26,9 @@ const formSchema = z.object({
 const RegisterBarbershop = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  
+  // Código de Acesso
+  const [accessCode, setAccessCode] = useState("");
   
   // Dados do Proprietário
   const [ownerName, setOwnerName] = useState("");
@@ -51,6 +54,7 @@ const RegisterBarbershop = () => {
     // Validação com zod
     try {
       formSchema.parse({
+        accessCode: accessCode.trim().toUpperCase(),
         email: ownerEmail,
         password: ownerPassword,
         fullName: ownerName,
@@ -69,9 +73,10 @@ const RegisterBarbershop = () => {
     setLoading(true);
     
     try {
-      // Chamar edge function para criar tudo (sem código de acesso temporariamente)
+      // Chamar edge function para criar tudo (com código de acesso obrigatório)
       const { data, error } = await supabase.functions.invoke('register-barbershop', {
         body: {
+          code: accessCode.trim().toUpperCase(),
           owner: {
             full_name: ownerName,
             email: ownerEmail,
@@ -146,6 +151,28 @@ const RegisterBarbershop = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Código de Acesso */}
+              <div className="space-y-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="space-y-2">
+                  <Label htmlFor="access-code" className="text-base font-semibold">
+                    Código de Acesso *
+                  </Label>
+                  <Input
+                    id="access-code"
+                    type="text"
+                    placeholder="Ex: BARBER2024"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                    className="uppercase font-mono"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Você precisa de um código de acesso válido para criar uma barbearia. 
+                    Entre em contato com o administrador para obter um código.
+                  </p>
+                </div>
+              </div>
+
               {/* Dados do Proprietário */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-lg font-semibold">
