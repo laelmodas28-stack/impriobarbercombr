@@ -30,8 +30,8 @@ serve(async (req) => {
       }),
       barbershop: z.object({
         name: z.string().min(2).max(100).trim(),
-        address: z.string().max(200).optional(),
-        description: z.string().max(500).optional()
+        address: z.string().max(200).nullable().optional(),
+        description: z.string().max(500).nullable().optional()
       })
     });
 
