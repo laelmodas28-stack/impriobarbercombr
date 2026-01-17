@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import BarbershopLayout from "@/components/BarbershopLayout";
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
+import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
 import BarbershopAuth from "./pages/BarbershopAuth";
 import Home from "./pages/Home";
@@ -77,8 +78,11 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              {/* Página inicial */}
-              <Route path="/" element={<Index />} />
+              {/* Landing page principal */}
+              <Route path="/" element={<LandingPage />} />
+              
+              {/* Página de redirecionamento (quando tabelas existirem) */}
+              {/* <Route path="/app" element={<Index />} /> */}
 
               {/* Rotas com slug da barbearia (outras barbearias) */}
               <Route path="/b/:slug" element={<BarbershopLayout />}>
