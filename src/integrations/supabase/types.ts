@@ -136,6 +136,7 @@ export type Database = {
           description: string | null
           id: string
           instagram: string | null
+          is_official: boolean | null
           logo_url: string | null
           mensagem_personalizada: string | null
           name: string
@@ -156,6 +157,7 @@ export type Database = {
           description?: string | null
           id?: string
           instagram?: string | null
+          is_official?: boolean | null
           logo_url?: string | null
           mensagem_personalizada?: string | null
           name: string
@@ -176,6 +178,7 @@ export type Database = {
           description?: string | null
           id?: string
           instagram?: string | null
+          is_official?: boolean | null
           logo_url?: string | null
           mensagem_personalizada?: string | null
           name?: string
