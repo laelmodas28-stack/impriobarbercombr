@@ -186,6 +186,46 @@ serve(async (req) => {
       }
     }
 
+    // Enviar webhook para n8n com dados de acesso
+    const webhookUrl = 'https://n8nwebhook.atendai.app/webhook/23f78ce8-d4c4-4ce3-bff4-374701a008a1';
+    const baseUrl = 'https://impriobarbercombr.lovable.app';
+
+    try {
+      const webhookPayload = {
+        event: 'barbershop_registered',
+        timestamp: new Date().toISOString(),
+        barbershop: {
+          id: barbershopId,
+          name: barbershop.name,
+          slug: barbershopData.slug,
+          address: barbershop.address || null,
+          description: barbershop.description || null
+        },
+        owner: {
+          id: userId,
+          email: owner.email,
+          full_name: owner.full_name,
+          phone: owner.phone || null
+        },
+        access_urls: {
+          barbershop_page: `${baseUrl}/b/${barbershopData.slug}`,
+          admin_panel: `${baseUrl}/b/${barbershopData.slug}/admin`,
+          login_page: `${baseUrl}/b/${barbershopData.slug}/auth`
+        }
+      };
+
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload)
+      });
+      
+      console.log('Webhook enviado para n8n:', webhookResponse.status);
+    } catch (webhookError) {
+      console.error('Erro ao enviar webhook (não crítico):', webhookError);
+      // Não falha o registro se webhook falhar
+    }
+
     console.log('Barbershop registration completed successfully');
 
     return new Response(
@@ -193,6 +233,7 @@ serve(async (req) => {
         success: true,
         user_id: userId,
         barbershop_id: barbershopId,
+        slug: barbershopData.slug,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
