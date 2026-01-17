@@ -96,8 +96,15 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Error creating user:', authError);
+      
+      // Translate common auth errors to Portuguese
+      let errorMessage = authError.message;
+      if (authError.code === 'email_exists' || authError.message.includes('already been registered')) {
+        errorMessage = 'Este email já está cadastrado. Tente fazer login ou use outro email.';
+      }
+      
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: errorMessage }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
