@@ -22,22 +22,8 @@ export const ShareableLink = ({ barbershopId, currentSlug, barbershopName }: Sha
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
 
-  // Verificar se é barbearia oficial
-  const { data: barbershop } = useQuery({
-    queryKey: ["barbershop-for-link", barbershopId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("barbershops")
-        .select("is_official")
-        .eq("id", barbershopId)
-        .maybeSingle();
-      return data;
-    },
-  });
-
-  const isOfficial = barbershop?.is_official || false;
   const baseUrl = window.location.origin;
-  const fullUrl = isOfficial ? `${baseUrl}/` : `${baseUrl}/b/${currentSlug}`;
+  const fullUrl = `${baseUrl}/b/${currentSlug}`;
 
   const copyToClipboard = async () => {
     try {
@@ -95,7 +81,6 @@ export const ShareableLink = ({ barbershopId, currentSlug, barbershopName }: Sha
       queryClient.invalidateQueries({ queryKey: ["barbershop"] });
       queryClient.invalidateQueries({ queryKey: ["barbershop-context"] });
       queryClient.invalidateQueries({ queryKey: ["barbershop-by-slug"] });
-      queryClient.invalidateQueries({ queryKey: ["barbershop-for-link"] });
       setIsEditing(false);
     } catch (error) {
       console.error(error);
@@ -132,51 +117,37 @@ export const ShareableLink = ({ barbershopId, currentSlug, barbershopName }: Sha
         {/* URL Display */}
         <div className="space-y-2">
           <Label>Seu link exclusivo</Label>
-          {isOfficial ? (
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center bg-muted rounded-md overflow-hidden">
-                <span className="px-3 py-2 text-sm font-medium">{baseUrl}/</span>
-              </div>
-              <div className="px-3 py-2 text-xs bg-primary/10 text-primary rounded-md">
-                Oficial
-              </div>
-              <Button onClick={copyToClipboard} variant="default" size="icon">
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center bg-muted rounded-md overflow-hidden">
-                <span className="px-3 py-2 text-sm text-muted-foreground bg-muted-foreground/10 border-r border-border">
-                  {baseUrl}/b/
-                </span>
-                {isEditing ? (
-                  <Input
-                    value={newSlug}
-                    onChange={(e) => handleSlugChange(e.target.value)}
-                    className="border-0 focus-visible:ring-0 bg-transparent"
-                    placeholder="seu-link"
-                  />
-                ) : (
-                  <span className="px-3 py-2 text-sm font-medium">{currentSlug}</span>
-                )}
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center bg-muted rounded-md overflow-hidden">
+              <span className="px-3 py-2 text-sm text-muted-foreground bg-muted-foreground/10 border-r border-border">
+                {baseUrl}/b/
+              </span>
               {isEditing ? (
-                <Button onClick={saveNewSlug} disabled={isSaving} size="icon">
-                  <Save className="w-4 h-4" />
-                </Button>
+                <Input
+                  value={newSlug}
+                  onChange={(e) => handleSlugChange(e.target.value)}
+                  className="border-0 focus-visible:ring-0 bg-transparent"
+                  placeholder="seu-link"
+                />
               ) : (
-                <>
-                  <Button onClick={() => setIsEditing(true)} variant="outline" size="icon">
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button onClick={copyToClipboard} variant="default" size="icon">
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </>
+                <span className="px-3 py-2 text-sm font-medium">{currentSlug}</span>
               )}
             </div>
-          )}
+            {isEditing ? (
+              <Button onClick={saveNewSlug} disabled={isSaving} size="icon">
+                <Save className="w-4 h-4" />
+              </Button>
+            ) : (
+              <>
+                <Button onClick={() => setIsEditing(true)} variant="outline" size="icon">
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                <Button onClick={copyToClipboard} variant="default" size="icon">
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Full URL Preview */}

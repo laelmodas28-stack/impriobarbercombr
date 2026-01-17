@@ -22,7 +22,7 @@ import Gallery from "./pages/Gallery";
 import Subscriptions from "./pages/Subscriptions";
 import RegisterBarbershop from "./pages/RegisterBarbershop";
 import NotFound from "./pages/NotFound";
-import { EnsureOfficialBarbershop } from "./components/EnsureOfficialBarbershop";
+
 
 const queryClient = new QueryClient();
 
@@ -76,21 +76,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <EnsureOfficialBarbershop />
             <Routes>
-              {/* Rota oficial da Imperio Barber (sem slug) */}
-              <Route path="/" element={<BarbershopLayout isOfficial={true} />}>
-                <Route index element={<Home />} />
-                <Route path="services" element={<Services />} />
-                <Route path="professionals" element={<Professionals />} />
-                <Route path="professionals/:id" element={<ProfessionalDetail />} />
-                <Route path="booking" element={<Booking />} />
-                <Route path="gallery" element={<Gallery />} />
-                <Route path="subscriptions" element={<Subscriptions />} />
-                <Route path="about" element={<About />} />
-                <Route path="auth" element={<BarbershopAuth />} />
-                <Route path="admin" element={<Admin />} />
-              </Route>
+              {/* Página inicial */}
+              <Route path="/" element={<Index />} />
 
               {/* Rotas com slug da barbearia (outras barbearias) */}
               <Route path="/b/:slug" element={<BarbershopLayout />}>

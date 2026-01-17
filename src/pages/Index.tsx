@@ -56,7 +56,7 @@ const Index = () => {
       if (userRole?.barbershop_id) {
         const { data: barbershop } = await supabase
           .from("barbershops")
-          .select("slug, is_official")
+          .select("slug")
           .eq("id", userRole.barbershop_id)
           .maybeSingle();
         
@@ -72,14 +72,8 @@ const Index = () => {
   // Cliente com originSlug já é tratado no useEffect acima
   useEffect(() => {
     if (!authLoading && !barbershopLoading && !originSlug) {
-      if (userBarbershop) {
-        // Se for barbearia oficial, redireciona para "/"
-        if (userBarbershop.is_official) {
-          navigate("/", { replace: true });
-        } else if (userBarbershop.slug) {
-          // Se não for oficial, usa o slug
-          navigate(`/b/${userBarbershop.slug}`, { replace: true });
-        }
+      if (userBarbershop?.slug) {
+        navigate(`/b/${userBarbershop.slug}`, { replace: true });
       }
     }
   }, [authLoading, barbershopLoading, userBarbershop, navigate, originSlug]);
