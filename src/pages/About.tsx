@@ -1,26 +1,12 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
 import { SocialLinks } from "@/components/SocialLinks";
 import { BusinessHours } from "@/components/BusinessHours";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Crown, MapPin, Phone } from "lucide-react";
+import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
 const About = () => {
-  const { data: info } = useQuery({
-    queryKey: ["barbershop-info"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("barbershop_info")
-        .select("*")
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  const { barbershop: info } = useBarbershopContext();
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,7 +16,7 @@ const About = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <Crown className="w-16 h-16 mx-auto mb-4 text-primary" />
-            <h1 className="text-4xl font-bold mb-4">Sobre o IMPÉRIO BARBER</h1>
+            <h1 className="text-4xl font-bold mb-4">Sobre {info?.name || "a Barbearia"}</h1>
             <p className="text-muted-foreground text-lg">
               {info?.description || "Barbearia premium com atendimento de excelência"}
             </p>
@@ -43,7 +29,7 @@ const About = () => {
             </CardHeader>
             <CardContent className="text-muted-foreground leading-relaxed">
               <p className="mb-4">
-                O IMPÉRIO BARBER nasceu com o objetivo de proporcionar uma experiência única e premium 
+                {info?.name || "Nossa barbearia"} nasceu com o objetivo de proporcionar uma experiência única e premium 
                 para homens que valorizam qualidade e estilo. Combinamos técnicas tradicionais de barbearia 
                 com as tendências mais modernas do mercado.
               </p>
@@ -85,7 +71,6 @@ const About = () => {
                 <SocialLinks 
                   whatsapp={info?.whatsapp}
                   instagram={info?.instagram}
-                  tiktok={info?.tiktok}
                 />
               </div>
             </CardContent>

@@ -25,17 +25,9 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface TutorialVideo {
-  id: string;
-  category_id: string;
-  category_title: string;
-  category_icon: string;
-  title: string;
-  description: string | null;
-  video_url: string | null;
-  duration: string | null;
-}
+type TutorialVideo = Tables<"tutorial_videos">;
 
 interface GroupedCategory {
   id: string;
@@ -70,11 +62,6 @@ const VideoCard = ({ video }: { video: TutorialVideo }) => {
         </p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        {video.duration && (
-          <Badge variant="secondary" className="text-xs">
-            {video.duration}
-          </Badge>
-        )}
         {video.video_url && (
           <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
         )}
@@ -97,11 +84,10 @@ export const VideoTutorials = () => {
         .select("*")
         .eq("barbershop_id", barbershop.id)
         .eq("is_active", true)
-        .order("category_id")
-        .order("display_order");
+        .order("order_index");
       
       if (error) throw error;
-      return data as TutorialVideo[];
+      return data;
     },
     enabled: !!barbershop?.id && isAdmin,
   });
@@ -111,21 +97,18 @@ export const VideoTutorials = () => {
     return null;
   }
 
-  // Group videos by category
+  // Group videos by a simple category based on title prefix or just show all
   const categories: GroupedCategory[] = [];
-  videos?.forEach((video) => {
-    let category = categories.find((c) => c.id === video.category_id);
-    if (!category) {
-      category = {
-        id: video.category_id,
-        title: video.category_title,
-        icon: video.category_icon,
-        videos: [],
-      };
-      categories.push(category);
-    }
-    category.videos.push(video);
-  });
+  const defaultCategory: GroupedCategory = {
+    id: "default",
+    title: "Tutoriais",
+    icon: "🎬",
+    videos: videos || [],
+  };
+  
+  if (videos && videos.length > 0) {
+    categories.push(defaultCategory);
+  }
 
   const totalVideos = videos?.length || 0;
 

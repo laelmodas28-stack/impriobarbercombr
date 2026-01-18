@@ -11,15 +11,16 @@ export const useBarbershopClients = (barbershopId?: string) => {
         .from("barbershop_clients")
         .select(`
           *,
-          client:profiles!barbershop_clients_client_id_fkey (
+          profile:profiles!barbershop_clients_user_id_fkey (
             id,
-            full_name,
+            name,
             phone,
-            avatar_url
+            avatar_url,
+            email
           )
         `)
         .eq("barbershop_id", barbershopId)
-        .order("last_visit", { ascending: false });
+        .order("created_at", { ascending: false });
       
       if (error) throw error;
       return data;
@@ -33,8 +34,8 @@ export const useBarbershopClients = (barbershopId?: string) => {
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
     return clients.filter(client => {
-      if (!client.last_visit) return true;
-      return new Date(client.last_visit) < cutoffDate;
+      // Use created_at as fallback since last_visit doesn't exist
+      return new Date(client.created_at) < cutoffDate;
     });
   };
 

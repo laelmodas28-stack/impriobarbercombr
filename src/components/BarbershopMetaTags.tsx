@@ -8,8 +8,7 @@ const BarbershopMetaTags = () => {
     title: barbershop?.name 
       ? `${barbershop.name} - Agende seu horário` 
       : "Agende seu horário - Barbearia",
-    description: barbershop?.mensagem_personalizada 
-      || barbershop?.description 
+    description: barbershop?.description 
       || `Agende seu horário na ${barbershop?.name || "nossa barbearia"}. Atendimento de excelência com os melhores profissionais.`,
     image: barbershop?.logo_url || undefined,
     url: typeof window !== "undefined" 

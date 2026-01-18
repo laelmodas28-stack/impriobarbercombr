@@ -2,27 +2,10 @@ import React, { createContext, useContext, ReactNode, useEffect, useRef } from "
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface Barbershop {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  logo_url: string | null;
-  address: string | null;
-  phone: string | null;
-  whatsapp: string | null;
-  instagram: string | null;
-  tiktok: string | null;
-  opening_time: string | null;
-  closing_time: string | null;
-  opening_days: string[] | null;
-  primary_color: string;
-  mensagem_personalizada: string | null;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
+// Use the database type directly
+type Barbershop = Tables<"barbershops">;
 
 interface BarbershopContextType {
   barbershop: Barbershop | null;
@@ -73,7 +56,7 @@ export const BarbershopProvider: React.FC<BarbershopProviderProps> = ({ children
         .maybeSingle();
       
       if (fetchError) throw fetchError;
-      return data as Barbershop | null;
+      return data;
     },
     enabled: !!currentSlug,
     staleTime: 0,

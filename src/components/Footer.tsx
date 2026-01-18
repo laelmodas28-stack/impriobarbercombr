@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Crown } from "lucide-react";
 import { SocialLinks } from "./SocialLinks";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
@@ -6,7 +6,8 @@ import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 const Footer = () => {
   const { barbershop: info, baseUrl } = useBarbershopContext();
 
-  return <footer className="border-t border-border bg-card/50 mt-20">
+  return (
+    <footer className="border-t border-border bg-card/50 mt-20">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
@@ -15,9 +16,9 @@ const Footer = () => {
               <span className="font-bold text-lg">{info?.name || "Barbearia"}</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              {info?.mensagem_personalizada || "Barbearia premium com atendimento de excelência"}
+              {info?.description || "Barbearia premium com atendimento de excelência"}
             </p>
-            <SocialLinks whatsapp={info?.whatsapp} instagram={info?.instagram} tiktok={info?.tiktok} />
+            <SocialLinks whatsapp={info?.whatsapp} instagram={info?.instagram} />
           </div>
           
           <div>
@@ -37,14 +38,14 @@ const Footer = () => {
               </Link>
             </div>
           </div>
-          
-          
         </div>
         
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} {info?.name || "Barbearia"}. Todos os direitos reservados.</p>
         </div>
       </div>
-    </footer>;
+    </footer>
+  );
 };
+
 export default Footer;
