@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Crown, 
   Calendar, 
@@ -169,6 +170,7 @@ const LandingPage = () => {
             </a>
           </nav>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
               Entrar
             </Button>
