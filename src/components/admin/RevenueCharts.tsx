@@ -20,11 +20,11 @@ import { ptBR } from "date-fns/locale";
 
 interface Booking {
   id: string;
-  total_price: number;
+  price: number | null;
   booking_date: string;
-  status: string;
-  professional?: { name: string };
-  service?: { name: string };
+  status: string | null;
+  professional?: { name: string } | null;
+  service?: { name: string } | null;
 }
 
 interface RevenueChartsProps {
@@ -57,7 +57,7 @@ const RevenueCharts = ({ bookings }: RevenueChartsProps) => {
       (b) => b.booking_date === dayStr
     );
     const revenue = dayBookings.reduce(
-      (sum, b) => sum + Number(b.total_price),
+      (sum, b) => sum + Number(b.price || 0),
       0
     );
     return {
@@ -80,7 +80,7 @@ const RevenueCharts = ({ bookings }: RevenueChartsProps) => {
     });
 
     const revenue = monthBookings.reduce(
-      (sum, b) => sum + Number(b.total_price),
+      (sum, b) => sum + Number(b.price || 0),
       0
     );
 
@@ -97,12 +97,12 @@ const RevenueCharts = ({ bookings }: RevenueChartsProps) => {
     const serviceName = booking.service?.name || "Outro";
     const existing = acc.find((item) => item.name === serviceName);
     if (existing) {
-      existing.value += Number(booking.total_price);
+      existing.value += Number(booking.price || 0);
       existing.count += 1;
     } else {
       acc.push({
         name: serviceName,
-        value: Number(booking.total_price),
+        value: Number(booking.price || 0),
         count: 1,
       });
     }

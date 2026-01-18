@@ -45,17 +45,17 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 
 interface Booking {
   id: string;
-  total_price: number;
+  price: number | null;
   booking_date: string;
-  status: string;
-  professional_id: string;
-  professional?: { name: string };
+  status: string | null;
+  professional_id: string | null;
+  professional?: { name: string } | null;
 }
 
 interface Professional {
   id: string;
   name: string;
-  photo_url?: string;
+  photo_url?: string | null;
 }
 
 interface CommissionDashboardProps {
@@ -147,8 +147,8 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
         bookingsCount: 0
       };
 
-      const amount = Number(booking.total_price);
-      const rate = getCommissionRate(booking.professional_id);
+      const amount = Number(booking.price || 0);
+      const rate = getCommissionRate(booking.professional_id || "");
       const commission = amount * (rate / 100);
 
       existing.grossAmount += amount;

@@ -81,7 +81,7 @@ const Home = () => {
   const handleOpenEditDialog = () => {
     if (barbershop) {
       setEditName(barbershop.name);
-      setEditDescription(barbershop.mensagem_personalizada || "");
+      setEditDescription(barbershop.description || "");
       setIsEditDialogOpen(true);
     }
   };
@@ -94,7 +94,7 @@ const Home = () => {
         .from("barbershops")
         .update({
           name: editName,
-          mensagem_personalizada: editDescription,
+          description: editDescription,
         })
         .eq("id", barbershop.id);
 
@@ -134,7 +134,7 @@ const Home = () => {
             )}
           </div>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            {barbershop?.mensagem_personalizada || "Barbearia premium com atendimento de excelência. Agende seu horário com os melhores profissionais."}
+            {barbershop?.description || "Barbearia premium com atendimento de excelência. Agende seu horário com os melhores profissionais."}
           </p>
           <Link to={getLink("/booking")}>
             <Button variant="premium" size="xl" className="shadow-elevation">
