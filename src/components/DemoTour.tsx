@@ -6,13 +6,20 @@ import {
   Users, 
   BarChart3, 
   Bell, 
-  Smartphone,
+  Building2,
   CreditCard,
   ChevronLeft, 
   ChevronRight,
   Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+import demoScheduling from "@/assets/demo-scheduling.jpg";
+import demoTeam from "@/assets/demo-team.jpg";
+import demoFinancial from "@/assets/demo-financial.jpg";
+import demoSubscriptions from "@/assets/demo-subscriptions.jpg";
+import demoNotifications from "@/assets/demo-notifications.jpg";
+import demoMultiunit from "@/assets/demo-multiunit.jpg";
 
 interface DemoTourProps {
   open: boolean;
@@ -22,6 +29,7 @@ interface DemoTourProps {
 const tourSteps = [
   {
     icon: Calendar,
+    image: demoScheduling,
     title: "Agendamento Online 24/7",
     description: "Sistema de agendamentos que funciona a qualquer hora, com confirmação automática integrada.",
     features: [
@@ -32,6 +40,7 @@ const tourSteps = [
   },
   {
     icon: Users,
+    image: demoTeam,
     title: "Gestão de Equipe",
     description: "Controle completo de profissionais, escalas de trabalho e comissões em um único lugar.",
     features: [
@@ -42,6 +51,7 @@ const tourSteps = [
   },
   {
     icon: BarChart3,
+    image: demoFinancial,
     title: "Dashboard Financeiro",
     description: "Visão completa do faturamento, serviços mais vendidos e tendências do negócio.",
     features: [
@@ -52,6 +62,7 @@ const tourSteps = [
   },
   {
     icon: Bell,
+    image: demoNotifications,
     title: "Notificações Automatizadas",
     description: "Reduza faltas com lembretes automáticos via WhatsApp e notificações push.",
     features: [
@@ -61,17 +72,19 @@ const tourSteps = [
     ]
   },
   {
-    icon: Smartphone,
-    title: "Identidade Própria",
-    description: "Sua barbearia com marca própria: logo, cores personalizadas e link exclusivo.",
+    icon: Building2,
+    image: demoMultiunit,
+    title: "Multi-Unidades",
+    description: "Gerencie múltiplas filiais com controle centralizado e relatórios consolidados.",
     features: [
-      "Link personalizado para sua barbearia",
-      "Cores e logo da sua marca",
-      "Responsivo para qualquer dispositivo"
+      "Painel único para todas as unidades",
+      "Comparativo de desempenho entre filiais",
+      "Gestão de equipe por localidade"
     ]
   },
   {
     icon: CreditCard,
+    image: demoSubscriptions,
     title: "Planos de Assinatura",
     description: "Crie planos mensais para fidelizar clientes e garantir receita recorrente.",
     features: [
@@ -107,7 +120,7 @@ export function DemoTour({ open, onOpenChange }: DemoTourProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0">
+      <DialogContent className="sm:max-w-3xl p-0 overflow-hidden gap-0">
         {/* Header with progress */}
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between mb-3">
@@ -142,26 +155,39 @@ export function DemoTour({ open, onOpenChange }: DemoTourProps) {
 
         {/* Content */}
         <div className="p-6">
-          {/* Icon */}
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
-            <Icon className="w-6 h-6 text-primary" />
+          {/* Screenshot image */}
+          <div className="rounded-lg overflow-hidden border border-border mb-6 shadow-lg">
+            <img 
+              src={step.image} 
+              alt={step.title}
+              className="w-full h-auto object-cover"
+            />
           </div>
 
-          {/* Title and description */}
-          <h3 className="text-xl font-semibold mb-2 text-foreground">{step.title}</h3>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-6">{step.description}</p>
+          <div className="flex items-start gap-4">
+            {/* Icon */}
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Icon className="w-5 h-5 text-primary" />
+            </div>
 
-          {/* Features list */}
-          <ul className="space-y-3">
-            {step.features.map((feature, index) => (
-              <li key={index} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Check className="w-3 h-3 text-primary" />
-                </div>
-                <span className="text-sm text-foreground">{feature}</span>
-              </li>
-            ))}
-          </ul>
+            <div className="flex-1 min-w-0">
+              {/* Title and description */}
+              <h3 className="text-lg font-semibold mb-1 text-foreground">{step.title}</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">{step.description}</p>
+
+              {/* Features list */}
+              <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {step.features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Check className="w-2.5 h-2.5 text-primary" />
+                    </div>
+                    <span className="text-xs text-foreground">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
 
         {/* Footer navigation */}
