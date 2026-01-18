@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,30 +10,63 @@ import { useSubscriptions } from "@/hooks/useSubscriptions";
 import { useBarbershop } from "@/hooks/useBarbershop";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check, Crown, Calendar, Award, Scissors } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { Check, Crown, Calendar, Award, Scissors, Loader2, CreditCard, QrCode } from "lucide-react";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Subscriptions = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { barbershop } = useBarbershop();
   const { plans, plansLoading, clientSubscriptions, activeSubscription, refetchSubscriptions } = useSubscriptions(barbershop?.id);
+  
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+
+  // Handle payment callback from URL
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      toast.success('Pagamento processado! Sua assinatura será ativada em instantes.');
+      refetchSubscriptions();
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (paymentStatus === 'failure') {
+      toast.error('Pagamento não aprovado. Tente novamente.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (paymentStatus === 'pending') {
+      toast.info('Pagamento pendente. Aguarde a confirmação.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams, refetchSubscriptions]);
 
   // Buscar todos os serviços disponíveis
   const { data: services } = useQuery({
-    queryKey: ["services-subscriptions"],
+    queryKey: ["services-subscriptions", barbershop?.id],
     queryFn: async () => {
+      if (!barbershop?.id) return [];
       const { data, error } = await supabase
         .from("services")
         .select("*")
+        .eq("barbershop_id", barbershop.id)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return data;
     },
+    enabled: !!barbershop?.id,
   });
 
   const handleSubscribe = async (planId: string) => {
@@ -47,38 +81,60 @@ const Subscriptions = () => {
       return;
     }
 
-    // Verificar se já tem assinatura ativa
     if (activeSubscription) {
       toast.error("Você já possui uma assinatura ativa");
       return;
     }
 
+    setSelectedPlanId(planId);
+    setIsCheckoutLoading(true);
+
     try {
-      const plan = plans?.find(p => p.id === planId);
-      if (!plan) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        navigate("/auth");
+        return;
+      }
 
-      const startDate = new Date();
-      const endDate = addDays(startDate, plan.duration_days);
+      const { data, error } = await supabase.functions.invoke('create-mercadopago-checkout', {
+        body: {
+          planId,
+          barbershopId: barbershop.id,
+        },
+      });
 
-      const { error } = await supabase
-        .from("client_subscriptions")
-        .insert({
-          plan_id: planId,
-          client_id: user.id,
-          barbershop_id: barbershop.id,
-          start_date: format(startDate, "yyyy-MM-dd"),
-          end_date: format(endDate, "yyyy-MM-dd"),
-          status: "active",
-          payment_status: "paid", // Simulando pagamento aprovado
-        });
+      if (error) {
+        console.error('Checkout error:', error);
+        if (error.message?.includes('MP_NOT_CONFIGURED')) {
+          toast.error('Sistema de pagamento não configurado. Entre em contato com a barbearia.');
+        } else {
+          toast.error('Erro ao criar checkout. Tente novamente.');
+        }
+        return;
+      }
 
-      if (error) throw error;
-
-      toast.success("Assinatura realizada com sucesso!");
-      refetchSubscriptions();
+      if (data?.initPoint) {
+        setCheckoutUrl(data.initPoint);
+        setShowPaymentDialog(true);
+      } else {
+        toast.error('Erro ao obter link de pagamento');
+      }
     } catch (error) {
-      console.error("Erro ao criar assinatura:", error);
-      toast.error("Erro ao criar assinatura");
+      console.error("Erro ao criar checkout:", error);
+      toast.error("Erro ao processar. Tente novamente.");
+    } finally {
+      setIsCheckoutLoading(false);
+      setSelectedPlanId(null);
+    }
+  };
+
+  const handleOpenCheckout = () => {
+    if (checkoutUrl) {
+      window.open(checkoutUrl, '_blank');
+      setShowPaymentDialog(false);
+      setCheckoutUrl(null);
     }
   };
 
@@ -115,7 +171,7 @@ const Subscriptions = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Valor Mensal</p>
                   <p className="text-2xl font-bold text-primary">
@@ -125,17 +181,7 @@ const Subscriptions = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Válido até</p>
                   <p className="text-lg font-semibold">
-                    {format(new Date(activeSubscription.end_date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Serviços Usados</p>
-                  <p className="text-lg font-semibold">
-                    {activeSubscription.services_used_this_month} 
-                    {activeSubscription.plan?.max_services_per_month 
-                      ? ` / ${activeSubscription.plan.max_services_per_month}`
-                      : " / Ilimitado"
-                    }
+                    {format(new Date(activeSubscription.expires_at), "dd 'de' MMMM, yyyy", { locale: ptBR })}
                   </p>
                 </div>
               </div>
@@ -178,83 +224,81 @@ const Subscriptions = () => {
           <p className="text-center text-muted-foreground mb-8">
             Escolha o plano ideal para você e economize
           </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plansLoading ? (
-            <p className="col-span-3 text-center text-muted-foreground">Carregando planos...</p>
-          ) : plans && plans.length > 0 ? (
-            plans.map((plan) => (
-              <Card 
-                key={plan.id} 
-                className={`border-border hover:shadow-gold transition-all ${
-                  activeSubscription?.plan_id === plan.id ? 'ring-2 ring-primary' : ''
-                }`}
-              >
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="pt-4">
-                    <span className="text-4xl font-bold text-primary">
-                      R$ {plan.price}
-                    </span>
-                    <span className="text-muted-foreground">/mês</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="font-semibold flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary" />
-                      Serviços Incluídos:
-                    </p>
-                    <ul className="space-y-1 ml-6">
-                      {plan.services_included && plan.services_included.length > 0 ? (
-                        plan.services_included.map((serviceId) => (
-                          <li key={serviceId} className="text-sm text-muted-foreground">
-                            • Serviço incluído
-                          </li>
-                        ))
-                      ) : (
-                        <li className="text-sm text-muted-foreground">• Todos os serviços</li>
-                      )}
-                    </ul>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plansLoading ? (
+              <p className="col-span-3 text-center text-muted-foreground">Carregando planos...</p>
+            ) : plans && plans.length > 0 ? (
+              plans.map((plan) => (
+                <Card 
+                  key={plan.id} 
+                  className={`border-border hover:shadow-gold transition-all ${
+                    activeSubscription?.plan_id === plan.id ? 'ring-2 ring-primary' : ''
+                  }`}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    <CardDescription>{plan.description}</CardDescription>
+                    <div className="pt-4">
+                      <span className="text-4xl font-bold text-primary">
+                        R$ {plan.price}
+                      </span>
+                      <span className="text-muted-foreground">/mês</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="font-semibold flex items-center gap-2">
+                        <Check className="w-4 h-4 text-primary" />
+                        Benefícios:
+                      </p>
+                      <ul className="space-y-1 ml-6">
+                        {plan.benefits && plan.benefits.length > 0 ? (
+                          plan.benefits.map((benefit, idx) => (
+                            <li key={idx} className="text-sm text-muted-foreground">
+                              • {benefit}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-sm text-muted-foreground">• Acesso aos serviços</li>
+                        )}
+                      </ul>
+                    </div>
 
-                  {plan.max_services_per_month && (
                     <p className="text-sm text-muted-foreground flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      Até {plan.max_services_per_month} serviços por mês
+                      Duração: {plan.duration_days} dias
                     </p>
-                  )}
 
-                  {plan.discount_percentage && plan.discount_percentage > 0 && (
-                    <Badge variant="secondary">
-                      {plan.discount_percentage}% de desconto
-                    </Badge>
-                  )}
-
-                  <Button 
-                    variant={activeSubscription?.plan_id === plan.id ? "outline" : "premium"}
-                    className="w-full"
-                    onClick={() => handleSubscribe(plan.id)}
-                    disabled={!!activeSubscription}
-                  >
-                    {activeSubscription?.plan_id === plan.id 
-                      ? "Plano Atual" 
-                      : activeSubscription 
-                        ? "Já possui assinatura"
-                        : "Assinar Agora"
-                    }
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-3 text-center py-12">
-              <p className="text-muted-foreground mb-4">
-                Nenhum plano disponível no momento
-              </p>
-            </div>
-          )}
-        </div>
+                    <Button 
+                      variant={activeSubscription?.plan_id === plan.id ? "outline" : "default"}
+                      className="w-full"
+                      onClick={() => handleSubscribe(plan.id)}
+                      disabled={!!activeSubscription || (isCheckoutLoading && selectedPlanId === plan.id)}
+                    >
+                      {isCheckoutLoading && selectedPlanId === plan.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : activeSubscription?.plan_id === plan.id ? (
+                        "Plano Atual"
+                      ) : activeSubscription ? (
+                        "Já possui assinatura"
+                      ) : (
+                        "Assinar Agora"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  Nenhum plano disponível no momento
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Histórico de Assinaturas */}
@@ -274,7 +318,7 @@ const Subscriptions = () => {
                     <div>
                       <p className="font-semibold">{subscription.plan?.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(subscription.start_date), "dd/MM/yyyy")} - {format(new Date(subscription.end_date), "dd/MM/yyyy")}
+                        {format(new Date(subscription.started_at), "dd/MM/yyyy")} - {format(new Date(subscription.expires_at), "dd/MM/yyyy")}
                       </p>
                     </div>
                     <div className="text-right">
@@ -296,6 +340,36 @@ const Subscriptions = () => {
           </Card>
         )}
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Finalizar Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              Você será redirecionado para o Mercado Pago para completar o pagamento de forma segura.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+              <QrCode className="w-8 h-8 text-primary" />
+              <div>
+                <p className="font-medium">Pague com Pix, cartão ou boleto</p>
+                <p className="text-sm text-muted-foreground">Ambiente seguro do Mercado Pago</p>
+              </div>
+            </div>
+            <Button onClick={handleOpenCheckout} className="w-full">
+              Ir para o Pagamento
+            </Button>
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)} className="w-full">
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
