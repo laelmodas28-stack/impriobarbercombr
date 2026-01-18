@@ -555,7 +555,7 @@ const LandingPage = () => {
           <div className="relative rounded-3xl overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent" />
             <div className="relative bg-card/80 backdrop-blur border border-primary/20 rounded-3xl p-8 md:p-16 text-center">
-              <Crown className="w-14 h-14 mx-auto mb-6 text-primary" />
+              
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
                 Pronto para transformar sua barbearia?
               </h2>
