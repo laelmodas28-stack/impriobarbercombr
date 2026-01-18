@@ -23,12 +23,12 @@ interface AdminBookingFormProps {
 
 interface Client {
   id: string;
-  client_id: string;
-  client?: {
+  user_id: string;
+  profile?: {
     id: string;
-    full_name: string;
-    phone?: string;
-  };
+    name: string | null;
+    phone: string | null;
+  } | null;
 }
 
 export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormProps) => {
@@ -90,16 +90,16 @@ export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormPr
         .from("barbershop_clients")
         .select(`
           *,
-          client:profiles!barbershop_clients_client_id_fkey (
+          profile:profiles!barbershop_clients_user_id_fkey (
             id,
-            full_name,
+            name,
             phone
           )
         `)
         .eq("barbershop_id", barbershopId)
-        .order("last_visit", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Client[];
+      return data as unknown as Client[];
     },
     enabled: !!barbershopId,
   });
@@ -136,11 +136,13 @@ export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormPr
     enabled: !!selectedProfessional && !!selectedDate,
   });
 
-  // Generate time slots
+  // Generate time slots from business_hours
   const timeSlots = useMemo(() => {
     const slots: string[] = [];
-    const openTime = barbershop?.opening_time || "08:00:00";
-    const closeTime = barbershop?.closing_time || "19:00:00";
+    // Extract opening/closing from business_hours JSON or use defaults
+    const businessHours = barbershop?.business_hours as any;
+    const openTime = businessHours?.opening_time || "08:00";
+    const closeTime = businessHours?.closing_time || "19:00";
     
     const [openHour] = openTime.split(':').map(Number);
     const [closeHour] = closeTime.split(':').map(Number);
@@ -204,7 +206,7 @@ export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormPr
         barbershop_id: barbershopId,
         booking_date: format(selectedDate, "yyyy-MM-dd"),
         booking_time: selectedTime,
-        total_price: service?.price || 0,
+        price: service?.price || 0,
         notes: notes,
         status: "confirmed"
       });
@@ -264,9 +266,9 @@ export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormPr
           .from("profiles")
           .insert({
             id: newId,
-            full_name: newClientName,
-            phone: newClientPhone || null,
-            role: 'client'
+            user_id: newId, // Use same ID as user_id for walk-in clients
+            name: newClientName,
+            phone: newClientPhone || null
           });
 
         if (profileError) throw profileError;
@@ -278,11 +280,9 @@ export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormPr
         .from("barbershop_clients")
         .upsert({
           barbershop_id: barbershopId,
-          client_id: clientId,
-          phone: newClientPhone || null,
-          email: newClientEmail || null,
-          is_active: true
-        }, { onConflict: 'barbershop_id,client_id' });
+          user_id: clientId,
+          notes: newClientEmail ? `Email: ${newClientEmail}` : null
+        }, { onConflict: 'barbershop_id,user_id' });
 
       if (clientError) throw clientError;
 
@@ -343,8 +343,8 @@ export const AdminBookingForm = ({ barbershopId, onSuccess }: AdminBookingFormPr
                 </SelectTrigger>
                 <SelectContent>
                   {clients?.map((c) => (
-                    <SelectItem key={c.client_id} value={c.client_id}>
-                      {c.client?.full_name} {c.client?.phone ? `- ${c.client.phone}` : ''}
+                    <SelectItem key={c.user_id} value={c.user_id}>
+                      {c.profile?.name || "Cliente"} {c.profile?.phone ? `- ${c.profile.phone}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

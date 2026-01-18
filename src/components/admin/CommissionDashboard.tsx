@@ -75,13 +75,13 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
   const [editingCommission, setEditingCommission] = useState<string | null>(null);
   const [newCommissionRate, setNewCommissionRate] = useState<string>("");
 
-  // Fetch commission rates
-  const { data: commissionRates, refetch: refetchCommissions } = useQuery({
-    queryKey: ["commission-rates", barbershopId],
+  // Fetch commission rates from professionals table (uses commission_percentage column)
+  const { data: professionalRates, refetch: refetchCommissions } = useQuery({
+    queryKey: ["professional-rates", barbershopId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("professional_commissions")
-        .select("*")
+        .from("professionals")
+        .select("id, commission_percentage")
         .eq("barbershop_id", barbershopId);
       if (error) throw error;
       return data || [];
@@ -96,18 +96,19 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
       const { data, error } = await supabase
         .from("commission_payments")
         .select("*")
-        .eq("barbershop_id", barbershopId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      // Filter by professionals from this barbershop
+      const profIds = professionals.map(p => p.id);
+      return (data || []).filter(p => profIds.includes(p.professional_id));
     },
-    enabled: !!barbershopId,
+    enabled: !!barbershopId && professionals.length > 0,
   });
 
   // Get commission rate for a professional
   const getCommissionRate = (professionalId: string): number => {
-    const rate = commissionRates?.find(r => r.professional_id === professionalId);
-    return rate ? Number(rate.commission_rate) : 50; // Default 50%
+    const prof = professionalRates?.find(r => r.id === professionalId);
+    return prof?.commission_percentage ? Number(prof.commission_percentage) : 50; // Default 50%
   };
 
   // Filter bookings by date range and professional
@@ -159,7 +160,7 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
     });
 
     return Array.from(commissionMap.values()).sort((a, b) => b.grossAmount - a.grossAmount);
-  }, [filteredBookings, professionals, commissionRates]);
+  }, [filteredBookings, professionals, professionalRates]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -227,12 +228,9 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
 
     try {
       const { error } = await supabase
-        .from("professional_commissions")
-        .upsert({
-          professional_id: professionalId,
-          barbershop_id: barbershopId,
-          commission_rate: rate
-        }, { onConflict: 'professional_id,barbershop_id' });
+        .from("professionals")
+        .update({ commission_percentage: rate })
+        .eq("id", professionalId);
 
       if (error) throw error;
 
