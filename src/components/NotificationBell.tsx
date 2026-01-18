@@ -15,8 +15,8 @@ import { VideoTutorials } from "./VideoTutorials";
 export const NotificationBell = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
-  const handleNotificationClick = (notificationId: string, read: boolean) => {
-    if (!read) {
+  const handleNotificationClick = (notificationId: string, isRead: boolean | null) => {
+    if (!isRead) {
       markAsRead.mutate(notificationId);
     }
   };
@@ -64,15 +64,15 @@ export const NotificationBell = () => {
                   <div
                     key={notification.id}
                     className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                      !notification.read ? "bg-primary/5" : ""
+                      !notification.is_read ? "bg-primary/5" : ""
                     }`}
-                    onClick={() => handleNotificationClick(notification.id, notification.read)}
+                    onClick={() => handleNotificationClick(notification.id, notification.is_read)}
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm">{notification.title}</p>
-                          {!notification.read && (
+                          {!notification.is_read && (
                             <div className="h-2 w-2 rounded-full bg-primary" />
                           )}
                         </div>

@@ -23,7 +23,7 @@ type AppRole = "admin" | "barber" | "client" | "super_admin";
 
 interface UserWithRole {
   id: string;
-  full_name: string;
+  name: string;
   phone: string | null;
   created_at: string;
   role: AppRole;
@@ -43,10 +43,10 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["admin-users", barbershopId],
     queryFn: async () => {
-      // 1. Fetch clients from barbershop_clients table
+      // 1. Fetch clients from barbershop_clients table (use user_id, not client_id)
       const { data: barbershopClients, error: clientsError } = await supabase
         .from("barbershop_clients")
-        .select("client_id")
+        .select("user_id")
         .eq("barbershop_id", barbershopId);
 
       if (clientsError) throw clientsError;
@@ -60,7 +60,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
       if (rolesError) throw rolesError;
 
       // Combine unique user IDs
-      const clientIds = barbershopClients?.map(c => c.client_id) || [];
+      const clientIds = barbershopClients?.map(c => c.user_id) || [];
       const roleUserIds = rolesInBarbershop?.map(r => r.user_id) || [];
       const uniqueUserIds = [...new Set([...clientIds, ...roleUserIds])];
 
@@ -72,18 +72,18 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .in("id", uniqueUserIds)
-        .order("full_name");
+        .in("user_id", uniqueUserIds)
+        .order("name");
 
       if (profilesError) throw profilesError;
 
       // Map profiles with their roles for current barbershop
-      const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
-        const userRole = rolesInBarbershop?.find(r => r.user_id === profile.id);
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
+        const userRole = rolesInBarbershop?.find(r => r.user_id === profile.user_id);
         
         return {
-          id: profile.id,
-          full_name: profile.full_name,
+          id: profile.user_id,
+          name: profile.name || "Sem nome",
           phone: profile.phone,
           created_at: profile.created_at,
           role: (userRole?.role as AppRole) || "client",
@@ -107,7 +107,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
     // Confirmation for admin role
     if (selectedRole === "admin") {
       const confirmed = confirm(
-        `Tem certeza que deseja dar permissão de ADMINISTRADOR para ${editingUser.full_name}?\n\nAdministradores têm acesso total ao painel e podem gerenciar todos os dados da barbearia.`
+        `Tem certeza que deseja dar permissão de ADMINISTRADOR para ${editingUser.name}?\n\nAdministradores têm acesso total ao painel e podem gerenciar todos os dados da barbearia.`
       );
       if (!confirmed) return;
     }
@@ -213,7 +213,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
 
   const filteredUsers = users?.filter(
     (user) =>
-      user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone?.includes(searchTerm)
   );
 
@@ -296,13 +296,13 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
                           ) : (
                             <User className="w-4 h-4 text-muted-foreground" />
                           )}
-                          {user.full_name || "Sem nome"}
+                          {user.name || "Sem nome"}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <span>{user.phone || "-"}</span>
-                          <WhatsAppButton phone={user.phone} clientName={user.full_name} />
+                          <WhatsAppButton phone={user.phone} clientName={user.name} />
                         </div>
                       </TableCell>
                       <TableCell>
@@ -329,7 +329,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => handleRemoveFromBarbershop(user.id, user.full_name)}
+                              onClick={() => handleRemoveFromBarbershop(user.id, user.name)}
                               disabled={isRemoving === user.id}
                             >
                               {isRemoving === user.id ? (
@@ -394,7 +394,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
           <DialogHeader>
             <DialogTitle>Editar Função do Usuário</DialogTitle>
             <DialogDescription>
-              Altere a função de {editingUser?.full_name || "usuário"} nesta barbearia
+              Altere a função de {editingUser?.name || "usuário"} nesta barbearia
             </DialogDescription>
           </DialogHeader>
 
@@ -402,7 +402,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
             <div className="space-y-2">
               <Label>Usuário</Label>
               <p className="text-sm text-muted-foreground">
-                {editingUser?.full_name} ({editingUser?.phone || "Sem telefone"})
+                {editingUser?.name} ({editingUser?.phone || "Sem telefone"})
               </p>
             </div>
 

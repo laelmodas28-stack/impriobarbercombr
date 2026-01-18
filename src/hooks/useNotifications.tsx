@@ -1,18 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Tables } from "@/integrations/supabase/types";
 
-export interface Notification {
-  id: string;
-  user_id: string;
-  barbershop_id: string | null;
-  type: 'booking_confirmation' | 'booking_reminder' | 'barber_notification';
-  title: string;
-  message: string;
-  read: boolean;
-  booking_id: string | null;
-  created_at: string;
-}
+// Use the database type directly
+type Notification = Tables<"notifications">;
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -30,18 +22,18 @@ export const useNotifications = () => {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data as Notification[];
+      return data;
     },
     enabled: !!user,
   });
 
-  const unreadCount = notifications?.filter(n => !n.read).length || 0;
+  const unreadCount = notifications?.filter(n => !n.is_read).length || 0;
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase
         .from("notifications")
-        .update({ read: true })
+        .update({ is_read: true })
         .eq("id", notificationId);
       
       if (error) throw error;
@@ -57,9 +49,9 @@ export const useNotifications = () => {
       
       const { error } = await supabase
         .from("notifications")
-        .update({ read: true })
+        .update({ is_read: true })
         .eq("user_id", user.id)
-        .eq("read", false);
+        .eq("is_read", false);
       
       if (error) throw error;
     },
@@ -76,3 +68,5 @@ export const useNotifications = () => {
     markAllAsRead,
   };
 };
+
+export type { Notification };
