@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import imperioLogo from "@/assets/imperio-logo.webp";
 import { z } from "zod";
-import { Crown, Store, User } from "lucide-react";
+import { Crown, Store, User, ArrowLeft } from "lucide-react";
 
 // Validation schema (accessCode is now required)
 const formSchema = z.object({
@@ -129,6 +129,14 @@ const RegisterBarbershop = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-2xl">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar para página principal
+        </Button>
         <div className="text-center mb-8">
           <img 
             src={imperioLogo} 
