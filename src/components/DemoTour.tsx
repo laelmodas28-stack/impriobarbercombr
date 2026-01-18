@@ -10,7 +10,7 @@ import {
   CreditCard,
   ChevronLeft, 
   ChevronRight,
-  CheckCircle2
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,68 +23,62 @@ const tourSteps = [
   {
     icon: Calendar,
     title: "Agendamento Online 24/7",
-    description: "Seus clientes agendam a qualquer hora, direto do celular. Confirmação automática por WhatsApp e email.",
+    description: "Sistema de agendamentos que funciona a qualquer hora, com confirmação automática integrada.",
     features: [
       "Calendário inteligente com disponibilidade em tempo real",
       "Bloqueio automático de horários ocupados",
-      "Reagendamento fácil pelo cliente"
-    ],
-    color: "from-blue-500 to-blue-600"
+      "Reagendamento simplificado para o cliente"
+    ]
   },
   {
     icon: Users,
-    title: "Gestão de Equipe Completa",
-    description: "Controle profissionais, escalas de trabalho e comissões de forma simples e organizada.",
+    title: "Gestão de Equipe",
+    description: "Controle completo de profissionais, escalas de trabalho e comissões em um único lugar.",
     features: [
-      "Perfil individual para cada barbeiro",
+      "Perfil individual para cada profissional",
       "Cálculo automático de comissões",
-      "Relatório de desempenho por profissional"
-    ],
-    color: "from-green-500 to-green-600"
+      "Relatório de desempenho detalhado"
+    ]
   },
   {
     icon: BarChart3,
     title: "Dashboard Financeiro",
-    description: "Acompanhe faturamento, serviços mais vendidos e tendências do seu negócio em tempo real.",
+    description: "Visão completa do faturamento, serviços mais vendidos e tendências do negócio.",
     features: [
-      "Gráficos de receita diária/semanal/mensal",
+      "Gráficos de receita por período",
       "Análise de serviços mais populares",
-      "Exportação de relatórios"
-    ],
-    color: "from-purple-500 to-purple-600"
+      "Exportação de relatórios em PDF"
+    ]
   },
   {
     icon: Bell,
-    title: "Notificações Inteligentes",
-    description: "Reduza faltas com lembretes automáticos e mantenha sua agenda sempre cheia.",
+    title: "Notificações Automatizadas",
+    description: "Reduza faltas com lembretes automáticos via WhatsApp e notificações push.",
     features: [
       "Lembrete 24h e 1h antes do horário",
-      "Notificação de novos agendamentos",
-      "Alertas de cancelamento"
-    ],
-    color: "from-orange-500 to-orange-600"
+      "Notificação instantânea de novos agendamentos",
+      "Alertas de cancelamento para a equipe"
+    ]
   },
   {
     icon: Smartphone,
-    title: "Seu App Personalizado",
-    description: "Sua barbearia com identidade própria: logo, cores e link exclusivo para compartilhar.",
+    title: "Identidade Própria",
+    description: "Sua barbearia com marca própria: logo, cores personalizadas e link exclusivo.",
     features: [
-      "Link personalizado (suabarbearia.imperioapp.com)",
-      "Logo e cores da sua marca",
-      "Funciona em qualquer dispositivo"
-    ],
-    color: "from-pink-500 to-pink-600"
+      "Link personalizado para sua barbearia",
+      "Cores e logo da sua marca",
+      "Responsivo para qualquer dispositivo"
+    ]
   },
   {
     icon: CreditCard,
     title: "Planos de Assinatura",
     description: "Crie planos mensais para fidelizar clientes e garantir receita recorrente.",
     features: [
-      "Crie planos com benefícios exclusivos",
+      "Criação de planos com benefícios exclusivos",
       "Pagamento integrado com Mercado Pago",
-      "Gestão automática de assinaturas"
-    ],
-    color: "from-amber-500 to-amber-600"
+      "Gestão automática de renovações"
+    ]
   }
 ];
 
@@ -113,80 +107,87 @@ export function DemoTour({ open, onOpenChange }: DemoTourProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
-        {/* Progress bar */}
-        <div className="flex gap-1 p-4 pb-0">
-          {tourSteps.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentStep(index)}
-              className={cn(
-                "h-1.5 flex-1 rounded-full transition-all",
-                index === currentStep 
-                  ? "bg-primary" 
-                  : index < currentStep 
-                    ? "bg-primary/50" 
-                    : "bg-muted"
-              )}
-            />
-          ))}
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0">
+        {/* Header with progress */}
+        <div className="border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Tour do Produto
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {currentStep + 1} / {tourSteps.length}
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            {tourSteps.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentStep(index)}
+                className={cn(
+                  "h-1 flex-1 rounded-full transition-all duration-300",
+                  index === currentStep 
+                    ? "bg-primary" 
+                    : index < currentStep 
+                      ? "bg-primary/40" 
+                      : "bg-border"
+                )}
+              />
+            ))}
+          </div>
         </div>
 
-        <DialogHeader className="px-6 pt-4">
-          <DialogTitle className="sr-only">Tour do ImperioApp</DialogTitle>
+        <DialogHeader className="sr-only">
+          <DialogTitle>Tour do ImperioApp</DialogTitle>
         </DialogHeader>
 
         {/* Content */}
-        <div className="px-6 pb-6">
-          {/* Icon with gradient background */}
-          <div className={cn(
-            "w-16 h-16 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br",
-            step.color
-          )}>
-            <Icon className="w-8 h-8 text-white" />
+        <div className="p-6">
+          {/* Icon */}
+          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
+            <Icon className="w-6 h-6 text-primary" />
           </div>
 
           {/* Title and description */}
-          <h3 className="text-2xl font-bold mb-2">{step.title}</h3>
-          <p className="text-muted-foreground mb-6">{step.description}</p>
+          <h3 className="text-xl font-semibold mb-2 text-foreground">{step.title}</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6">{step.description}</p>
 
           {/* Features list */}
-          <ul className="space-y-3 mb-8">
+          <ul className="space-y-3">
             {step.features.map((feature, index) => (
               <li key={index} className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-success mt-0.5 shrink-0" />
-                <span className="text-sm">{feature}</span>
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-sm text-foreground">{feature}</span>
               </li>
             ))}
           </ul>
+        </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={goPrev}
-              disabled={currentStep === 0}
-              className="gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Anterior
+        {/* Footer navigation */}
+        <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/30">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goPrev}
+            disabled={currentStep === 0}
+            className="gap-1.5"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Anterior
+          </Button>
+
+          {currentStep === tourSteps.length - 1 ? (
+            <Button onClick={handleClose} size="sm" className="gap-1.5">
+              Começar Agora
+              <ChevronRight className="w-4 h-4" />
             </Button>
-
-            <span className="text-sm text-muted-foreground">
-              {currentStep + 1} de {tourSteps.length}
-            </span>
-
-            {currentStep === tourSteps.length - 1 ? (
-              <Button onClick={handleClose} variant="premium" className="gap-2">
-                Começar Agora
-              </Button>
-            ) : (
-              <Button onClick={goNext} className="gap-2">
-                Próximo
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+          ) : (
+            <Button onClick={goNext} size="sm" className="gap-1.5">
+              Próximo
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
