@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Crown } from "lucide-react";
+import { Crown, ArrowLeft } from "lucide-react";
 import BarbershopLoader from "@/components/BarbershopLoader";
 
 const Auth = () => {
@@ -105,6 +105,17 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      {/* Back button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(originSlug ? `/b/${originSlug}` : "/")}
+        className="absolute top-4 left-4 gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Voltar
+      </Button>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           {originBarbershop?.logo_url ? (
