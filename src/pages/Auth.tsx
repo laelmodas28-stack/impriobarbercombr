@@ -43,9 +43,8 @@ const Auth = () => {
 
   // Redirect if already logged in - back to origin barbershop if available
   useEffect(() => {
-    if (user && !loading) {
+    if (!loading && user) {
       if (originSlug) {
-        // NÃO remover originSlug - manter para permitir re-login na mesma barbearia
         navigate(`/b/${originSlug}`, { replace: true });
       } else {
         navigate("/", { replace: true });
@@ -53,7 +52,7 @@ const Auth = () => {
     }
   }, [user, loading, navigate, originSlug]);
 
-  // Show loading while checking auth
+  // Show loading only briefly while checking initial auth state
   if (loading) {
     return (
       <BarbershopLoader 
