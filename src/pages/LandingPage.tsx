@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DemoTour } from "@/components/DemoTour";
 import { 
   Calendar, 
   Users, 
@@ -30,6 +32,7 @@ import imperioLogo from "@/assets/imperio-logo.webp";
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [showDemoTour, setShowDemoTour] = useState(false);
 
   const features = [
     {
@@ -226,11 +229,15 @@ const LandingPage = () => {
               size="lg" 
               variant="outline"
               className="text-base px-8 h-12 border-border/60 hover:bg-muted/50"
+              onClick={() => setShowDemoTour(true)}
             >
               <Play className="w-4 h-4 mr-2" />
               Ver Demo
             </Button>
           </div>
+
+          {/* Demo Tour Modal */}
+          <DemoTour open={showDemoTour} onOpenChange={setShowDemoTour} />
 
           {/* Dashboard Preview */}
           <div className="relative mx-auto max-w-4xl">
