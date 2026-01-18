@@ -21,9 +21,33 @@ import {
   Lock, 
   MapPin,
   Building2,
-  FileText
+  FileText,
+  LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Component defined OUTSIDE to prevent re-creation on every render
+interface InputWithIconProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  icon: LucideIcon;
+  error?: string;
+}
+
+const InputWithIcon = ({ icon: Icon, error, className, ...props }: InputWithIconProps) => (
+  <div className="space-y-1">
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <Input 
+        className={cn(
+          "pl-10",
+          error && "border-destructive focus-visible:ring-destructive",
+          className
+        )} 
+        {...props} 
+      />
+    </div>
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+);
 
 // Validation schemas for each step
 const ownerSchema = z.object({
@@ -224,29 +248,6 @@ const RegisterBarbershop = () => {
     { number: 2, title: "Barbearia", icon: Store },
     { number: 3, title: "Confirmação", icon: Check },
   ];
-
-  const InputWithIcon = ({ 
-    icon: Icon, 
-    error, 
-    ...props 
-  }: { 
-    icon: React.ElementType; 
-    error?: string;
-  } & React.InputHTMLAttributes<HTMLInputElement>) => (
-    <div className="space-y-1">
-      <div className="relative">
-        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input 
-          className={cn(
-            "pl-10",
-            error && "border-destructive focus-visible:ring-destructive"
-          )} 
-          {...props} 
-        />
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
