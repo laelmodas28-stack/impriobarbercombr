@@ -6,11 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Crown, ArrowLeft } from "lucide-react";
+import { Crown, ArrowLeft, Store, ChevronRight } from "lucide-react";
 import BarbershopLoader from "@/components/BarbershopLoader";
 import { toast } from "sonner";
+
+interface BarbershopOption {
+  id: string;
+  slug: string;
+  name: string;
+  logo_url: string | null;
+  isAdmin?: boolean;
+}
 
 const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -19,6 +28,8 @@ const Auth = () => {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [showBarbershopSelector, setShowBarbershopSelector] = useState(false);
+  const [availableBarbershops, setAvailableBarbershops] = useState<BarbershopOption[]>([]);
   
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
@@ -43,79 +54,130 @@ const Auth = () => {
     enabled: !!originSlug,
   });
 
-  // Function to find user's barbershop and redirect
-  const findUserBarbershopAndRedirect = async (userId: string) => {
+  // Function to find user's barbershops
+  const findUserBarbershops = async (userId: string): Promise<BarbershopOption[]> => {
+    const barbershops: BarbershopOption[] = [];
+    const seenIds = new Set<string>();
+
+    // Check user_roles for admin/barber roles
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("barbershop_id, role")
+      .eq("user_id", userId)
+      .in("role", ["admin", "super_admin", "barber"]);
+
+    if (userRoles && userRoles.length > 0) {
+      for (const role of userRoles) {
+        if (role.barbershop_id && !seenIds.has(role.barbershop_id)) {
+          const { data: barbershop } = await supabase
+            .from("barbershops")
+            .select("id, slug, name, logo_url")
+            .eq("id", role.barbershop_id)
+            .single();
+
+          if (barbershop) {
+            seenIds.add(barbershop.id);
+            barbershops.push({
+              ...barbershop,
+              isAdmin: role.role === "admin" || role.role === "super_admin"
+            });
+          }
+        }
+      }
+    }
+
+    // Check barbershop_clients for client associations
+    const { data: clientAssociations } = await supabase
+      .from("barbershop_clients")
+      .select("barbershop_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (clientAssociations && clientAssociations.length > 0) {
+      for (const assoc of clientAssociations) {
+        if (!seenIds.has(assoc.barbershop_id)) {
+          const { data: barbershop } = await supabase
+            .from("barbershops")
+            .select("id, slug, name, logo_url")
+            .eq("id", assoc.barbershop_id)
+            .single();
+
+          if (barbershop) {
+            seenIds.add(barbershop.id);
+            barbershops.push({
+              ...barbershop,
+              isAdmin: false
+            });
+          }
+        }
+      }
+    }
+
+    return barbershops;
+  };
+
+  // Function to handle redirection logic
+  const handleUserRedirect = async (userId: string) => {
     setIsRedirecting(true);
     
     try {
-      // If we have an origin slug, use it
+      // If we have an origin slug, use it directly
       if (originSlug) {
         navigate(`/b/${originSlug}`, { replace: true });
         return;
       }
 
-      // Check user_roles for admin/barber roles
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("barbershop_id, role")
-        .eq("user_id", userId)
-        .in("role", ["admin", "super_admin", "barber"]);
+      const barbershops = await findUserBarbershops(userId);
 
-      if (userRoles && userRoles.length > 0) {
-        // Get the barbershop slug for the first role found
-        const { data: barbershop } = await supabase
-          .from("barbershops")
-          .select("slug, name")
-          .eq("id", userRoles[0].barbershop_id)
-          .single();
+      if (barbershops.length === 0) {
+        // No barbershop association found
+        toast.info("Acesse uma barbearia para agendar seus serviços");
+        navigate("/", { replace: true });
+        return;
+      }
 
-        if (barbershop) {
-          toast.success(`Bem-vindo de volta!`);
+      if (barbershops.length === 1) {
+        // Single barbershop - redirect directly
+        const barbershop = barbershops[0];
+        toast.success(`Bem-vindo de volta!`);
+        if (barbershop.isAdmin) {
           navigate(`/b/${barbershop.slug}/admin`, { replace: true });
-          return;
-        }
-      }
-
-      // Check barbershop_clients for client associations
-      const { data: clientAssociations } = await supabase
-        .from("barbershop_clients")
-        .select("barbershop_id")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (clientAssociations && clientAssociations.length > 0) {
-        const { data: barbershop } = await supabase
-          .from("barbershops")
-          .select("slug, name")
-          .eq("id", clientAssociations[0].barbershop_id)
-          .single();
-
-        if (barbershop) {
-          toast.success(`Bem-vindo de volta!`);
+        } else {
           navigate(`/b/${barbershop.slug}`, { replace: true });
-          return;
         }
+        return;
       }
 
-      // No barbershop association found - redirect to landing
-      toast.info("Faça login através de uma barbearia para agendar");
-      navigate("/", { replace: true });
+      // Multiple barbershops - show selector
+      setAvailableBarbershops(barbershops);
+      setShowBarbershopSelector(true);
+      setIsRedirecting(false);
     } catch (error) {
-      console.error("Error finding user barbershop:", error);
+      console.error("Error finding user barbershops:", error);
       navigate("/", { replace: true });
+    }
+  };
+
+  // Handle barbershop selection
+  const handleSelectBarbershop = (barbershop: BarbershopOption) => {
+    setShowBarbershopSelector(false);
+    toast.success(`Entrando em ${barbershop.name}`);
+    if (barbershop.isAdmin) {
+      navigate(`/b/${barbershop.slug}/admin`, { replace: true });
+    } else {
+      navigate(`/b/${barbershop.slug}`, { replace: true });
     }
   };
 
   // Redirect if already logged in
   useEffect(() => {
-    if (!loading && user && !isRedirecting) {
-      findUserBarbershopAndRedirect(user.id);
+    if (!loading && user && !isRedirecting && !showBarbershopSelector) {
+      handleUserRedirect(user.id);
     }
   }, [user, loading]);
 
   // Show loading while checking auth
-  if (loading || isRedirecting) {
+  if (loading || (isRedirecting && !showBarbershopSelector)) {
     return (
       <BarbershopLoader 
         logoUrl={originBarbershop?.logo_url} 
@@ -125,8 +187,8 @@ const Auth = () => {
     );
   }
 
-  // If user is logged in, show loader while redirecting
-  if (user) {
+  // If user is logged in and no selector shown, show loader
+  if (user && !showBarbershopSelector) {
     return (
       <BarbershopLoader 
         logoUrl={originBarbershop?.logo_url} 
@@ -141,10 +203,9 @@ const Auth = () => {
     const { error } = await signIn(loginEmail, loginPassword);
     
     if (!error) {
-      // Get the user after login
       const { data: { user: loggedInUser } } = await supabase.auth.getUser();
       if (loggedInUser) {
-        await findUserBarbershopAndRedirect(loggedInUser.id);
+        await handleUserRedirect(loggedInUser.id);
       }
     }
   };
@@ -154,7 +215,6 @@ const Auth = () => {
     const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupPhone);
     
     if (!error) {
-      // After signup, redirect to origin or landing
       if (originSlug) {
         navigate(`/b/${originSlug}`, { replace: true });
       } else {
@@ -166,6 +226,49 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      {/* Barbershop Selector Modal */}
+      <Dialog open={showBarbershopSelector} onOpenChange={setShowBarbershopSelector}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="w-5 h-5 text-primary" />
+              Escolha sua Barbearia
+            </DialogTitle>
+            <DialogDescription>
+              Você frequenta várias barbearias. Selecione qual deseja acessar:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-4">
+            {availableBarbershops.map((barbershop) => (
+              <button
+                key={barbershop.id}
+                onClick={() => handleSelectBarbershop(barbershop)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all group"
+              >
+                {barbershop.logo_url ? (
+                  <img 
+                    src={barbershop.logo_url} 
+                    alt={barbershop.name}
+                    className="w-12 h-12 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <Crown className="w-6 h-6 text-primary" />
+                  </div>
+                )}
+                <div className="flex-1 text-left">
+                  <p className="font-medium">{barbershop.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {barbershop.isAdmin ? "Administrador" : "Cliente"}
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Back button */}
       <Button
         variant="ghost"
