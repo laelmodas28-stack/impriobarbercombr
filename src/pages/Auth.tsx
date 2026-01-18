@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Crown, ArrowLeft } from "lucide-react";
 import BarbershopLoader from "@/components/BarbershopLoader";
+import { toast } from "sonner";
 
 const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -17,13 +18,14 @@ const Auth = () => {
   
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
 
-  // Check if user came from a barbershop route (localStorage para persistência)
+  // Check if user came from a barbershop route
   const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
 
   // Fetch barbershop info if we have an origin slug
@@ -41,24 +43,84 @@ const Auth = () => {
     enabled: !!originSlug,
   });
 
-  // Redirect if already logged in - back to origin barbershop if available
-  useEffect(() => {
-    if (!loading && user) {
+  // Function to find user's barbershop and redirect
+  const findUserBarbershopAndRedirect = async (userId: string) => {
+    setIsRedirecting(true);
+    
+    try {
+      // If we have an origin slug, use it
       if (originSlug) {
         navigate(`/b/${originSlug}`, { replace: true });
-      } else {
-        navigate("/", { replace: true });
+        return;
       }
-    }
-  }, [user, loading, navigate, originSlug]);
 
-  // Show loading only briefly while checking initial auth state
-  if (loading) {
+      // Check user_roles for admin/barber roles
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("barbershop_id, role")
+        .eq("user_id", userId)
+        .in("role", ["admin", "super_admin", "barber"]);
+
+      if (userRoles && userRoles.length > 0) {
+        // Get the barbershop slug for the first role found
+        const { data: barbershop } = await supabase
+          .from("barbershops")
+          .select("slug, name")
+          .eq("id", userRoles[0].barbershop_id)
+          .single();
+
+        if (barbershop) {
+          toast.success(`Bem-vindo de volta!`);
+          navigate(`/b/${barbershop.slug}/admin`, { replace: true });
+          return;
+        }
+      }
+
+      // Check barbershop_clients for client associations
+      const { data: clientAssociations } = await supabase
+        .from("barbershop_clients")
+        .select("barbershop_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (clientAssociations && clientAssociations.length > 0) {
+        const { data: barbershop } = await supabase
+          .from("barbershops")
+          .select("slug, name")
+          .eq("id", clientAssociations[0].barbershop_id)
+          .single();
+
+        if (barbershop) {
+          toast.success(`Bem-vindo de volta!`);
+          navigate(`/b/${barbershop.slug}`, { replace: true });
+          return;
+        }
+      }
+
+      // No barbershop association found - redirect to landing
+      toast.info("Faça login através de uma barbearia para agendar");
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Error finding user barbershop:", error);
+      navigate("/", { replace: true });
+    }
+  };
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user && !isRedirecting) {
+      findUserBarbershopAndRedirect(user.id);
+    }
+  }, [user, loading]);
+
+  // Show loading while checking auth
+  if (loading || isRedirecting) {
     return (
       <BarbershopLoader 
         logoUrl={originBarbershop?.logo_url} 
         name={originBarbershop?.name} 
-        message="Carregando..."
+        message={isRedirecting ? "Entrando..." : "Carregando..."}
       />
     );
   }
@@ -78,12 +140,11 @@ const Auth = () => {
     e.preventDefault();
     const { error } = await signIn(loginEmail, loginPassword);
     
-    // Redirect IMEDIATO após login bem-sucedido
     if (!error) {
-      if (originSlug) {
-        navigate(`/b/${originSlug}`, { replace: true });
-      } else {
-        navigate("/", { replace: true });
+      // Get the user after login
+      const { data: { user: loggedInUser } } = await supabase.auth.getUser();
+      if (loggedInUser) {
+        await findUserBarbershopAndRedirect(loggedInUser.id);
       }
     }
   };
@@ -92,11 +153,12 @@ const Auth = () => {
     e.preventDefault();
     const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupPhone);
     
-    // Redirect IMEDIATO após signup bem-sucedido
     if (!error) {
+      // After signup, redirect to origin or landing
       if (originSlug) {
         navigate(`/b/${originSlug}`, { replace: true });
       } else {
+        toast.success("Conta criada! Acesse uma barbearia para agendar.");
         navigate("/", { replace: true });
       }
     }
@@ -130,8 +192,13 @@ const Auth = () => {
           )}
           <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
             <Crown className="text-primary" />
-            {originBarbershop?.name || "Barbearia"}
+            {originBarbershop?.name || "Imperio Barber"}
           </h1>
+          {!originSlug && (
+            <p className="text-muted-foreground text-sm mt-2">
+              Entre com sua conta para acessar sua barbearia
+            </p>
+          )}
         </div>
 
         <Tabs defaultValue="login" className="w-full">
