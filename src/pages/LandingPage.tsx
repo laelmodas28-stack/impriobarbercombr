@@ -195,7 +195,7 @@ const LandingPage = () => {
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-8 backdrop-blur-sm">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             <span className="text-xs text-primary font-medium tracking-wide">
-              PLATAFORMA #1 PARA BARBEARIAS NO BRASIL
+              PLATAFORMA Nº 1 PARA BARBEARIAS NO BRASIL
             </span>
           </div>
 
