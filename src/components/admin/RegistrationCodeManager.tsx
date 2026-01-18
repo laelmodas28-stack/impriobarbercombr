@@ -301,8 +301,8 @@ export const RegistrationCodeManager = () => {
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          {code.used_at
-                            ? format(new Date(code.used_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                          {code.is_used && code.used_by
+                            ? "Sim"
                             : "-"}
                         </TableCell>
                         <TableCell className="text-right">

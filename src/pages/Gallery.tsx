@@ -13,9 +13,9 @@ const Gallery = () => {
     queryKey: ["public-gallery"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("gallery")
+        .from("gallery_images")
         .select("*, barbershop:barbershops(name)")
-        .order("display_order");
+        .order("order_index");
       
       if (error) throw error;
       return data;
@@ -49,7 +49,7 @@ const Gallery = () => {
                 <div className="aspect-square relative">
                   <img
                     src={item.image_url}
-                    alt={item.title || "Trabalho da barbearia"}
+                    alt={item.caption || "Trabalho da barbearia"}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />

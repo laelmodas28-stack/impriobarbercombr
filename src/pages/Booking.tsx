@@ -99,8 +99,9 @@ const Booking = () => {
   // Gerar slots de horário dinamicamente baseado nos horários do banco
   const generateTimeSlots = () => {
     const slots: string[] = [];
-    const openTime = barbershop?.opening_time || "08:00:00";
-    const closeTime = barbershop?.closing_time || "19:00:00";
+    const bh = barbershop?.business_hours as any;
+    const openTime = bh?.opening_time || "08:00";
+    const closeTime = bh?.closing_time || "19:00";
     
     const [openHour] = openTime.split(':').map(Number);
     const [closeHour] = closeTime.split(':').map(Number);
@@ -172,7 +173,7 @@ const Booking = () => {
         barbershop_id: barbershop.id,
         booking_date: format(selectedDate, "yyyy-MM-dd"),
         booking_time: selectedTime,
-        total_price: service.price,
+        price: service.price,
         notes: notes,
         status: "pending"
       }).select().single();
@@ -182,8 +183,8 @@ const Booking = () => {
       // Buscar dados do perfil do cliente
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, phone")
-        .eq("id", user.id)
+        .select("name, phone")
+        .eq("user_id", user.id)
         .single();
 
       // Enviar notificação
@@ -193,7 +194,7 @@ const Booking = () => {
             bookingId: booking?.id,
             barbershopId: barbershop.id,
             clientEmail: user.email,
-            clientName: profile?.full_name || "Cliente",
+            clientName: profile?.name || "Cliente",
             clientPhone: profile?.phone,
             date: format(selectedDate, "yyyy-MM-dd"),
             time: selectedTime,
