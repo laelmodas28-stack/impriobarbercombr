@@ -34,29 +34,27 @@ import ServiceAnalysis from "./ServiceAnalysis";
 
 interface Booking {
   id: string;
-  total_price: number;
+  price: number | null;
   booking_date: string;
   booking_time: string;
-  status: string;
-  professional?: { name: string };
-  professional_id: string;
-  service?: { name: string };
-  service_id: string;
-  client?: { full_name: string };
+  status: string | null;
+  professional?: { name: string } | null;
+  professional_id: string | null;
+  service?: { name: string } | null;
+  service_id: string | null;
 }
 
 interface Professional {
   id: string;
   name: string;
-  photo_url?: string;
-  specialties?: string[];
+  photo_url?: string | null;
+  specialties?: string[] | null;
 }
 
 interface Service {
   id: string;
   name: string;
   price: number;
-  image_url?: string;
 }
 
 interface FinancialDashboardProps {
@@ -194,7 +192,7 @@ const FinancialDashboard = ({
     const cancelled = filteredBookings.filter((b) => b.status === "cancelled");
 
     const totalRevenue = completed.reduce(
-      (sum, b) => sum + Number(b.total_price),
+      (sum, b) => sum + Number(b.price || 0),
       0
     );
     const totalBookings = completed.length;
@@ -233,7 +231,7 @@ const FinancialDashboard = ({
       const name = booking.professional?.name || "Desconhecido";
       const revenue = acc[name] || { count: 0, revenue: 0 };
       revenue.count += 1;
-      revenue.revenue += Number(booking.total_price);
+      revenue.revenue += Number(booking.price || 0);
       acc[name] = revenue;
       return acc;
     }, {} as Record<string, { count: number; revenue: number }>);
@@ -294,7 +292,7 @@ const FinancialDashboard = ({
 
     const completed = prevBookings.filter((b) => b.status === "completed");
     const totalRevenue = completed.reduce(
-      (sum, b) => sum + Number(b.total_price),
+      (sum, b) => sum + Number(b.price || 0),
       0
     );
 

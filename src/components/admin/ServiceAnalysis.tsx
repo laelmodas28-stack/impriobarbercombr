@@ -5,18 +5,17 @@ import { Scissors, TrendingUp, DollarSign } from "lucide-react";
 
 interface Booking {
   id: string;
-  total_price: number;
+  price: number | null;
   booking_date: string;
-  status: string;
-  service?: { name: string };
-  service_id: string;
+  status: string | null;
+  service?: { name: string } | null;
+  service_id: string | null;
 }
 
 interface Service {
   id: string;
   name: string;
   price: number;
-  image_url?: string;
 }
 
 interface ServiceAnalysisProps {
@@ -33,7 +32,7 @@ const ServiceAnalysis = ({ bookings, services }: ServiceAnalysisProps) => {
       (b) => b.service_id === service.id
     );
     const totalRevenue = serviceBookings.reduce(
-      (sum, b) => sum + Number(b.total_price),
+      (sum, b) => sum + Number(b.price || 0),
       0
     );
     const totalSold = serviceBookings.length;
