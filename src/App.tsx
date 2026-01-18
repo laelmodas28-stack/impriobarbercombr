@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import BarbershopLayout from "@/components/BarbershopLayout";
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
@@ -71,45 +72,47 @@ class ErrorBoundary extends React.Component<
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Landing page principal */}
-              <Route path="/" element={<LandingPage />} />
-              
-              {/* Página de redirecionamento (quando tabelas existirem) */}
-              {/* <Route path="/app" element={<Index />} /> */}
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                {/* Landing page principal */}
+                <Route path="/" element={<LandingPage />} />
+                
+                {/* Página de redirecionamento (quando tabelas existirem) */}
+                {/* <Route path="/app" element={<Index />} /> */}
 
-              {/* Rotas com slug da barbearia (outras barbearias) */}
-              <Route path="/b/:slug" element={<BarbershopLayout />}>
-                <Route index element={<Home />} />
-                <Route path="services" element={<Services />} />
-                <Route path="professionals" element={<Professionals />} />
-                <Route path="professionals/:id" element={<ProfessionalDetail />} />
-                <Route path="booking" element={<Booking />} />
-                <Route path="gallery" element={<Gallery />} />
-                <Route path="subscriptions" element={<Subscriptions />} />
-                <Route path="about" element={<About />} />
-                <Route path="auth" element={<BarbershopAuth />} />
-                <Route path="admin" element={<Admin />} />
-              </Route>
+                {/* Rotas com slug da barbearia (outras barbearias) */}
+                <Route path="/b/:slug" element={<BarbershopLayout />}>
+                  <Route index element={<Home />} />
+                  <Route path="services" element={<Services />} />
+                  <Route path="professionals" element={<Professionals />} />
+                  <Route path="professionals/:id" element={<ProfessionalDetail />} />
+                  <Route path="booking" element={<Booking />} />
+                  <Route path="gallery" element={<Gallery />} />
+                  <Route path="subscriptions" element={<Subscriptions />} />
+                  <Route path="about" element={<About />} />
+                  <Route path="auth" element={<BarbershopAuth />} />
+                  <Route path="admin" element={<Admin />} />
+                </Route>
 
-              {/* Rotas padrão */}
-              <Route path="/splash" element={<Splash />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/account" element={<Account />} />
-              <Route path="/registro-barbeiro" element={<RegisterBarbershop />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+                {/* Rotas padrão */}
+                <Route path="/splash" element={<Splash />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/account" element={<Account />} />
+                <Route path="/registro-barbeiro" element={<RegisterBarbershop />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 

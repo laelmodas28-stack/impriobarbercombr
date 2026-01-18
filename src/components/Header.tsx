@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "./NotificationBell";
 import { VideoTutorials } from "./VideoTutorials";
+import { ThemeToggle } from "./ThemeToggle";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,6 +122,7 @@ const Header = () => {
                 </Link>
               )}
               <VideoTutorials />
+              <ThemeToggle />
               <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
