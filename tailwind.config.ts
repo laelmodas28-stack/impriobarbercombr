@@ -75,6 +75,18 @@ export default {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar))",
+          foreground: "hsl(var(--sidebar-foreground))",
+        },
+        header: {
+          DEFAULT: "hsl(var(--header))",
+          foreground: "hsl(var(--header-foreground))",
+        },
+        table: {
+          alt: "hsl(var(--table-row-alt))",
+          hover: "hsl(var(--table-row-hover))",
+        },
       },
       backgroundImage: {
         'gradient-primary': 'var(--gradient-primary)',
@@ -83,6 +95,8 @@ export default {
       boxShadow: {
         'gold': 'var(--shadow-gold)',
         'elevation': 'var(--shadow-elevation)',
+        'card': 'var(--shadow-card)',
+        'dropdown': 'var(--shadow-dropdown)',
       },
       borderRadius: {
         lg: "var(--radius)",
