@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
-  Crown, 
   Calendar, 
   Users, 
   BarChart3, 
@@ -220,7 +219,6 @@ const LandingPage = () => {
               className="text-base px-8 h-12 shadow-[0_0_30px_-5px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_40px_-5px_hsl(var(--primary)/0.5)] transition-shadow"
               onClick={() => navigate("/registro-barbeiro")}
             >
-              <Crown className="w-4 h-4 mr-2" />
               Começar Gratuitamente
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -570,7 +568,7 @@ const LandingPage = () => {
                   className="text-base px-10 h-12 shadow-[0_0_30px_-5px_hsl(var(--primary)/0.4)]"
                   onClick={() => navigate("/registro-barbeiro")}
                 >
-                  <Crown className="w-4 h-4 mr-2" />
+                  
                   Criar Minha Barbearia
                 </Button>
                 <Button 
