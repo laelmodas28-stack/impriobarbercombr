@@ -2,55 +2,164 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* 
+ * Global Design System with Light/Dark Theme Support
+ * All colors MUST be HSL values (without hsl() wrapper for Tailwind compatibility)
+ * 
+ * TOKEN STRUCTURE:
+ * --background: Main app background
+ * --foreground: Primary text color
+ * --card: Card/surface backgrounds
+ * --card-foreground: Text on cards
+ * --popover: Popover/dropdown backgrounds
+ * --popover-foreground: Text on popovers
+ * --primary: Brand/accent color for CTAs
+ * --primary-foreground: Text on primary elements
+ * --secondary: Secondary actions/elements
+ * --secondary-foreground: Text on secondary elements
+ * --muted: Muted/disabled backgrounds
+ * --muted-foreground: Muted text (descriptions, placeholders)
+ * --accent: Highlight/hover states
+ * --accent-foreground: Text on accent elements
+ * --destructive: Error/danger states
+ * --destructive-foreground: Text on destructive elements
+ * --success: Success states
+ * --success-foreground: Text on success elements
+ * --warning: Warning states
+ * --warning-foreground: Text on warning elements
+ * --info: Informational states
+ * --info-foreground: Text on info elements
+ * --border: Default border color
+ * --input: Input field backgrounds
+ * --ring: Focus ring color
+ * --overlay: Modal/overlay backdrop
+ */
 
 @layer base {
+  /* Light Theme (default) */
   :root {
-    /* Black + Gold Imperial Theme */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Gold primary brand color */
+    --primary: 43 74% 49%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 43 74% 95%;
+    --accent-foreground: 43 74% 30%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 9%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 96%;
+    --ring: 43 74% 49%;
+    --overlay: 0 0% 0%;
+
+    --radius: 0.75rem;
+
+    /* Gold variants for brand consistency */
+    --gold: 43 74% 49%;
+    --gold-light: 43 74% 60%;
+    --gold-dark: 43 74% 38%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(43 74% 38%), hsl(43 74% 49%));
+    --gradient-shine: linear-gradient(90deg, transparent, hsla(43, 74%, 49%, 0.2), transparent);
+
+    /* Shadows */
+    --shadow-gold: 0 4px 20px hsla(43, 74%, 49%, 0.25);
+    --shadow-elevation: 0 10px 30px -10px hsla(0, 0%, 0%, 0.1);
+
+    /* Chart colors */
+    --chart-1: 43 74% 49%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 280 65% 60%;
+  }
+
+  /* Dark Theme */
+  .dark {
     --background: 0 0% 5%;
-    --foreground: 0 0% 91%;
+    --foreground: 0 0% 95%;
 
     --card: 0 0% 8%;
-    --card-foreground: 0 0% 91%;
+    --card-foreground: 0 0% 95%;
 
     --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 91%;
+    --popover-foreground: 0 0% 95%;
 
+    /* Gold primary - slightly brighter for dark mode */
     --primary: 43 74% 52%;
     --primary-foreground: 0 0% 5%;
 
-    --secondary: 0 0% 16%;
-    --secondary-foreground: 0 0% 91%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 0 0% 16%;
+    --muted: 0 0% 14%;
     --muted-foreground: 0 0% 60%;
 
     --accent: 43 74% 52%;
     --accent-foreground: 0 0% 5%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 16%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 9%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 14%;
     --ring: 43 74% 52%;
+    --overlay: 0 0% 0%;
 
-    --radius: 0.75rem;
-
-    /* Gold variants */
+    /* Gold variants for dark mode */
     --gold: 43 74% 52%;
     --gold-light: 43 74% 62%;
     --gold-dark: 43 74% 42%;
 
-    /* Gradient */
+    /* Gradients - adjusted for dark mode */
     --gradient-primary: linear-gradient(135deg, hsl(43 74% 42%), hsl(43 74% 52%));
     --gradient-shine: linear-gradient(90deg, transparent, hsla(43, 74%, 52%, 0.3), transparent);
 
-    /* Shadows */
+    /* Shadows - darker for dark mode */
     --shadow-gold: 0 4px 20px hsla(43, 74%, 52%, 0.3);
     --shadow-elevation: 0 10px 30px -10px hsla(0, 0%, 0%, 0.5);
+
+    /* Chart colors - brighter for dark mode */
+    --chart-1: 43 74% 55%;
+    --chart-2: 199 89% 55%;
+    --chart-3: 142 76% 50%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 280 65% 65%;
   }
 }
 
@@ -61,10 +170,24 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Prevent FOUC - hide until theme is applied */
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold;
+    @apply font-bold text-foreground;
+  }
+
+  /* Smooth transitions for theme switching */
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: background-color 0.3s ease-in-out, 
+                border-color 0.3s ease-in-out, 
+                color 0.3s ease-in-out,
+                box-shadow 0.3s ease-in-out !important;
+    transition-delay: 0s !important;
   }
 }
 
@@ -76,4 +199,11 @@ All colors MUST be HSL.
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Focus visible styles for accessibility */
+@layer utilities {
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
 }
