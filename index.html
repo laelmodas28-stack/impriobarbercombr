@@ -16,6 +16,32 @@
     <meta property="og:type" content="website" />
 
     <meta name="twitter:card" content="summary_large_image" />
+    
+    <!-- Anti-FOUC: Apply theme before first paint -->
+    <script>
+      (function() {
+        const storageKey = 'imperio-theme';
+        const theme = localStorage.getItem(storageKey);
+        
+        // Determine which theme to apply
+        let resolvedTheme = theme;
+        
+        if (!theme || theme === 'system') {
+          // Check system preference
+          resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        
+        // Apply dark class if needed (before first paint)
+        if (resolvedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        
+        // Set color-scheme for native elements
+        document.documentElement.style.colorScheme = resolvedTheme;
+      })();
+    </script>
   </head>
 
   <body>
