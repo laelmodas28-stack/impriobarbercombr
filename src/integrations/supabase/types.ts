@@ -176,9 +176,12 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          mercadopago_preference_id: string | null
+          payment_method: string | null
           plan_id: string
           started_at: string
           status: string | null
+          transaction_id: string | null
           user_id: string
         }
         Insert: {
@@ -186,9 +189,12 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          mercadopago_preference_id?: string | null
+          payment_method?: string | null
           plan_id: string
           started_at?: string
           status?: string | null
+          transaction_id?: string | null
           user_id: string
         }
         Update: {
@@ -196,9 +202,12 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          mercadopago_preference_id?: string | null
+          payment_method?: string | null
           plan_id?: string
           started_at?: string
           status?: string | null
+          transaction_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -331,6 +340,79 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          barbershop_id: string | null
+          client_id: string
+          created_at: string | null
+          id: string
+          mercadopago_status: string | null
+          payment_method: string | null
+          plan_id: string | null
+          preference_id: string | null
+          raw_response: Json | null
+          status: string | null
+          subscription_id: string | null
+          transaction_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          barbershop_id?: string | null
+          client_id: string
+          created_at?: string | null
+          id?: string
+          mercadopago_status?: string | null
+          payment_method?: string | null
+          plan_id?: string | null
+          preference_id?: string | null
+          raw_response?: Json | null
+          status?: string | null
+          subscription_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          barbershop_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          mercadopago_status?: string | null
+          payment_method?: string | null
+          plan_id?: string | null
+          preference_id?: string | null
+          raw_response?: Json | null
+          status?: string | null
+          subscription_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "client_subscriptions"
             referencedColumns: ["id"]
           },
         ]
