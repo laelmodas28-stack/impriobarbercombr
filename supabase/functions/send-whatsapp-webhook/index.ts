@@ -12,6 +12,7 @@ interface RequestBody {
   barbershopId: string;
   phone: string;
   message: string;
+  isTest?: boolean;
 }
 
 serve(async (req: Request) => {
@@ -29,16 +30,16 @@ serve(async (req: Request) => {
       );
     }
 
-    const { barbershopId, phone, message }: RequestBody = await req.json();
+    const { barbershopId, phone, message, isTest }: RequestBody = await req.json();
     
-    if (!barbershopId || !phone || !message) {
+    if (!barbershopId || !message) {
       return new Response(
         JSON.stringify({ success: false, message: "Dados incompletos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Sending WhatsApp message to ${phone} via n8n webhook`);
+    console.log(`Sending WhatsApp message${isTest ? " (TEST)" : ""} via n8n webhook`);
 
     // Send to n8n webhook
     const webhookRes = await fetch(N8N_WHATSAPP_WEBHOOK_URL, {
@@ -48,8 +49,9 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         barbershopId,
-        phone,
+        phone: phone || "test",
         message,
+        isTest: isTest || false,
         timestamp: new Date().toISOString(),
       }),
     });
