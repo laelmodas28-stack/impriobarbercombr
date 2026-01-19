@@ -35,11 +35,12 @@ interface WhatsAppSimpleSettings {
 
 interface WhatsAppSimpleCardProps {
   barbershopId: string;
+  barbershopSlug: string;
   settings: WhatsAppSimpleSettings;
-  onSettingsChange: (settings: WhatsAppSimpleSettings) => void;
+  onSettingsChange: (settings: Partial<WhatsAppSimpleSettings>) => void;
 }
 
-export function WhatsAppSimpleCard({ barbershopId, settings, onSettingsChange }: WhatsAppSimpleCardProps) {
+export function WhatsAppSimpleCard({ barbershopId, barbershopSlug, settings, onSettingsChange }: WhatsAppSimpleCardProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
@@ -47,16 +48,16 @@ export function WhatsAppSimpleCard({ barbershopId, settings, onSettingsChange }:
   const [qrCode, setQrCode] = useState<string | null>(null);
 
   const checkStatus = useCallback(async () => {
-    if (!barbershopId) return;
+    if (!barbershopId || !barbershopSlug) return;
     
     setIsLoadingStatus(true);
     try {
-      const status = await getWhatsAppStatus(barbershopId);
+      const status = await getWhatsAppStatus(barbershopId, barbershopSlug);
       setConnectionStatus(status);
 
       // If not connected, try to get QR code
       if (status.state !== "open" && status.state !== "connected" && status.state !== "not_found") {
-        const connectResult = await connectWhatsApp(barbershopId);
+        const connectResult = await connectWhatsApp(barbershopId, barbershopSlug);
         if (connectResult.qrCode) {
           setQrCode(connectResult.qrCode);
         }
@@ -69,7 +70,7 @@ export function WhatsAppSimpleCard({ barbershopId, settings, onSettingsChange }:
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [barbershopId]);
+  }, [barbershopId, barbershopSlug]);
 
   // Check status on mount
   useEffect(() => {
@@ -87,7 +88,7 @@ export function WhatsAppSimpleCard({ barbershopId, settings, onSettingsChange }:
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      const result = await connectWhatsApp(barbershopId);
+      const result = await connectWhatsApp(barbershopId, barbershopSlug);
       
       if (result.qrCode) {
         setQrCode(result.qrCode);
@@ -108,7 +109,7 @@ export function WhatsAppSimpleCard({ barbershopId, settings, onSettingsChange }:
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
     try {
-      const result = await disconnectWhatsApp(barbershopId);
+      const result = await disconnectWhatsApp(barbershopId, barbershopSlug);
       
       if (result.success) {
         toast.success("WhatsApp desconectado");

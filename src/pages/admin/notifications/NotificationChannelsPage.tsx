@@ -163,6 +163,7 @@ export function NotificationChannelsPage() {
           {/* WhatsApp - Simplified */}
           <WhatsAppSimpleCard
             barbershopId={barbershop.id}
+            barbershopSlug={barbershop.slug}
             settings={{
               whatsapp_enabled: settings.whatsapp_enabled,
               whatsapp_send_booking_confirmation: settings.whatsapp_send_booking_confirmation,

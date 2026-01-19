@@ -17,18 +17,18 @@ export interface WhatsAppConnectResult {
 }
 
 /**
- * Generate a unique instance name for a barbershop
+ * Generate a unique instance name for a barbershop using slug
  */
-export function generateInstanceName(barbershopId: string): string {
-  return `barbershop-${barbershopId.substring(0, 8)}`;
+export function generateInstanceName(slug: string): string {
+  return slug;
 }
 
 /**
  * Create or get existing WhatsApp instance
  */
-export async function createWhatsAppInstance(barbershopId: string): Promise<WhatsAppConnectResult> {
+export async function createWhatsAppInstance(barbershopId: string, instanceName: string): Promise<WhatsAppConnectResult> {
   const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
-    body: { action: "create", barbershopId },
+    body: { action: "create", barbershopId, instanceName },
   });
 
   if (error) {
@@ -42,9 +42,9 @@ export async function createWhatsAppInstance(barbershopId: string): Promise<What
 /**
  * Get WhatsApp connection status
  */
-export async function getWhatsAppStatus(barbershopId: string): Promise<WhatsAppConnectionStatus> {
+export async function getWhatsAppStatus(barbershopId: string, instanceName: string): Promise<WhatsAppConnectionStatus> {
   const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
-    body: { action: "status", barbershopId },
+    body: { action: "status", barbershopId, instanceName },
   });
 
   if (error) {
@@ -58,9 +58,9 @@ export async function getWhatsAppStatus(barbershopId: string): Promise<WhatsAppC
 /**
  * Connect WhatsApp and get QR code
  */
-export async function connectWhatsApp(barbershopId: string): Promise<WhatsAppConnectResult> {
+export async function connectWhatsApp(barbershopId: string, instanceName: string): Promise<WhatsAppConnectResult> {
   const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
-    body: { action: "connect", barbershopId },
+    body: { action: "connect", barbershopId, instanceName },
   });
 
   if (error) {
@@ -74,9 +74,9 @@ export async function connectWhatsApp(barbershopId: string): Promise<WhatsAppCon
 /**
  * Disconnect WhatsApp
  */
-export async function disconnectWhatsApp(barbershopId: string): Promise<WhatsAppConnectResult> {
+export async function disconnectWhatsApp(barbershopId: string, instanceName: string): Promise<WhatsAppConnectResult> {
   const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
-    body: { action: "logout", barbershopId },
+    body: { action: "logout", barbershopId, instanceName },
   });
 
   if (error) {
@@ -90,9 +90,9 @@ export async function disconnectWhatsApp(barbershopId: string): Promise<WhatsApp
 /**
  * Delete WhatsApp instance
  */
-export async function deleteWhatsAppInstance(barbershopId: string): Promise<WhatsAppConnectResult> {
+export async function deleteWhatsAppInstance(barbershopId: string, instanceName: string): Promise<WhatsAppConnectResult> {
   const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
-    body: { action: "delete", barbershopId },
+    body: { action: "delete", barbershopId, instanceName },
   });
 
   if (error) {
