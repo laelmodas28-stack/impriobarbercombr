@@ -42,7 +42,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // Generate instance name from barbershop ID if not provided
+    // Use provided instanceName (slug) or generate from barbershop ID as fallback
     const finalInstanceName = instanceName || `barbershop-${barbershopId.substring(0, 8)}`;
     const cleanUrl = EVOLUTION_API_URL.replace(/\/$/, "");
 
