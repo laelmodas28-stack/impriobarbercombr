@@ -139,7 +139,6 @@ export function CalendarPage() {
       <PageHeader
         title="Calendario"
         subtitle="Visualizacao em calendario de todos os agendamentos"
-        icon={CalendarDays}
         actions={
           <Button onClick={() => setIsModalOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />

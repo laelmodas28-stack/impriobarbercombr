@@ -323,7 +323,6 @@ export function AppointmentsPage() {
       <PageHeader
         title="Agendamentos"
         subtitle="Gerencie todos os agendamentos da barbearia"
-        icon={Calendar}
         actions={
           <Button onClick={() => setIsModalOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -365,9 +364,9 @@ export function AppointmentsPage() {
         isLoading={isLoading}
         searchable
         searchKeys={["client.name", "service.name", "professional.name"]}
-        pagination
         pageSize={15}
         emptyState={{
+          icon: Calendar,
           title: "Nenhum agendamento encontrado",
           description: statusFilter !== "all" || dateFilter !== "all"
             ? "Tente ajustar os filtros para ver mais resultados"
