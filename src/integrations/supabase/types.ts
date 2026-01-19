@@ -503,6 +503,59 @@ export type Database = {
           },
         ]
       }
+      professional_time_blocks: {
+        Row: {
+          block_date: string | null
+          block_type: string
+          created_at: string
+          day_of_week: number | null
+          end_time: string
+          id: string
+          is_recurring: boolean
+          notes: string | null
+          professional_id: string
+          start_time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          block_date?: string | null
+          block_type?: string
+          created_at?: string
+          day_of_week?: number | null
+          end_time: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          professional_id: string
+          start_time: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          block_date?: string | null
+          block_type?: string
+          created_at?: string
+          day_of_week?: number | null
+          end_time?: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          professional_id?: string
+          start_time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_time_blocks_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professionals: {
         Row: {
           barbershop_id: string
