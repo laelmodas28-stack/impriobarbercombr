@@ -60,6 +60,7 @@ export type Database = {
           evolution_instance_name: string | null
           id: string
           n8n_webhook_url: string | null
+          n8n_whatsapp_webhook_url: string | null
           reminder_hours_before: number | null
           require_deposit: boolean | null
           send_booking_confirmation: boolean | null
@@ -84,6 +85,7 @@ export type Database = {
           evolution_instance_name?: string | null
           id?: string
           n8n_webhook_url?: string | null
+          n8n_whatsapp_webhook_url?: string | null
           reminder_hours_before?: number | null
           require_deposit?: boolean | null
           send_booking_confirmation?: boolean | null
@@ -108,6 +110,7 @@ export type Database = {
           evolution_instance_name?: string | null
           id?: string
           n8n_webhook_url?: string | null
+          n8n_whatsapp_webhook_url?: string | null
           reminder_hours_before?: number | null
           require_deposit?: boolean | null
           send_booking_confirmation?: boolean | null

@@ -73,7 +73,8 @@ export async function sendWhatsAppMessage({ barbershopId, phone, message }: Send
   const formattedPhone = formatPhoneNumber(phone);
 
   try {
-    const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
+    // Use n8n webhook for WhatsApp via send-whatsapp-webhook edge function
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-webhook", {
       body: {
         barbershopId,
         phone: formattedPhone,
@@ -82,7 +83,7 @@ export async function sendWhatsAppMessage({ barbershopId, phone, message }: Send
     });
 
     if (error) {
-      console.error("Error sending WhatsApp message:", error);
+      console.error("Error sending WhatsApp message via webhook:", error);
       return false;
     }
 
