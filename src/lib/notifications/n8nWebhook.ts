@@ -246,17 +246,6 @@ export async function sendTestEmailNotification(barbershopId: string, barbershop
  */
 export async function sendTestWhatsAppNotification(barbershopId: string, barbershopName: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase
-      .from("barbershop_settings")
-      .select("n8n_whatsapp_webhook_url, whatsapp_enabled")
-      .eq("barbershop_id", barbershopId)
-      .single();
-
-    if (error || !data?.n8n_whatsapp_webhook_url || !data?.whatsapp_enabled) {
-      console.log("WhatsApp webhook not configured or disabled");
-      return false;
-    }
-
     const now = new Date();
     const bookingDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Tomorrow
 
@@ -301,8 +290,8 @@ _Esta é uma mensagem automática de teste._`,
       timestamp: now.toISOString(),
     };
 
-    // Send to edge function which forwards to n8n webhook
-    const { error: fnError } = await supabase.functions.invoke("send-whatsapp-webhook", {
+    // Send to edge function which forwards to n8n webhook using the secret
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-webhook", {
       body: {
         barbershopId,
         phone: "+5511999999999",
@@ -312,13 +301,13 @@ _Esta é uma mensagem automática de teste._`,
       },
     });
 
-    if (fnError) {
-      console.error("Error sending test WhatsApp notification:", fnError);
+    if (error) {
+      console.error("Error sending test WhatsApp notification:", error);
       return false;
     }
 
-    console.log("Test WhatsApp notification sent to n8n");
-    return true;
+    console.log("Test WhatsApp notification sent to n8n", data);
+    return data?.success ?? false;
   } catch (error) {
     console.error("Error sending test WhatsApp notification:", error);
     return false;
