@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Sidebar,
@@ -28,6 +28,29 @@ import { ChevronRight, LogOut, Scissors } from "lucide-react";
 
 const SIDEBAR_OPEN_GROUPS_KEY = "imperio-admin-sidebar-open-groups";
 
+// Get initial open groups - runs only once on mount
+function getInitialOpenGroups(currentPath: string, groupIds: string[]): Record<string, boolean> {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_OPEN_GROUPS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Ensure the active group is open
+      groupIds.forEach((groupId) => {
+        if (isGroupActive(currentPath, groupId)) {
+          parsed[groupId] = true;
+        }
+      });
+      return parsed;
+    }
+  } catch {}
+  // Default: open the group containing the current route
+  const initial: Record<string, boolean> = {};
+  groupIds.forEach((groupId) => {
+    initial[groupId] = isGroupActive(currentPath, groupId);
+  });
+  return initial;
+}
+
 export function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,41 +65,39 @@ export function AdminSidebar() {
   // Extract path relative to admin base
   const currentPath = location.pathname.replace(`${adminBaseUrl}/`, "").replace(adminBaseUrl, "");
 
-  // Get grouped routes from config
-  const { standalone, groups } = getGroupedRoutes();
+  // Memoize grouped routes to prevent unnecessary recalculations
+  const { standalone, groups } = useMemo(() => getGroupedRoutes(), []);
+  const groupIds = useMemo(() => groups.map(g => g.id), [groups]);
 
   // Track which groups are open (persisted in localStorage)
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem(SIDEBAR_OPEN_GROUPS_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    // Default: open the group containing the current route
-    const initial: Record<string, boolean> = {};
-    groups.forEach((group) => {
-      initial[group.id] = isGroupActive(currentPath, group.id);
-    });
-    return initial;
-  });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => 
+    getInitialOpenGroups(currentPath, groupIds)
+  );
 
-  // Update open groups when route changes
-  useEffect(() => {
-    setOpenGroups((prev) => {
-      const updated = { ...prev };
-      groups.forEach((group) => {
-        if (isGroupActive(currentPath, group.id)) {
-          updated[group.id] = true;
-        }
-      });
-      return updated;
-    });
-  }, [currentPath, groups]);
+  // Track previous path to detect route changes
+  const prevPathRef = useRef(currentPath);
 
-  // Persist open groups
+  // Update open groups when route changes - only expand the active group
   useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify(openGroups));
-    } catch {}
+    if (prevPathRef.current !== currentPath) {
+      prevPathRef.current = currentPath;
+      
+      // Find the active group and expand it
+      const activeGroupId = groupIds.find(id => isGroupActive(currentPath, id));
+      if (activeGroupId && !openGroups[activeGroupId]) {
+        setOpenGroups(prev => ({ ...prev, [activeGroupId]: true }));
+      }
+    }
+  }, [currentPath, groupIds, openGroups]);
+
+  // Persist open groups to localStorage (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify(openGroups));
+      } catch {}
+    }, 100);
+    return () => clearTimeout(timeout);
   }, [openGroups]);
 
   const toggleGroup = (groupId: string) => {
@@ -153,7 +174,7 @@ export function AdminSidebar() {
               {/* Grouped routes */}
               {groups.map((group) => {
                 const groupActive = isGroupActive(currentPath, group.id);
-                const isOpen = openGroups[group.id] || false;
+                const isOpen = openGroups[group.id] || groupActive;
 
                 return (
                   <SidebarMenuItem key={group.id}>
