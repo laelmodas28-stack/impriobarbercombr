@@ -56,8 +56,11 @@ export type Database = {
           created_at: string
           deposit_percentage: number | null
           id: string
+          n8n_webhook_url: string | null
           reminder_hours_before: number | null
           require_deposit: boolean | null
+          send_booking_confirmation: boolean | null
+          send_booking_reminder: boolean | null
           send_booking_reminders: boolean | null
           timezone: string | null
           updated_at: string
@@ -71,8 +74,11 @@ export type Database = {
           created_at?: string
           deposit_percentage?: number | null
           id?: string
+          n8n_webhook_url?: string | null
           reminder_hours_before?: number | null
           require_deposit?: boolean | null
+          send_booking_confirmation?: boolean | null
+          send_booking_reminder?: boolean | null
           send_booking_reminders?: boolean | null
           timezone?: string | null
           updated_at?: string
@@ -86,8 +92,11 @@ export type Database = {
           created_at?: string
           deposit_percentage?: number | null
           id?: string
+          n8n_webhook_url?: string | null
           reminder_hours_before?: number | null
           require_deposit?: boolean | null
+          send_booking_confirmation?: boolean | null
+          send_booking_reminder?: boolean | null
           send_booking_reminders?: boolean | null
           timezone?: string | null
           updated_at?: string
