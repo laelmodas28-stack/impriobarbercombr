@@ -17,8 +17,10 @@ import {
   WifiOff,
   Smartphone,
   AlertCircle,
-  LogOut
+  LogOut,
+  TestTube
 } from "lucide-react";
+import { sendWhatsAppMessage } from "@/lib/notifications/evolutionApi";
 import { 
   getWhatsAppStatus,
   connectWhatsApp,
@@ -44,6 +46,7 @@ export function WhatsAppSimpleCard({ barbershopId, barbershopSlug, settings, onS
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<WhatsAppConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
 
@@ -122,6 +125,35 @@ export function WhatsAppSimpleCard({ barbershopId, barbershopSlug, settings, onS
       toast.error("Erro ao desconectar");
     } finally {
       setIsDisconnecting(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    if (!connectionStatus?.phoneNumber) {
+      toast.error("Nenhum número conectado para enviar teste");
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const testMessage = `🧪 *Teste de Notificação*\n\nOlá! Esta é uma mensagem de teste do seu sistema de notificações.\n\n✅ Seu WhatsApp está funcionando corretamente!`;
+      
+      const result = await sendWhatsAppMessage({
+        barbershopId,
+        phone: connectionStatus.phoneNumber,
+        message: testMessage
+      });
+      
+      if (result) {
+        toast.success("Mensagem de teste enviada!");
+      } else {
+        toast.error("Erro ao enviar mensagem de teste");
+      }
+    } catch (error) {
+      console.error("Erro ao testar notificação:", error);
+      toast.error("Erro ao enviar mensagem de teste");
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -255,17 +287,34 @@ export function WhatsAppSimpleCard({ barbershopId, barbershopSlug, settings, onS
           </div>
 
           {isConnected ? (
-            <Alert className="border-green-500/30 bg-green-500/10">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-green-700 dark:text-green-300">
-                WhatsApp conectado e pronto para enviar mensagens!
-                {connectionStatus?.phoneNumber && (
-                  <span className="block text-sm mt-1">
-                    Número: +{connectionStatus.phoneNumber}
-                  </span>
+            <div className="space-y-3">
+              <Alert className="border-green-500/30 bg-green-500/10">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <AlertDescription className="text-green-700 dark:text-green-300">
+                  WhatsApp conectado e pronto para enviar mensagens!
+                  {connectionStatus?.phoneNumber && (
+                    <span className="block text-sm mt-1">
+                      Número: +{connectionStatus.phoneNumber}
+                    </span>
+                  )}
+                </AlertDescription>
+              </Alert>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTestNotification}
+                disabled={isTesting || !connectionStatus?.phoneNumber}
+                className="w-full"
+              >
+                {isTesting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <TestTube className="w-4 h-4 mr-2" />
                 )}
-              </AlertDescription>
-            </Alert>
+                Testar Notificação
+              </Button>
+            </div>
           ) : qrCode ? (
             <div className="flex flex-col items-center gap-4 p-4 rounded-lg bg-muted/30 border">
               <div className="text-center">
