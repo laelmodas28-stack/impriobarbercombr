@@ -3,12 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import BarbershopLayout from "@/components/BarbershopLayout";
 import Splash from "./pages/Splash";
-import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
 import BarbershopAuth from "./pages/BarbershopAuth";
@@ -24,17 +23,71 @@ import Subscriptions from "./pages/Subscriptions";
 import RegisterBarbershop from "./pages/RegisterBarbershop";
 import NotFound from "./pages/NotFound";
 
-// Admin pages
+// Admin Layout & Pages
 import AdminLayout from "./components/admin/layout/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import ClientsPage from "./pages/admin/ClientsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import ImportsPage from "./pages/admin/ImportsPage";
 import ImportWizardPage from "./pages/admin/ImportWizardPage";
+import AdminNotFound from "./pages/admin/AdminNotFound";
+
+// Agenda
+import AppointmentsPage from "./pages/admin/agenda/AppointmentsPage";
+import CalendarPage from "./pages/admin/agenda/CalendarPage";
+import WaitingListPage from "./pages/admin/agenda/WaitingListPage";
+
+// Clients
+import ClientHistoryPage from "./pages/admin/clients/ClientHistoryPage";
+import ClientSegmentsPage from "./pages/admin/clients/ClientSegmentsPage";
+
+// Professionals
+import ProfessionalsListPage from "./pages/admin/professionals/ProfessionalsListPage";
+import AvailabilityPage from "./pages/admin/professionals/AvailabilityPage";
+import CommissionsPage from "./pages/admin/professionals/CommissionsPage";
+
+// Services
+import ServicesCatalogPage from "./pages/admin/services/ServicesCatalogPage";
+import ServicesPricingPage from "./pages/admin/services/ServicesPricingPage";
+import ServicesAddonsPage from "./pages/admin/services/ServicesAddonsPage";
+
+// Finance
+import FinanceOverviewPage from "./pages/admin/finance/FinanceOverviewPage";
+import TransactionsPage from "./pages/admin/finance/TransactionsPage";
+import CashflowPage from "./pages/admin/finance/CashflowPage";
+import PayoutsPage from "./pages/admin/finance/PayoutsPage";
+
+// Subscriptions
+import SubscriptionPlansPage from "./pages/admin/subscriptions/SubscriptionPlansPage";
+import InvoicesPage from "./pages/admin/subscriptions/InvoicesPage";
+import SubscriptionStatusPage from "./pages/admin/subscriptions/SubscriptionStatusPage";
+
+// Reports
+import RevenueReportPage from "./pages/admin/reports/RevenueReportPage";
+import AppointmentsReportPage from "./pages/admin/reports/AppointmentsReportPage";
+import RetentionReportPage from "./pages/admin/reports/RetentionReportPage";
+import ExportCenterPage from "./pages/admin/reports/ExportCenterPage";
+
+// Imports
+import ImportLogsPage from "./pages/admin/imports/ImportLogsPage";
+
+// Notifications
+import NotificationTemplatesPage from "./pages/admin/notifications/NotificationTemplatesPage";
+import NotificationChannelsPage from "./pages/admin/notifications/NotificationChannelsPage";
+import NotificationLogsPage from "./pages/admin/notifications/NotificationLogsPage";
+
+// Settings
+import BarbershopSettingsPage from "./pages/admin/settings/BarbershopSettingsPage";
+import UsersRolesPage from "./pages/admin/settings/UsersRolesPage";
+import IntegrationsPage from "./pages/admin/settings/IntegrationsPage";
+import PreferencesPage from "./pages/admin/settings/PreferencesPage";
+
+// Help
+import TutorialsPage from "./pages/admin/help/TutorialsPage";
+import SupportPage from "./pages/admin/help/SupportPage";
 
 const queryClient = new QueryClient();
 
-// Error Boundary para capturar erros não tratados
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; error?: Error }
@@ -59,19 +112,18 @@ class ErrorBoundary extends React.Component<
           <div className="text-center max-w-md">
             <h1 className="text-2xl font-bold text-foreground mb-4">Algo deu errado</h1>
             <p className="text-muted-foreground mb-6">
-              Ocorreu um erro inesperado. Tente recarregar a página.
+              Ocorreu um erro inesperado. Tente recarregar a pagina.
             </p>
             <button
               onClick={() => window.location.reload()}
               className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
-              Recarregar Página
+              Recarregar Pagina
             </button>
           </div>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
@@ -86,13 +138,8 @@ const App = () => (
           <BrowserRouter>
             <AuthProvider>
               <Routes>
-                {/* Landing page principal */}
                 <Route path="/" element={<LandingPage />} />
-                
-                {/* Página de redirecionamento (quando tabelas existirem) */}
-                {/* <Route path="/app" element={<Index />} /> */}
 
-                {/* Rotas com slug da barbearia (outras barbearias) */}
                 <Route path="/b/:slug" element={<BarbershopLayout />}>
                   <Route index element={<Home />} />
                   <Route path="services" element={<Services />} />
@@ -103,23 +150,78 @@ const App = () => (
                   <Route path="subscriptions" element={<Subscriptions />} />
                   <Route path="about" element={<About />} />
                   <Route path="auth" element={<BarbershopAuth />} />
-                  
-                  {/* Admin routes with new sidebar layout */}
+
+                  {/* Admin routes */}
                   <Route path="admin" element={<AdminLayout />}>
                     <Route index element={<DashboardPage />} />
-                    <Route path="clients" element={<ClientsPage />} />
+                    
+                    {/* Agenda */}
+                    <Route path="agenda/appointments" element={<AppointmentsPage />} />
+                    <Route path="agenda/calendar" element={<CalendarPage />} />
+                    <Route path="agenda/waiting-list" element={<WaitingListPage />} />
+                    
+                    {/* Clients */}
+                    <Route path="clients/list" element={<ClientsPage />} />
+                    <Route path="clients/history" element={<ClientHistoryPage />} />
+                    <Route path="clients/segments" element={<ClientSegmentsPage />} />
+                    
+                    {/* Professionals */}
+                    <Route path="professionals/list" element={<ProfessionalsListPage />} />
+                    <Route path="professionals/availability" element={<AvailabilityPage />} />
+                    <Route path="professionals/commissions" element={<CommissionsPage />} />
+                    
+                    {/* Services */}
+                    <Route path="services/catalog" element={<ServicesCatalogPage />} />
+                    <Route path="services/pricing" element={<ServicesPricingPage />} />
+                    <Route path="services/add-ons" element={<ServicesAddonsPage />} />
+                    
+                    {/* Finance */}
+                    <Route path="finance/overview" element={<FinanceOverviewPage />} />
+                    <Route path="finance/transactions" element={<TransactionsPage />} />
+                    <Route path="finance/cashflow" element={<CashflowPage />} />
+                    <Route path="finance/payouts" element={<PayoutsPage />} />
+                    
+                    {/* Subscriptions */}
+                    <Route path="subscriptions/plans" element={<SubscriptionPlansPage />} />
+                    <Route path="subscriptions/invoices" element={<InvoicesPage />} />
+                    <Route path="subscriptions/status" element={<SubscriptionStatusPage />} />
+                    
+                    {/* Reports */}
                     <Route path="reports" element={<ReportsPage />} />
+                    <Route path="reports/revenue" element={<RevenueReportPage />} />
+                    <Route path="reports/appointments" element={<AppointmentsReportPage />} />
+                    <Route path="reports/retention" element={<RetentionReportPage />} />
+                    <Route path="reports/export-center" element={<ExportCenterPage />} />
+                    
+                    {/* Imports */}
                     <Route path="imports" element={<ImportsPage />} />
                     <Route path="imports/:type" element={<ImportWizardPage />} />
+                    <Route path="imports/logs" element={<ImportLogsPage />} />
+                    
+                    {/* Notifications */}
+                    <Route path="notifications/templates" element={<NotificationTemplatesPage />} />
+                    <Route path="notifications/channels" element={<NotificationChannelsPage />} />
+                    <Route path="notifications/logs" element={<NotificationLogsPage />} />
+                    
+                    {/* Settings */}
+                    <Route path="settings/barbershop" element={<BarbershopSettingsPage />} />
+                    <Route path="settings/users-roles" element={<UsersRolesPage />} />
+                    <Route path="settings/integrations" element={<IntegrationsPage />} />
+                    <Route path="settings/preferences" element={<PreferencesPage />} />
+                    
+                    {/* Help */}
+                    <Route path="help/tutorials" element={<TutorialsPage />} />
+                    <Route path="help/support" element={<SupportPage />} />
+                    
+                    {/* Admin 404 */}
+                    <Route path="*" element={<AdminNotFound />} />
                   </Route>
                 </Route>
 
-                {/* Rotas padrão */}
                 <Route path="/splash" element={<Splash />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/registro-barbeiro" element={<RegisterBarbershop />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AuthProvider>

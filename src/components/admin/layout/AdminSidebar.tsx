@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Sidebar,
@@ -23,175 +23,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import {
-  LayoutDashboard,
-  Calendar,
-  CalendarDays,
-  Clock,
-  Users,
-  History,
-  Tags,
-  UserCircle,
-  CalendarClock,
-  Percent,
-  Scissors,
-  DollarSign,
-  Wallet,
-  Receipt,
-  TrendingUp,
-  Crown,
-  FileText,
-  Activity,
-  BarChart3,
-  PieChart,
-  UserCheck,
-  Download,
-  Upload,
-  FileWarning,
-  MessageSquare,
-  Send,
-  Building,
-  Shield,
-  Puzzle,
-  Settings,
-  Video,
-  HelpCircle,
-  ChevronRight,
-  LogOut,
-  Image,
-  Bell,
-} from "lucide-react";
+import { getGroupedRoutes, isRouteActive, isGroupActive } from "@/config/adminRoutes";
+import { ChevronRight, LogOut, Scissors } from "lucide-react";
 
-interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ComponentType<{ className?: string }>;
-  items?: { title: string; url: string; icon: React.ComponentType<{ className?: string }> }[];
-}
-
-const navItems: NavItem[] = [
-  {
-    title: "Dashboard",
-    url: "",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Agenda",
-    url: "agenda",
-    icon: Calendar,
-    items: [
-      { title: "Agendamentos", url: "bookings", icon: Calendar },
-      { title: "Calendario", url: "calendar", icon: CalendarDays },
-      { title: "Lista de Espera", url: "waiting-list", icon: Clock },
-    ],
-  },
-  {
-    title: "Clientes",
-    url: "clients",
-    icon: Users,
-    items: [
-      { title: "Lista de Clientes", url: "clients", icon: Users },
-      { title: "Historico", url: "clients/history", icon: History },
-      { title: "Tags e Segmentos", url: "clients/tags", icon: Tags },
-    ],
-  },
-  {
-    title: "Profissionais",
-    url: "professionals",
-    icon: UserCircle,
-    items: [
-      { title: "Equipe", url: "professionals", icon: UserCircle },
-      { title: "Disponibilidade", url: "availability", icon: CalendarClock },
-      { title: "Comissoes", url: "commissions", icon: Percent },
-    ],
-  },
-  {
-    title: "Servicos",
-    url: "services",
-    icon: Scissors,
-    items: [
-      { title: "Catalogo", url: "services", icon: Scissors },
-      { title: "Precos", url: "services/pricing", icon: DollarSign },
-    ],
-  },
-  {
-    title: "Financeiro",
-    url: "finance",
-    icon: Wallet,
-    items: [
-      { title: "Visao Geral", url: "finance", icon: Wallet },
-      { title: "Transacoes", url: "transactions", icon: Receipt },
-      { title: "Fluxo de Caixa", url: "cashflow", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "Assinaturas",
-    url: "subscriptions",
-    icon: Crown,
-    items: [
-      { title: "Planos", url: "subscriptions", icon: Crown },
-      { title: "Faturas", url: "invoices", icon: FileText },
-      { title: "Status", url: "subscriptions/status", icon: Activity },
-    ],
-  },
-  {
-    title: "Relatorios",
-    url: "reports",
-    icon: BarChart3,
-    items: [
-      { title: "Receita", url: "reports/revenue", icon: BarChart3 },
-      { title: "Agendamentos", url: "reports/bookings", icon: PieChart },
-      { title: "Retencao", url: "reports/retention", icon: UserCheck },
-      { title: "Central de Exportacao", url: "reports/export", icon: Download },
-    ],
-  },
-  {
-    title: "Importacoes",
-    url: "imports",
-    icon: Upload,
-    items: [
-      { title: "Importar Clientes", url: "imports/clients", icon: Upload },
-      { title: "Importar Servicos", url: "imports/services", icon: Upload },
-      { title: "Importar Profissionais", url: "imports/professionals", icon: Upload },
-      { title: "Logs de Importacao", url: "import-logs", icon: FileWarning },
-    ],
-  },
-  {
-    title: "Galeria",
-    url: "gallery",
-    icon: Image,
-  },
-  {
-    title: "Notificacoes",
-    url: "notifications",
-    icon: Bell,
-    items: [
-      { title: "Templates", url: "notification-templates", icon: FileText },
-      { title: "WhatsApp/Email", url: "notification-settings", icon: MessageSquare },
-      { title: "Logs de Envio", url: "notification-logs", icon: Send },
-    ],
-  },
-  {
-    title: "Configuracoes",
-    url: "settings",
-    icon: Settings,
-    items: [
-      { title: "Perfil da Barbearia", url: "settings", icon: Building },
-      { title: "Usuarios e Funcoes", url: "settings/users", icon: Shield },
-      { title: "Integracoes", url: "settings/integrations", icon: Puzzle },
-      { title: "Preferencias", url: "settings/preferences", icon: Settings },
-    ],
-  },
-  {
-    title: "Ajuda",
-    url: "help",
-    icon: HelpCircle,
-    items: [
-      { title: "Tutoriais", url: "tutorials", icon: Video },
-      { title: "Suporte", url: "support", icon: HelpCircle },
-    ],
-  },
-];
+const SIDEBAR_OPEN_GROUPS_KEY = "imperio-admin-sidebar-open-groups";
 
 export function AdminSidebar() {
   const location = useLocation();
@@ -203,21 +38,49 @@ export function AdminSidebar() {
   
   const collapsed = state === "collapsed";
   const adminBaseUrl = `${baseUrl}/admin`;
-  const currentPath = location.pathname;
+  
+  // Extract path relative to admin base
+  const currentPath = location.pathname.replace(`${adminBaseUrl}/`, "").replace(adminBaseUrl, "");
 
-  const isActive = (url: string) => {
-    const fullUrl = `${adminBaseUrl}${url ? `/${url}` : ""}`;
-    if (url === "") {
-      return currentPath === adminBaseUrl || currentPath === `${adminBaseUrl}/`;
-    }
-    return currentPath.startsWith(fullUrl);
-  };
+  // Get grouped routes from config
+  const { standalone, groups } = getGroupedRoutes();
 
-  const isGroupActive = (item: NavItem) => {
-    if (item.items) {
-      return item.items.some((subItem) => isActive(subItem.url));
-    }
-    return isActive(item.url);
+  // Track which groups are open (persisted in localStorage)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_OPEN_GROUPS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    // Default: open the group containing the current route
+    const initial: Record<string, boolean> = {};
+    groups.forEach((group) => {
+      initial[group.id] = isGroupActive(currentPath, group.id);
+    });
+    return initial;
+  });
+
+  // Update open groups when route changes
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const updated = { ...prev };
+      groups.forEach((group) => {
+        if (isGroupActive(currentPath, group.id)) {
+          updated[group.id] = true;
+        }
+      });
+      return updated;
+    });
+  }, [currentPath, groups]);
+
+  // Persist open groups
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify(openGroups));
+    } catch {}
+  }, [openGroups]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
   const handleLogout = async () => {
@@ -268,43 +131,70 @@ export function AdminSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  {item.items ? (
-                    <Collapsible defaultOpen={isGroupActive(item)}>
+              {/* Standalone routes (Dashboard) */}
+              {standalone.map((route) => (
+                <SidebarMenuItem key={route.id}>
+                  <SidebarMenuButton
+                    asChild
+                    className={`${
+                      isRouteActive(currentPath, route.path)
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-sidebar-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Link to={`${adminBaseUrl}${route.path ? `/${route.path}` : ""}`}>
+                      <route.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{route.label}</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+
+              {/* Grouped routes */}
+              {groups.map((group) => {
+                const groupActive = isGroupActive(currentPath, group.id);
+                const isOpen = openGroups[group.id] || false;
+
+                return (
+                  <SidebarMenuItem key={group.id}>
+                    <Collapsible open={isOpen} onOpenChange={() => toggleGroup(group.id)}>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
                           className={`w-full justify-between ${
-                            isGroupActive(item)
+                            groupActive
                               ? "bg-accent text-accent-foreground font-medium"
                               : "text-sidebar-foreground hover:bg-muted"
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {!collapsed && <span>{item.title}</span>}
+                            <group.icon className="h-4 w-4 shrink-0" />
+                            {!collapsed && <span>{group.label}</span>}
                           </div>
                           {!collapsed && (
-                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <ChevronRight
+                              className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                                isOpen ? "rotate-90" : ""
+                              }`}
+                            />
                           )}
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       {!collapsed && (
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.items.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.url}>
+                            {group.children.map((child) => (
+                              <SidebarMenuSubItem key={child.id}>
                                 <SidebarMenuSubButton
                                   asChild
                                   className={`${
-                                    isActive(subItem.url)
+                                    isRouteActive(currentPath, child.path)
                                       ? "bg-primary/10 text-primary font-medium"
                                       : "text-muted-foreground hover:text-sidebar-foreground hover:bg-muted"
                                   }`}
                                 >
-                                  <Link to={`${adminBaseUrl}/${subItem.url}`}>
-                                    <subItem.icon className="h-3.5 w-3.5 shrink-0" />
-                                    <span>{subItem.title}</span>
+                                  <Link to={`${adminBaseUrl}/${child.path}`}>
+                                    <child.icon className="h-3.5 w-3.5 shrink-0" />
+                                    <span>{child.label}</span>
                                   </Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
@@ -313,23 +203,9 @@ export function AdminSidebar() {
                         </CollapsibleContent>
                       )}
                     </Collapsible>
-                  ) : (
-                    <SidebarMenuButton
-                      asChild
-                      className={`${
-                        isActive(item.url)
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-sidebar-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <Link to={`${adminBaseUrl}${item.url ? `/${item.url}` : ""}`}>
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                  )}
-                </SidebarMenuItem>
-              ))}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
