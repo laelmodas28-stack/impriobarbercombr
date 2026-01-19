@@ -236,6 +236,145 @@ _Caso precise cancelar ou reagendar, entre em contato conosco._`;
   });
 }
 
+export async function createEvolutionInstance(
+  apiUrl: string,
+  apiKey: string,
+  instanceName: string
+): Promise<{ success: boolean; message: string }> {
+  const cleanUrl = apiUrl.replace(/\/$/, "");
+
+  try {
+    // First check if instance already exists
+    const checkResponse = await fetch(`${cleanUrl}/instance/fetchInstances`, {
+      method: "GET",
+      headers: {
+        "apikey": apiKey,
+      },
+    });
+
+    if (!checkResponse.ok) {
+      return { 
+        success: false, 
+        message: "Falha na autenticação. Verifique a API Key." 
+      };
+    }
+
+    const instances = await checkResponse.json();
+    const existingInstance = instances.find((i: any) => i.instance?.instanceName === instanceName);
+
+    if (existingInstance) {
+      return { 
+        success: true, 
+        message: "Instância já existe. Pronta para conectar!" 
+      };
+    }
+
+    // Create new instance
+    const createResponse = await fetch(`${cleanUrl}/instance/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": apiKey,
+      },
+      body: JSON.stringify({
+        instanceName: instanceName,
+        qrcode: true,
+        integration: "WHATSAPP-BAILEYS",
+      }),
+    });
+
+    if (!createResponse.ok) {
+      const errorData = await createResponse.text();
+      console.error("Error creating instance:", errorData);
+      return { 
+        success: false, 
+        message: "Erro ao criar instância. Verifique as configurações." 
+      };
+    }
+
+    return { 
+      success: true, 
+      message: "Instância criada com sucesso!" 
+    };
+  } catch (error) {
+    console.error("Error creating Evolution instance:", error);
+    return { 
+      success: false, 
+      message: "Erro de conexão. Verifique a URL do servidor." 
+    };
+  }
+}
+
+export async function deleteEvolutionInstance(
+  apiUrl: string,
+  apiKey: string,
+  instanceName: string
+): Promise<{ success: boolean; message: string }> {
+  const cleanUrl = apiUrl.replace(/\/$/, "");
+
+  try {
+    const response = await fetch(`${cleanUrl}/instance/delete/${instanceName}`, {
+      method: "DELETE",
+      headers: {
+        "apikey": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        message: "Erro ao desconectar instância." 
+      };
+    }
+
+    return { 
+      success: true, 
+      message: "WhatsApp desconectado com sucesso!" 
+    };
+  } catch (error) {
+    console.error("Error deleting instance:", error);
+    return { 
+      success: false, 
+      message: "Erro de conexão." 
+    };
+  }
+}
+
+export async function logoutEvolutionInstance(
+  apiUrl: string,
+  apiKey: string,
+  instanceName: string
+): Promise<{ success: boolean; message: string }> {
+  const cleanUrl = apiUrl.replace(/\/$/, "");
+
+  try {
+    const response = await fetch(`${cleanUrl}/instance/logout/${instanceName}`, {
+      method: "DELETE",
+      headers: {
+        "apikey": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        message: "Erro ao fazer logout." 
+      };
+    }
+
+    return { 
+      success: true, 
+      message: "Logout realizado com sucesso!" 
+    };
+  } catch (error) {
+    console.error("Error logging out instance:", error);
+    return { 
+      success: false, 
+      message: "Erro de conexão." 
+    };
+  }
+}
+
 export async function testEvolutionApiConnection(
   apiUrl: string,
   apiKey: string,
@@ -263,10 +402,11 @@ export async function testEvolutionApiConnection(
     const instance = instances.find((i: any) => i.instance?.instanceName === instanceName);
 
     if (!instance) {
-      return { 
-        success: false, 
-        message: `Instância "${instanceName}" não encontrada. Crie-a primeiro no Evolution API.` 
-      };
+      // Try to create the instance automatically
+      const createResult = await createEvolutionInstance(apiUrl, apiKey, instanceName);
+      if (!createResult.success) {
+        return createResult;
+      }
     }
 
     // Check connection status

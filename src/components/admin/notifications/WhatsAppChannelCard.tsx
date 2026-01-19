@@ -20,11 +20,15 @@ import {
   Wifi,
   WifiOff,
   Smartphone,
-  AlertCircle
+  AlertCircle,
+  LogOut,
+  Trash2
 } from "lucide-react";
 import { 
   testEvolutionApiConnection, 
   getInstanceStatus,
+  createEvolutionInstance,
+  logoutEvolutionInstance,
   type ConnectionStatus 
 } from "@/lib/notifications/evolutionApi";
 import { toast } from "sonner";
@@ -45,6 +49,8 @@ interface WhatsAppChannelCardProps {
 
 export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChannelCardProps) {
   const [isTesting, setIsTesting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -101,22 +107,65 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
     }
   }, [isConfigured, settings.evolution_api_url, settings.evolution_api_key, settings.evolution_instance_name]);
 
-  // Auto-refresh status every 10 seconds when showing QR code
+  // Auto-refresh status every 5 seconds when showing QR code
   useEffect(() => {
     if (qrCode && qrCodeExpiry) {
       const interval = setInterval(() => {
-        if (Date.now() > qrCodeExpiry) {
-          // QR expired, refresh
-          checkConnectionStatus();
-        } else {
-          // Just check status (maybe user scanned)
-          checkConnectionStatus();
-        }
+        checkConnectionStatus();
       }, 5000);
 
       return () => clearInterval(interval);
     }
   }, [qrCode, qrCodeExpiry, checkConnectionStatus]);
+
+  const handleCreateAndConnect = async () => {
+    if (!settings.evolution_api_url || !settings.evolution_api_key || !settings.evolution_instance_name) {
+      toast.error("Preencha todos os campos de configuração");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      // First create the instance
+      const createResult = await createEvolutionInstance(
+        settings.evolution_api_url,
+        settings.evolution_api_key,
+        settings.evolution_instance_name
+      );
+
+      if (!createResult.success) {
+        toast.error(createResult.message);
+        return;
+      }
+
+      toast.success(createResult.message);
+
+      // Now get QR code for connection
+      const result = await testEvolutionApiConnection(
+        settings.evolution_api_url,
+        settings.evolution_api_key,
+        settings.evolution_instance_name
+      );
+
+      if (result.success) {
+        toast.success(result.message);
+        setConnectionStatus({ state: "open" });
+        setQrCode(null);
+      } else {
+        if (result.qrCode) {
+          setQrCode(result.qrCode);
+          setQrCodeExpiry(Date.now() + 40000);
+          toast.info("Escaneie o QR Code para conectar seu WhatsApp");
+        } else {
+          toast.error(result.message);
+        }
+      }
+    } catch (error) {
+      toast.error("Erro ao criar instância");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleTestConnection = async () => {
     if (!isConfigured) {
@@ -149,6 +198,33 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
       toast.error("Erro ao testar conexão");
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!isConfigured) return;
+
+    setIsLoggingOut(true);
+    try {
+      const result = await logoutEvolutionInstance(
+        settings.evolution_api_url,
+        settings.evolution_api_key,
+        settings.evolution_instance_name
+      );
+
+      if (result.success) {
+        toast.success(result.message);
+        setConnectionStatus({ state: "close" });
+        setQrCode(null);
+        // Refresh to get new QR
+        setTimeout(() => checkConnectionStatus(), 1000);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error("Erro ao desconectar");
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -270,9 +346,12 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
               id="evolution_instance"
               type="text"
               value={settings.evolution_instance_name}
-              onChange={(e) => updateSetting("evolution_instance_name", e.target.value)}
+              onChange={(e) => updateSetting("evolution_instance_name", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
               placeholder="minha-barbearia"
             />
+            <p className="text-xs text-muted-foreground">
+              Nome único para sua barbearia (será criado automaticamente)
+            </p>
           </div>
         </div>
         
@@ -285,9 +364,6 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
             onChange={(e) => updateSetting("evolution_api_key", e.target.value)}
             placeholder="Sua chave de API do Evolution"
           />
-          <p className="text-xs text-muted-foreground">
-            Configure uma instância no seu servidor Evolution API e use as credenciais aqui.
-          </p>
         </div>
 
         {/* Connection Status & QR Code Section */}
@@ -301,16 +377,35 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
                   <Smartphone className="w-4 h-4" />
                   Status da Conexão
                 </h4>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={checkConnectionStatus}
-                  disabled={isLoadingStatus || isTesting}
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingStatus ? "animate-spin" : ""}`} />
-                  Atualizar
-                </Button>
+                <div className="flex items-center gap-2">
+                  {isConnected && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      {isLoggingOut ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <LogOut className="w-4 h-4 mr-2" />
+                      )}
+                      Desconectar
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={checkConnectionStatus}
+                    disabled={isLoadingStatus || isTesting}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingStatus ? "animate-spin" : ""}`} />
+                    Atualizar
+                  </Button>
+                </div>
               </div>
 
               {isConnected ? (
@@ -320,7 +415,7 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
                     WhatsApp conectado e pronto para enviar mensagens!
                     {connectionStatus?.phoneNumber && (
                       <span className="block text-sm mt-1">
-                        Número: {connectionStatus.phoneNumber}
+                        Número: +{connectionStatus.phoneNumber}
                       </span>
                     )}
                   </AlertDescription>
@@ -354,7 +449,7 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    {connectionStatus?.message || "Clique em 'Verificar Conexão' para obter o QR Code"}
+                    {connectionStatus?.message || "Clique em 'Criar e Conectar' para configurar seu WhatsApp"}
                   </AlertDescription>
                 </Alert>
               )}
@@ -363,7 +458,23 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {!isConnected && (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={handleCreateAndConnect}
+              disabled={!isConfigured || isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <QrCode className="w-4 h-4 mr-2" />
+              )}
+              Criar e Conectar
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -374,9 +485,9 @@ export function WhatsAppChannelCard({ settings, onSettingsChange }: WhatsAppChan
             {isTesting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <QrCode className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-4 h-4 mr-2" />
             )}
-            {isConnected ? "Reconectar" : "Verificar Conexão"}
+            Verificar Conexão
           </Button>
           <Button
             type="button"
