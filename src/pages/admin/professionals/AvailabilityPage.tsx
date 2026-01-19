@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ export function AvailabilityPage() {
     start_time: "12:00",
     end_time: "13:00",
   });
+  const [selectedDays, setSelectedDays] = useState<number[]>([1]); // Multiple days for recurring blocks
 
   const { data: professionals, isLoading: loadingProfessionals } = useQuery({
     queryKey: ["professionals", barbershop?.id],
@@ -232,19 +234,37 @@ export function AvailabilityPage() {
     mutationFn: async () => {
       if (!selectedProfessional) throw new Error("Nenhum profissional selecionado");
 
-      const { error } = await supabase.from("professional_time_blocks").insert({
-        professional_id: selectedProfessional,
-        title: newBlock.title || "Bloqueio",
-        block_type: newBlock.block_type || "break",
-        is_recurring: newBlock.is_recurring ?? true,
-        day_of_week: newBlock.is_recurring ? newBlock.day_of_week : null,
-        block_date: !newBlock.is_recurring ? newBlock.block_date : null,
-        start_time: newBlock.start_time,
-        end_time: newBlock.end_time,
-        notes: newBlock.notes || null,
-      });
+      // For recurring blocks with multiple days, insert one record per day
+      if (newBlock.is_recurring && selectedDays.length > 0) {
+        const blocks = selectedDays.map((dayOfWeek) => ({
+          professional_id: selectedProfessional,
+          title: newBlock.title || "Bloqueio",
+          block_type: newBlock.block_type || "break",
+          is_recurring: true,
+          day_of_week: dayOfWeek,
+          block_date: null,
+          start_time: newBlock.start_time,
+          end_time: newBlock.end_time,
+          notes: newBlock.notes || null,
+        }));
 
-      if (error) throw error;
+        const { error } = await supabase.from("professional_time_blocks").insert(blocks);
+        if (error) throw error;
+      } else {
+        // Single specific date block
+        const { error } = await supabase.from("professional_time_blocks").insert({
+          professional_id: selectedProfessional,
+          title: newBlock.title || "Bloqueio",
+          block_type: newBlock.block_type || "break",
+          is_recurring: false,
+          day_of_week: null,
+          block_date: newBlock.block_date,
+          start_time: newBlock.start_time,
+          end_time: newBlock.end_time,
+          notes: newBlock.notes || null,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Bloqueio adicionado!");
@@ -257,6 +277,7 @@ export function AvailabilityPage() {
         start_time: "12:00",
         end_time: "13:00",
       });
+      setSelectedDays([1]);
       queryClient.invalidateQueries({ queryKey: ["professional-time-blocks"] });
       queryClient.invalidateQueries({ queryKey: ["all-professional-time-blocks"] });
     },
@@ -513,6 +534,21 @@ export function AvailabilityPage() {
                           </div>
                         );
                       })}
+
+                      {/* Save button always visible */}
+                      <div className="flex justify-end pt-4 border-t mt-4">
+                        <Button
+                          onClick={() => saveMutation.mutate()}
+                          disabled={saveMutation.isPending || !hasChanges}
+                        >
+                          {saveMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Salvar Horários
+                        </Button>
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="blocks" className="mt-4 space-y-4">
@@ -830,24 +866,33 @@ export function AvailabilityPage() {
 
             {newBlock.is_recurring ? (
               <div className="space-y-2">
-                <Label>Dia da Semana</Label>
-                <Select
-                  value={newBlock.day_of_week?.toString()}
-                  onValueChange={(value) =>
-                    setNewBlock((prev) => ({ ...prev, day_of_week: parseInt(value) }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAYS_OF_WEEK.map((day) => (
-                      <SelectItem key={day.value} value={day.value.toString()}>
+                <Label>Dias da Semana</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {DAYS_OF_WEEK.map((day) => (
+                    <div key={day.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`day-${day.value}`}
+                        checked={selectedDays.includes(day.value)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedDays((prev) => [...prev, day.value].sort((a, b) => a - b));
+                          } else {
+                            setSelectedDays((prev) => prev.filter((d) => d !== day.value));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`day-${day.value}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
                         {day.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {selectedDays.length === 0 && (
+                  <p className="text-xs text-destructive">Selecione pelo menos um dia</p>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
@@ -884,7 +929,10 @@ export function AvailabilityPage() {
             <Button variant="outline" onClick={() => setIsBlockModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => addBlockMutation.mutate()} disabled={addBlockMutation.isPending}>
+            <Button 
+              onClick={() => addBlockMutation.mutate()} 
+              disabled={addBlockMutation.isPending || (newBlock.is_recurring && selectedDays.length === 0)}
+            >
               {addBlockMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
