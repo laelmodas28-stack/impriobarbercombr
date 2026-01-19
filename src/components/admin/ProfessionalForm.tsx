@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useBarbershop } from "@/hooks/useBarbershop";
-import { Plus, Save } from "lucide-react";
-import ImageUpload from "@/components/ImageUpload";
-import { resizeImage } from "@/lib/imageUtils";
+import { Plus, Save, Camera, Loader2 } from "lucide-react";
+import { resizeImage, validateImageFile } from "@/lib/imageUtils";
 
 interface Professional {
   id: string;
@@ -36,6 +36,7 @@ const ProfessionalForm = ({ onSuccess, professional }: ProfessionalFormProps) =>
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!professional;
 
@@ -57,9 +58,13 @@ const ProfessionalForm = ({ onSuccess, professional }: ProfessionalFormProps) =>
     }
   }, [professional]);
 
-  const handlePhotoUpload = async (file: File) => {
-    if (!professional && !barbershop) {
-      toast.error("Salve o profissional primeiro para adicionar foto");
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateImageFile(file, 5);
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
 
@@ -96,6 +101,9 @@ const ProfessionalForm = ({ onSuccess, professional }: ProfessionalFormProps) =>
       toast.error("Erro ao fazer upload da foto");
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -159,16 +167,33 @@ const ProfessionalForm = ({ onSuccess, professional }: ProfessionalFormProps) =>
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex justify-center">
-        <div className="w-32">
-          <ImageUpload
-            label="Foto"
-            currentImageUrl={photoUrl}
-            onImageSelect={handlePhotoUpload}
-            maxSizeMB={5}
-            maxWidth={800}
-            maxHeight={800}
-            aspectRatio="square"
-            className="w-full"
+        <div className="relative group">
+          <Avatar className="h-28 w-28 border-4 border-border shadow-lg">
+            <AvatarImage src={photoUrl || undefined} className="object-cover" />
+            <AvatarFallback className="text-2xl font-semibold bg-muted">
+              {name ? name.slice(0, 2).toUpperCase() : "?"}
+            </AvatarFallback>
+          </Avatar>
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="absolute bottom-0 right-0 h-9 w-9 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 border-2 border-background"
+          >
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+          </button>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png"
+            onChange={handleFileChange}
+            className="hidden"
           />
         </div>
       </div>
