@@ -1,14 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-interface EvolutionApiSettings {
-  evolution_api_url: string | null;
-  evolution_api_key: string | null;
-  evolution_instance_name: string | null;
-  whatsapp_enabled: boolean;
-  whatsapp_send_booking_confirmation: boolean;
-  whatsapp_send_booking_reminder: boolean;
-}
-
 interface SendMessageParams {
   barbershopId: string;
   phone: string;
@@ -34,13 +25,16 @@ export interface ConnectionStatus {
   phoneNumber?: string;
 }
 
+interface EvolutionApiSettings {
+  whatsapp_enabled: boolean;
+  whatsapp_send_booking_confirmation: boolean;
+  whatsapp_send_booking_reminder: boolean;
+}
+
 export async function getWhatsAppSettings(barbershopId: string): Promise<EvolutionApiSettings | null> {
   const { data, error } = await supabase
     .from("barbershop_settings")
     .select(`
-      evolution_api_url,
-      evolution_api_key,
-      evolution_instance_name,
       whatsapp_enabled,
       whatsapp_send_booking_confirmation,
       whatsapp_send_booking_reminder
@@ -54,49 +48,6 @@ export async function getWhatsAppSettings(barbershopId: string): Promise<Evoluti
   }
 
   return data as EvolutionApiSettings;
-}
-
-export async function getInstanceStatus(
-  apiUrl: string,
-  apiKey: string,
-  instanceName: string
-): Promise<ConnectionStatus> {
-  const cleanUrl = apiUrl.replace(/\/$/, "");
-
-  try {
-    const response = await fetch(
-      `${cleanUrl}/instance/connectionState/${instanceName}`,
-      {
-        method: "GET",
-        headers: {
-          "apikey": apiKey,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return { state: "error", message: "Instância não encontrada" };
-      }
-      return { state: "error", message: "Erro ao verificar status" };
-    }
-
-    const data = await response.json();
-    
-    // Extract phone number if available
-    let phoneNumber: string | undefined;
-    if (data.instance?.owner) {
-      phoneNumber = data.instance.owner.split("@")[0];
-    }
-
-    return {
-      state: data.state || data.instance?.state || "unknown",
-      phoneNumber,
-    };
-  } catch (error) {
-    console.error("Error getting instance status:", error);
-    return { state: "error", message: "Erro de conexão com o servidor" };
-  }
 }
 
 function formatPhoneNumber(phone: string): string {
@@ -119,38 +70,23 @@ export async function sendWhatsAppMessage({ barbershopId, phone, message }: Send
     return false;
   }
 
-  if (!settings.evolution_api_url || !settings.evolution_api_key || !settings.evolution_instance_name) {
-    console.log("Evolution API not configured");
-    return false;
-  }
-
   const formattedPhone = formatPhoneNumber(phone);
-  const apiUrl = settings.evolution_api_url.replace(/\/$/, ""); // Remove trailing slash
 
   try {
-    const response = await fetch(
-      `${apiUrl}/message/sendText/${settings.evolution_instance_name}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": settings.evolution_api_key,
-        },
-        body: JSON.stringify({
-          number: formattedPhone,
-          text: message,
-        }),
-      }
-    );
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
+      body: {
+        barbershopId,
+        phone: formattedPhone,
+        message,
+      },
+    });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("Evolution API error:", errorData);
+    if (error) {
+      console.error("Error sending WhatsApp message:", error);
       return false;
     }
 
-    console.log("WhatsApp message sent successfully");
-    return true;
+    return data?.success ?? false;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
     return false;
@@ -234,234 +170,4 @@ _Caso precise cancelar ou reagendar, entre em contato conosco._`;
     phone: params.clientPhone,
     message,
   });
-}
-
-export async function createEvolutionInstance(
-  apiUrl: string,
-  apiKey: string,
-  instanceName: string
-): Promise<{ success: boolean; message: string }> {
-  const cleanUrl = apiUrl.replace(/\/$/, "");
-
-  try {
-    // First check if instance already exists
-    const checkResponse = await fetch(`${cleanUrl}/instance/fetchInstances`, {
-      method: "GET",
-      headers: {
-        "apikey": apiKey,
-      },
-    });
-
-    if (!checkResponse.ok) {
-      return { 
-        success: false, 
-        message: "Falha na autenticação. Verifique a API Key." 
-      };
-    }
-
-    const instances = await checkResponse.json();
-    const existingInstance = instances.find((i: any) => i.instance?.instanceName === instanceName);
-
-    if (existingInstance) {
-      return { 
-        success: true, 
-        message: "Instância já existe. Pronta para conectar!" 
-      };
-    }
-
-    // Create new instance
-    const createResponse = await fetch(`${cleanUrl}/instance/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": apiKey,
-      },
-      body: JSON.stringify({
-        instanceName: instanceName,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS",
-      }),
-    });
-
-    if (!createResponse.ok) {
-      const errorData = await createResponse.text();
-      console.error("Error creating instance:", errorData);
-      return { 
-        success: false, 
-        message: "Erro ao criar instância. Verifique as configurações." 
-      };
-    }
-
-    return { 
-      success: true, 
-      message: "Instância criada com sucesso!" 
-    };
-  } catch (error) {
-    console.error("Error creating Evolution instance:", error);
-    return { 
-      success: false, 
-      message: "Erro de conexão. Verifique a URL do servidor." 
-    };
-  }
-}
-
-export async function deleteEvolutionInstance(
-  apiUrl: string,
-  apiKey: string,
-  instanceName: string
-): Promise<{ success: boolean; message: string }> {
-  const cleanUrl = apiUrl.replace(/\/$/, "");
-
-  try {
-    const response = await fetch(`${cleanUrl}/instance/delete/${instanceName}`, {
-      method: "DELETE",
-      headers: {
-        "apikey": apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      return { 
-        success: false, 
-        message: "Erro ao desconectar instância." 
-      };
-    }
-
-    return { 
-      success: true, 
-      message: "WhatsApp desconectado com sucesso!" 
-    };
-  } catch (error) {
-    console.error("Error deleting instance:", error);
-    return { 
-      success: false, 
-      message: "Erro de conexão." 
-    };
-  }
-}
-
-export async function logoutEvolutionInstance(
-  apiUrl: string,
-  apiKey: string,
-  instanceName: string
-): Promise<{ success: boolean; message: string }> {
-  const cleanUrl = apiUrl.replace(/\/$/, "");
-
-  try {
-    const response = await fetch(`${cleanUrl}/instance/logout/${instanceName}`, {
-      method: "DELETE",
-      headers: {
-        "apikey": apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      return { 
-        success: false, 
-        message: "Erro ao fazer logout." 
-      };
-    }
-
-    return { 
-      success: true, 
-      message: "Logout realizado com sucesso!" 
-    };
-  } catch (error) {
-    console.error("Error logging out instance:", error);
-    return { 
-      success: false, 
-      message: "Erro de conexão." 
-    };
-  }
-}
-
-export async function testEvolutionApiConnection(
-  apiUrl: string,
-  apiKey: string,
-  instanceName: string
-): Promise<{ success: boolean; message: string; qrCode?: string }> {
-  const cleanUrl = apiUrl.replace(/\/$/, "");
-
-  try {
-    // First check if instance exists
-    const instanceResponse = await fetch(`${cleanUrl}/instance/fetchInstances`, {
-      method: "GET",
-      headers: {
-        "apikey": apiKey,
-      },
-    });
-
-    if (!instanceResponse.ok) {
-      return { 
-        success: false, 
-        message: "Falha na autenticação. Verifique a API Key." 
-      };
-    }
-
-    const instances = await instanceResponse.json();
-    const instance = instances.find((i: any) => i.instance?.instanceName === instanceName);
-
-    if (!instance) {
-      // Try to create the instance automatically
-      const createResult = await createEvolutionInstance(apiUrl, apiKey, instanceName);
-      if (!createResult.success) {
-        return createResult;
-      }
-    }
-
-    // Check connection status
-    const connectionResponse = await fetch(
-      `${cleanUrl}/instance/connectionState/${instanceName}`,
-      {
-        method: "GET",
-        headers: {
-          "apikey": apiKey,
-        },
-      }
-    );
-
-    if (!connectionResponse.ok) {
-      return { 
-        success: false, 
-        message: "Erro ao verificar status da conexão." 
-      };
-    }
-
-    const connectionState = await connectionResponse.json();
-    
-    if (connectionState.state === "open") {
-      return { 
-        success: true, 
-        message: "WhatsApp conectado e pronto para uso!" 
-      };
-    } else {
-      // Get QR Code if not connected
-      const qrResponse = await fetch(`${cleanUrl}/instance/connect/${instanceName}`, {
-        method: "GET",
-        headers: {
-          "apikey": apiKey,
-        },
-      });
-
-      if (qrResponse.ok) {
-        const qrData = await qrResponse.json();
-        return { 
-          success: false, 
-          message: "WhatsApp não conectado. Escaneie o QR Code para conectar.",
-          qrCode: qrData.base64 || qrData.qrcode?.base64
-        };
-      }
-
-      return { 
-        success: false, 
-        message: "WhatsApp não conectado. Acesse o Evolution API para configurar." 
-      };
-    }
-  } catch (error) {
-    console.error("Error testing Evolution API:", error);
-    return { 
-      success: false, 
-      message: "Erro de conexão. Verifique a URL do servidor." 
-    };
-  }
 }
