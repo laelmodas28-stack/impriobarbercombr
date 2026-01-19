@@ -1,25 +1,103 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useBarbershop } from "@/hooks/useBarbershop";
-import { Plus } from "lucide-react";
+import { Plus, Save } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
+import { resizeImage } from "@/lib/imageUtils";
+
+interface Professional {
+  id: string;
+  name: string;
+  bio: string | null;
+  photo_url: string | null;
+  rating: number | null;
+  specialties: string[] | null;
+  is_active: boolean | null;
+}
 
 interface ProfessionalFormProps {
   onSuccess: () => void;
+  professional?: Professional | null;
 }
 
-const ProfessionalForm = ({ onSuccess }: ProfessionalFormProps) => {
+const ProfessionalForm = ({ onSuccess, professional }: ProfessionalFormProps) => {
   const { barbershop } = useBarbershop();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState("");
   const [rating, setRating] = useState("5.0");
+  const [isActive, setIsActive] = useState(true);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const isEditing = !!professional;
+
+  useEffect(() => {
+    if (professional) {
+      setName(professional.name);
+      setBio(professional.bio || "");
+      setSpecialties(professional.specialties?.join(", ") || "");
+      setRating(professional.rating?.toString() || "5.0");
+      setIsActive(professional.is_active ?? true);
+      setPhotoUrl(professional.photo_url);
+    } else {
+      setName("");
+      setBio("");
+      setSpecialties("");
+      setRating("5.0");
+      setIsActive(true);
+      setPhotoUrl(null);
+    }
+  }, [professional]);
+
+  const handlePhotoUpload = async (file: File) => {
+    if (!professional && !barbershop) {
+      toast.error("Salve o profissional primeiro para adicionar foto");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const resizedFile = await resizeImage(file, 800, 800);
+      const fileExt = resizedFile.name.split('.').pop()?.toLowerCase();
+      const professionalId = professional?.id || `temp-${Date.now()}`;
+      const fileName = `${professionalId}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('professional-photos')
+        .upload(fileName, resizedFile, { cacheControl: '3600', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('professional-photos')
+        .getPublicUrl(fileName);
+
+      if (professional) {
+        const { error: updateError } = await supabase
+          .from('professionals')
+          .update({ photo_url: publicUrl })
+          .eq('id', professional.id);
+
+        if (updateError) throw updateError;
+      }
+
+      setPhotoUrl(publicUrl);
+      toast.success("Foto atualizada!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao fazer upload da foto");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,28 +120,36 @@ const ProfessionalForm = ({ onSuccess }: ProfessionalFormProps) => {
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
 
-      const { error } = await supabase.from("professionals").insert({
-        barbershop_id: barbershop.id,
+      const data = {
         name: name.trim(),
         bio: bio.trim() || null,
         specialties: specialtiesArray.length > 0 ? specialtiesArray : null,
         rating: parseFloat(rating),
-        is_active: true,
-      });
+        is_active: isActive,
+        photo_url: photoUrl,
+      };
 
-      if (error) throw error;
+      if (isEditing) {
+        const { error } = await supabase
+          .from("professionals")
+          .update(data)
+          .eq("id", professional.id);
 
-      toast.success("Profissional cadastrado com sucesso!");
-      
-      // Limpar formulário
-      setName("");
-      setBio("");
-      setSpecialties("");
-      setRating("5.0");
+        if (error) throw error;
+        toast.success("Profissional atualizado!");
+      } else {
+        const { error } = await supabase.from("professionals").insert({
+          ...data,
+          barbershop_id: barbershop.id,
+        });
+
+        if (error) throw error;
+        toast.success("Profissional cadastrado!");
+      }
       
       onSuccess();
     } catch (error: any) {
-      console.error("Erro ao cadastrar profissional:", error);
+      console.error("Erro ao salvar profissional:", error);
       toast.error(`Erro: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -71,77 +157,100 @@ const ProfessionalForm = ({ onSuccess }: ProfessionalFormProps) => {
   };
 
   return (
-    <Card className="border-border">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Plus className="w-5 h-5" />
-          Cadastrar Novo Profissional
-        </CardTitle>
-        <CardDescription>
-          Adicione um novo barbeiro à sua equipe
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="prof-name">Nome *</Label>
-            <Input
-              id="prof-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nome do profissional"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="prof-bio">Biografia</Label>
-            <Textarea
-              id="prof-bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Breve descrição sobre o profissional..."
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="prof-specialties">Especialidades</Label>
-            <Input
-              id="prof-specialties"
-              value={specialties}
-              onChange={(e) => setSpecialties(e.target.value)}
-              placeholder="Ex: Barba, Corte Moderno, Degradê (separado por vírgula)"
-            />
-            <p className="text-xs text-muted-foreground">
-              Separe as especialidades por vírgula
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="prof-rating">Avaliação Inicial</Label>
-            <Input
-              id="prof-rating"
-              type="number"
-              min="0"
-              max="5"
-              step="0.1"
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-            />
-          </div>
-
-          <Button
-            type="submit"
-            variant="imperial"
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex justify-center">
+        <div className="w-32">
+          <ImageUpload
+            label="Foto"
+            currentImageUrl={photoUrl}
+            onImageSelect={handlePhotoUpload}
+            maxSizeMB={5}
+            maxWidth={800}
+            maxHeight={800}
+            aspectRatio="square"
             className="w-full"
-            disabled={isSubmitting}
-          >
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="prof-name">Nome *</Label>
+        <Input
+          id="prof-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nome do profissional"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="prof-bio">Biografia</Label>
+        <Textarea
+          id="prof-bio"
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Breve descrição sobre o profissional..."
+          rows={3}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="prof-specialties">Especialidades</Label>
+        <Input
+          id="prof-specialties"
+          value={specialties}
+          onChange={(e) => setSpecialties(e.target.value)}
+          placeholder="Ex: Barba, Corte Moderno, Degradê"
+        />
+        <p className="text-xs text-muted-foreground">
+          Separe as especialidades por vírgula
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="prof-rating">Avaliação</Label>
+          <Input
+            id="prof-rating"
+            type="number"
+            min="0"
+            max="5"
+            step="0.1"
+            value={rating}
+            onChange={(e) => setRating(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-3 pt-6">
+          <Switch
+            id="prof-active"
+            checked={isActive}
+            onCheckedChange={setIsActive}
+          />
+          <Label htmlFor="prof-active">Ativo</Label>
+        </div>
+      </div>
+
+      <Button
+        type="submit"
+        variant="imperial"
+        className="w-full"
+        disabled={isSubmitting || isUploading}
+      >
+        {isEditing ? (
+          <>
+            <Save className="w-4 h-4 mr-2" />
+            {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+          </>
+        ) : (
+          <>
+            <Plus className="w-4 h-4 mr-2" />
             {isSubmitting ? "Cadastrando..." : "Cadastrar Profissional"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          </>
+        )}
+      </Button>
+    </form>
   );
 };
 
