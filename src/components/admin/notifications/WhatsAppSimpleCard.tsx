@@ -20,13 +20,14 @@ import {
   LogOut,
   TestTube
 } from "lucide-react";
-import { sendWhatsAppMessage } from "@/lib/notifications/evolutionApi";
+import { sendTestWhatsAppNotification } from "@/lib/notifications/n8nWebhook";
 import { 
   getWhatsAppStatus,
   connectWhatsApp,
   disconnectWhatsApp,
   type WhatsAppConnectionStatus 
 } from "@/lib/notifications/whatsappService";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface WhatsAppSimpleSettings {
@@ -129,29 +130,27 @@ export function WhatsAppSimpleCard({ barbershopId, barbershopSlug, settings, onS
   };
 
   const handleTestNotification = async () => {
-    if (!connectionStatus?.phoneNumber) {
-      toast.error("Nenhum número conectado para enviar teste");
-      return;
-    }
-
     setIsTesting(true);
     try {
-      const testMessage = `🧪 *Teste de Notificação*\n\nOlá! Esta é uma mensagem de teste do seu sistema de notificações.\n\n✅ Seu WhatsApp está funcionando corretamente!`;
+      // Fetch barbershop name for the test
+      const { data: barbershop } = await supabase
+        .from("barbershops")
+        .select("name")
+        .eq("id", barbershopId)
+        .single();
+
+      const barbershopName = barbershop?.name || "Barbearia";
       
-      const result = await sendWhatsAppMessage({
-        barbershopId,
-        phone: connectionStatus.phoneNumber,
-        message: testMessage
-      });
+      const result = await sendTestWhatsAppNotification(barbershopId, barbershopName);
       
       if (result) {
-        toast.success("Mensagem de teste enviada!");
+        toast.success("Notificação de teste enviada para o webhook!");
       } else {
-        toast.error("Erro ao enviar mensagem de teste");
+        toast.error("Erro ao enviar notificação de teste. Verifique se o webhook está configurado.");
       }
     } catch (error) {
       console.error("Erro ao testar notificação:", error);
-      toast.error("Erro ao enviar mensagem de teste");
+      toast.error("Erro ao enviar notificação de teste");
     } finally {
       setIsTesting(false);
     }
@@ -304,7 +303,7 @@ export function WhatsAppSimpleCard({ barbershopId, barbershopSlug, settings, onS
                 variant="outline"
                 size="sm"
                 onClick={handleTestNotification}
-                disabled={isTesting || !connectionStatus?.phoneNumber}
+                disabled={isTesting}
                 className="w-full"
               >
                 {isTesting ? (
