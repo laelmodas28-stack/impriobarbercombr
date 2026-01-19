@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
   MessageSquare, 
@@ -16,10 +15,10 @@ import {
   Mail, 
   Bell,
   CheckCircle,
-  XCircle,
-  Webhook
+  TestTube
 } from "lucide-react";
 import { WhatsAppSimpleCard } from "@/components/admin/notifications/WhatsAppSimpleCard";
+import { sendTestEmailNotification } from "@/lib/notifications/n8nWebhook";
 
 interface NotificationSettings {
   send_booking_confirmation: boolean;
@@ -41,6 +40,8 @@ export function NotificationChannelsPage() {
     whatsapp_send_booking_confirmation: true,
     whatsapp_send_booking_reminder: true,
   });
+
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
 
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ["barbershop-notification-settings", barbershop?.id],
@@ -126,6 +127,25 @@ export function NotificationChannelsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateMutation.mutate(settings);
+  };
+
+  const handleTestEmail = async () => {
+    if (!barbershop?.id || !barbershop?.name) return;
+    
+    setIsTestingEmail(true);
+    try {
+      const result = await sendTestEmailNotification(barbershop.id, barbershop.name);
+      if (result) {
+        toast.success("Notificação de teste enviada para o webhook!");
+      } else {
+        toast.error("Webhook de email não configurado");
+      }
+    } catch (error) {
+      console.error("Error testing email:", error);
+      toast.error("Erro ao enviar notificação de teste");
+    } finally {
+      setIsTestingEmail(false);
+    }
   };
 
   if (!barbershop?.id) {
@@ -234,6 +254,22 @@ export function NotificationChannelsPage() {
                     }
                   />
                 </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestEmail}
+                  disabled={isTestingEmail}
+                  className="w-full mt-4"
+                >
+                  {isTestingEmail ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <TestTube className="w-4 h-4 mr-2" />
+                  )}
+                  Testar Notificação por Email
+                </Button>
               </div>
             </CardContent>
           </Card>
