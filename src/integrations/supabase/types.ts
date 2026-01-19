@@ -55,6 +55,9 @@ export type Database = {
           booking_cancellation_hours: number | null
           created_at: string
           deposit_percentage: number | null
+          evolution_api_key: string | null
+          evolution_api_url: string | null
+          evolution_instance_name: string | null
           id: string
           n8n_webhook_url: string | null
           reminder_hours_before: number | null
@@ -64,6 +67,9 @@ export type Database = {
           send_booking_reminders: boolean | null
           timezone: string | null
           updated_at: string
+          whatsapp_enabled: boolean | null
+          whatsapp_send_booking_confirmation: boolean | null
+          whatsapp_send_booking_reminder: boolean | null
         }
         Insert: {
           allow_online_payments?: boolean | null
@@ -73,6 +79,9 @@ export type Database = {
           booking_cancellation_hours?: number | null
           created_at?: string
           deposit_percentage?: number | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          evolution_instance_name?: string | null
           id?: string
           n8n_webhook_url?: string | null
           reminder_hours_before?: number | null
@@ -82,6 +91,9 @@ export type Database = {
           send_booking_reminders?: boolean | null
           timezone?: string | null
           updated_at?: string
+          whatsapp_enabled?: boolean | null
+          whatsapp_send_booking_confirmation?: boolean | null
+          whatsapp_send_booking_reminder?: boolean | null
         }
         Update: {
           allow_online_payments?: boolean | null
@@ -91,6 +103,9 @@ export type Database = {
           booking_cancellation_hours?: number | null
           created_at?: string
           deposit_percentage?: number | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          evolution_instance_name?: string | null
           id?: string
           n8n_webhook_url?: string | null
           reminder_hours_before?: number | null
@@ -100,6 +115,9 @@ export type Database = {
           send_booking_reminders?: boolean | null
           timezone?: string | null
           updated_at?: string
+          whatsapp_enabled?: boolean | null
+          whatsapp_send_booking_confirmation?: boolean | null
+          whatsapp_send_booking_reminder?: boolean | null
         }
         Relationships: [
           {

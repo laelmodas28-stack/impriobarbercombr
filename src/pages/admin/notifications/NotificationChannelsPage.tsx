@@ -23,11 +23,19 @@ import {
   ExternalLink,
   TestTube
 } from "lucide-react";
+import { WhatsAppChannelCard } from "@/components/admin/notifications/WhatsAppChannelCard";
 
 interface NotificationSettings {
   n8n_webhook_url: string;
   send_booking_confirmation: boolean;
   send_booking_reminder: boolean;
+  // WhatsApp / Evolution API
+  evolution_api_url: string;
+  evolution_api_key: string;
+  evolution_instance_name: string;
+  whatsapp_enabled: boolean;
+  whatsapp_send_booking_confirmation: boolean;
+  whatsapp_send_booking_reminder: boolean;
 }
 
 export function NotificationChannelsPage() {
@@ -39,6 +47,12 @@ export function NotificationChannelsPage() {
     n8n_webhook_url: "",
     send_booking_confirmation: true,
     send_booking_reminder: true,
+    evolution_api_url: "",
+    evolution_api_key: "",
+    evolution_instance_name: "",
+    whatsapp_enabled: false,
+    whatsapp_send_booking_confirmation: true,
+    whatsapp_send_booking_reminder: true,
   });
 
   const { data: settingsData, isLoading } = useQuery({
@@ -47,7 +61,17 @@ export function NotificationChannelsPage() {
       if (!barbershop?.id) return null;
       const { data, error } = await supabase
         .from("barbershop_settings")
-        .select("n8n_webhook_url, send_booking_confirmation, send_booking_reminder")
+        .select(`
+          n8n_webhook_url, 
+          send_booking_confirmation, 
+          send_booking_reminder,
+          evolution_api_url,
+          evolution_api_key,
+          evolution_instance_name,
+          whatsapp_enabled,
+          whatsapp_send_booking_confirmation,
+          whatsapp_send_booking_reminder
+        `)
         .eq("barbershop_id", barbershop.id)
         .single();
       
@@ -63,6 +87,12 @@ export function NotificationChannelsPage() {
         n8n_webhook_url: settingsData.n8n_webhook_url || "",
         send_booking_confirmation: settingsData.send_booking_confirmation ?? true,
         send_booking_reminder: settingsData.send_booking_reminder ?? true,
+        evolution_api_url: settingsData.evolution_api_url || "",
+        evolution_api_key: settingsData.evolution_api_key || "",
+        evolution_instance_name: settingsData.evolution_instance_name || "",
+        whatsapp_enabled: settingsData.whatsapp_enabled ?? false,
+        whatsapp_send_booking_confirmation: settingsData.whatsapp_send_booking_confirmation ?? true,
+        whatsapp_send_booking_reminder: settingsData.whatsapp_send_booking_reminder ?? true,
       });
     }
   }, [settingsData]);
@@ -85,6 +115,12 @@ export function NotificationChannelsPage() {
             n8n_webhook_url: data.n8n_webhook_url || null,
             send_booking_confirmation: data.send_booking_confirmation,
             send_booking_reminder: data.send_booking_reminder,
+            evolution_api_url: data.evolution_api_url || null,
+            evolution_api_key: data.evolution_api_key || null,
+            evolution_instance_name: data.evolution_instance_name || null,
+            whatsapp_enabled: data.whatsapp_enabled,
+            whatsapp_send_booking_confirmation: data.whatsapp_send_booking_confirmation,
+            whatsapp_send_booking_reminder: data.whatsapp_send_booking_reminder,
             updated_at: new Date().toISOString(),
           })
           .eq("barbershop_id", barbershop.id);
@@ -97,6 +133,12 @@ export function NotificationChannelsPage() {
             n8n_webhook_url: data.n8n_webhook_url || null,
             send_booking_confirmation: data.send_booking_confirmation,
             send_booking_reminder: data.send_booking_reminder,
+            evolution_api_url: data.evolution_api_url || null,
+            evolution_api_key: data.evolution_api_key || null,
+            evolution_instance_name: data.evolution_instance_name || null,
+            whatsapp_enabled: data.whatsapp_enabled,
+            whatsapp_send_booking_confirmation: data.whatsapp_send_booking_confirmation,
+            whatsapp_send_booking_reminder: data.whatsapp_send_booking_reminder,
           });
         if (error) throw error;
       }
@@ -180,6 +222,21 @@ export function NotificationChannelsPage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* WhatsApp / Evolution API */}
+          <WhatsAppChannelCard
+            settings={{
+              evolution_api_url: settings.evolution_api_url,
+              evolution_api_key: settings.evolution_api_key,
+              evolution_instance_name: settings.evolution_instance_name,
+              whatsapp_enabled: settings.whatsapp_enabled,
+              whatsapp_send_booking_confirmation: settings.whatsapp_send_booking_confirmation,
+              whatsapp_send_booking_reminder: settings.whatsapp_send_booking_reminder,
+            }}
+            onSettingsChange={(whatsappSettings) => 
+              setSettings(prev => ({ ...prev, ...whatsappSettings }))
+            }
+          />
+
           {/* n8n Integration */}
           <Card>
             <CardHeader>

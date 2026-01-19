@@ -51,8 +51,7 @@ import {
   type ExistingBooking,
 } from "@/lib/appointments";
 import { sendBookingConfirmationViaWebhook } from "@/lib/notifications/n8nWebhook";
-
-// Validation schema
+import { sendBookingConfirmationWhatsApp } from "@/lib/notifications/evolutionApi";
 const clientSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
   phone: z.string().trim().max(20, "Telefone muito longo").optional(),
@@ -359,28 +358,40 @@ export function NewAppointmentModal({
 
       if (error) throw error;
 
-      // Send notification via n8n webhook if enabled
+      // Send notifications if enabled
       if (sendNotification) {
+        // Get client profile info
+        const selectedClientData = clients?.find(c => c.user_id === selectedClient);
+        const selectedProfessionalData = professionals?.find(p => p.id === selectedProfessional);
+        
+        const notificationParams = {
+          barbershopId,
+          barbershopName: barbershop?.name || "",
+          clientName: selectedClientData?.profile?.name || "Cliente",
+          clientPhone: selectedClientData?.profile?.phone || "",
+          serviceName: selectedServiceData?.name || "",
+          servicePrice: finalPrice,
+          professionalName: selectedProfessionalData?.name || "",
+          bookingDate: format(selectedDate!, "yyyy-MM-dd"),
+          bookingTime: selectedTime,
+          notes: notes.trim() || undefined,
+        };
+
+        // Send via n8n webhook (email)
         try {
-          // Get client profile info
-          const selectedClientData = clients?.find(c => c.user_id === selectedClient);
-          const selectedProfessionalData = professionals?.find(p => p.id === selectedProfessional);
-          
           await sendBookingConfirmationViaWebhook({
-            barbershopId,
-            barbershopName: barbershop?.name || "",
-            clientName: selectedClientData?.profile?.name || "Cliente",
-            clientEmail: null, // Profile doesn't have email in the current query
-            clientPhone: selectedClientData?.profile?.phone || null,
-            serviceName: selectedServiceData?.name || "",
-            servicePrice: finalPrice,
-            professionalName: selectedProfessionalData?.name || "",
-            bookingDate: format(selectedDate!, "yyyy-MM-dd"),
-            bookingTime: selectedTime,
-            notes: notes.trim() || null,
+            ...notificationParams,
+            clientEmail: null,
           });
         } catch (notifError) {
           console.warn("Failed to send n8n notification:", notifError);
+        }
+
+        // Send via WhatsApp (Evolution API)
+        try {
+          await sendBookingConfirmationWhatsApp(notificationParams);
+        } catch (whatsappError) {
+          console.warn("Failed to send WhatsApp notification:", whatsappError);
         }
       }
 
