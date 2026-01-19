@@ -28,6 +28,12 @@ interface BookingNotificationParams {
   notes?: string;
 }
 
+export interface ConnectionStatus {
+  state: "open" | "close" | "connecting" | "connected" | "disconnected" | "error" | string;
+  message?: string;
+  phoneNumber?: string;
+}
+
 export async function getWhatsAppSettings(barbershopId: string): Promise<EvolutionApiSettings | null> {
   const { data, error } = await supabase
     .from("barbershop_settings")
@@ -48,6 +54,49 @@ export async function getWhatsAppSettings(barbershopId: string): Promise<Evoluti
   }
 
   return data as EvolutionApiSettings;
+}
+
+export async function getInstanceStatus(
+  apiUrl: string,
+  apiKey: string,
+  instanceName: string
+): Promise<ConnectionStatus> {
+  const cleanUrl = apiUrl.replace(/\/$/, "");
+
+  try {
+    const response = await fetch(
+      `${cleanUrl}/instance/connectionState/${instanceName}`,
+      {
+        method: "GET",
+        headers: {
+          "apikey": apiKey,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { state: "error", message: "Instância não encontrada" };
+      }
+      return { state: "error", message: "Erro ao verificar status" };
+    }
+
+    const data = await response.json();
+    
+    // Extract phone number if available
+    let phoneNumber: string | undefined;
+    if (data.instance?.owner) {
+      phoneNumber = data.instance.owner.split("@")[0];
+    }
+
+    return {
+      state: data.state || data.instance?.state || "unknown",
+      phoneNumber,
+    };
+  } catch (error) {
+    console.error("Error getting instance status:", error);
+    return { state: "error", message: "Erro de conexão com o servidor" };
+  }
 }
 
 function formatPhoneNumber(phone: string): string {
