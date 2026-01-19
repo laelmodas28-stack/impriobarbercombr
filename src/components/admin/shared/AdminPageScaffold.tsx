@@ -10,6 +10,7 @@ interface AdminPageScaffoldProps {
   icon: LucideIcon;
   actionLabel?: string;
   onAction?: () => void;
+  actions?: ReactNode;
   children?: ReactNode;
 }
 
@@ -19,6 +20,7 @@ export function AdminPageScaffold({
   icon: Icon,
   actionLabel,
   onAction,
+  actions,
   children,
 }: AdminPageScaffoldProps) {
   return (
@@ -27,12 +29,12 @@ export function AdminPageScaffold({
         title={title}
         subtitle={subtitle}
         actions={
-          actionLabel && onAction ? (
+          actions || (actionLabel && onAction ? (
             <Button onClick={onAction} className="gap-2">
               <Plus className="h-4 w-4" />
               {actionLabel}
             </Button>
-          ) : undefined
+          ) : undefined)
         }
       />
 
