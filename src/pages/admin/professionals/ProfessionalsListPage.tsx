@@ -12,11 +12,34 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ProfessionalForm from "@/components/admin/ProfessionalForm";
+
+interface Professional {
+  id: string;
+  name: string;
+  bio: string | null;
+  photo_url: string | null;
+  rating: number | null;
+  specialties: string[] | null;
+  is_active: boolean | null;
+}
 
 export function ProfessionalsListPage() {
   const { barbershop } = useBarbershop();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
+  const [deletingProfessional, setDeletingProfessional] = useState<Professional | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: professionals, isLoading, refetch } = useQuery({
     queryKey: ["professionals", barbershop?.id],
@@ -28,23 +51,47 @@ export function ProfessionalsListPage() {
         .eq("barbershop_id", barbershop.id)
         .order("name");
       if (error) throw error;
-      return data;
+      return data as Professional[];
     },
     enabled: !!barbershop?.id,
   });
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("professionals").delete().eq("id", id);
+  const handleEdit = (prof: Professional) => {
+    setEditingProfessional(prof);
+    setIsModalOpen(true);
+  };
+
+  const handleNew = () => {
+    setEditingProfessional(null);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingProfessional) return;
+    
+    setIsDeleting(true);
+    const { error } = await supabase
+      .from("professionals")
+      .delete()
+      .eq("id", deletingProfessional.id);
+    
     if (error) {
-      toast.error("Erro ao excluir profissional");
+      if (error.code === "23503") {
+        toast.error("Não é possível excluir: profissional tem agendamentos vinculados");
+      } else {
+        toast.error("Erro ao excluir profissional");
+      }
     } else {
       toast.success("Profissional excluído");
       refetch();
     }
+    setIsDeleting(false);
+    setDeletingProfessional(null);
   };
 
   const handleSuccess = () => {
     setIsModalOpen(false);
+    setEditingProfessional(null);
     refetch();
   };
 
@@ -55,7 +102,7 @@ export function ProfessionalsListPage() {
         subtitle="Profissionais cadastrados na barbearia"
         icon={UserCircle}
         actionLabel="Novo Profissional"
-        onAction={() => setIsModalOpen(true)}
+        onAction={handleNew}
       >
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -99,12 +146,12 @@ export function ProfessionalsListPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(prof)}>
                           <Pencil className="mr-2 h-4 w-4" /> Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
-                          onClick={() => handleDelete(prof.id)}
+                          onClick={() => setDeletingProfessional(prof)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Excluir
                         </DropdownMenuItem>
@@ -135,7 +182,7 @@ export function ProfessionalsListPage() {
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <UserCircle className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Nenhum profissional cadastrado</p>
-              <Button className="mt-4" onClick={() => setIsModalOpen(true)}>
+              <Button className="mt-4" onClick={handleNew}>
                 Adicionar Primeiro Profissional
               </Button>
             </CardContent>
@@ -146,13 +193,39 @@ export function ProfessionalsListPage() {
       <Sheet open={isModalOpen} onOpenChange={setIsModalOpen}>
         <SheetContent className="overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Novo Profissional</SheetTitle>
+            <SheetTitle>
+              {editingProfessional ? "Editar Profissional" : "Novo Profissional"}
+            </SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            <ProfessionalForm onSuccess={handleSuccess} />
+            <ProfessionalForm 
+              onSuccess={handleSuccess} 
+              professional={editingProfessional}
+            />
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={!!deletingProfessional} onOpenChange={() => setDeletingProfessional(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir profissional?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O profissional "{deletingProfessional?.name}" será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
