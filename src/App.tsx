@@ -19,12 +19,18 @@ import ProfessionalDetail from "./pages/ProfessionalDetail";
 import Booking from "./pages/Booking";
 import Account from "./pages/Account";
 import About from "./pages/About";
-import Admin from "./pages/Admin";
 import Gallery from "./pages/Gallery";
 import Subscriptions from "./pages/Subscriptions";
 import RegisterBarbershop from "./pages/RegisterBarbershop";
 import NotFound from "./pages/NotFound";
 
+// Admin pages
+import AdminLayout from "./components/admin/layout/AdminLayout";
+import DashboardPage from "./pages/admin/DashboardPage";
+import ClientsPage from "./pages/admin/ClientsPage";
+import ReportsPage from "./pages/admin/ReportsPage";
+import ImportsPage from "./pages/admin/ImportsPage";
+import ImportWizardPage from "./pages/admin/ImportWizardPage";
 
 const queryClient = new QueryClient();
 
@@ -97,7 +103,15 @@ const App = () => (
                   <Route path="subscriptions" element={<Subscriptions />} />
                   <Route path="about" element={<About />} />
                   <Route path="auth" element={<BarbershopAuth />} />
-                  <Route path="admin" element={<Admin />} />
+                  
+                  {/* Admin routes with new sidebar layout */}
+                  <Route path="admin" element={<AdminLayout />}>
+                    <Route index element={<DashboardPage />} />
+                    <Route path="clients" element={<ClientsPage />} />
+                    <Route path="reports" element={<ReportsPage />} />
+                    <Route path="imports" element={<ImportsPage />} />
+                    <Route path="imports/:type" element={<ImportWizardPage />} />
+                  </Route>
                 </Route>
 
                 {/* Rotas padrão */}
