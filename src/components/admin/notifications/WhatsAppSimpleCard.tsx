@@ -76,10 +76,10 @@ export function WhatsAppSimpleCard({ barbershopId, settings, onSettingsChange }:
     checkStatus();
   }, [checkStatus]);
 
-  // Auto-refresh when showing QR code
+  // Auto-refresh when showing QR code (15 seconds to give user time to scan)
   useEffect(() => {
     if (qrCode) {
-      const interval = setInterval(checkStatus, 5000);
+      const interval = setInterval(checkStatus, 15000);
       return () => clearInterval(interval);
     }
   }, [qrCode, checkStatus]);
