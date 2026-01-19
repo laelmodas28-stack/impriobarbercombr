@@ -1,9 +1,75 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-signature, x-request-id',
 };
+
+// Validate Mercado Pago webhook signature
+async function validateWebhookSignature(
+  xSignature: string | null,
+  xRequestId: string | null,
+  dataId: string | null,
+  secret: string
+): Promise<boolean> {
+  if (!xSignature || !xRequestId) {
+    console.error('Missing signature headers');
+    return false;
+  }
+
+  try {
+    // Parse x-signature header: "ts=xxx,v1=xxx"
+    const signatureParts = xSignature.split(',');
+    let ts = '';
+    let v1 = '';
+    
+    for (const part of signatureParts) {
+      const [key, value] = part.split('=');
+      if (key === 'ts') ts = value;
+      if (key === 'v1') v1 = value;
+    }
+
+    if (!ts || !v1) {
+      console.error('Invalid signature format');
+      return false;
+    }
+
+    // Build manifest string
+    // According to Mercado Pago docs: id:[data_id];request-id:[x-request-id];ts:[ts];
+    const manifest = `id:${dataId || ''};request-id:${xRequestId};ts:${ts};`;
+    
+    // Generate HMAC-SHA256
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const messageData = encoder.encode(manifest);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+    const signatureHex = Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Compare signatures using timing-safe comparison
+    const isValid = signatureHex === v1;
+    
+    if (!isValid) {
+      console.error('Signature mismatch:', { expected: v1, calculated: signatureHex });
+    }
+    
+    return isValid;
+  } catch (error) {
+    console.error('Signature validation error:', error);
+    return false;
+  }
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -15,6 +81,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const mercadopagoToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    const webhookSecret = Deno.env.get('MERCADOPAGO_WEBHOOK_SECRET');
 
     if (!mercadopagoToken) {
       console.error('MERCADOPAGO_ACCESS_TOKEN not configured');
@@ -30,8 +97,12 @@ Deno.serve(async (req) => {
 
     // Also try to get from body
     let body: any = {};
+    let rawBody = '';
     try {
-      body = await req.json();
+      rawBody = await req.text();
+      if (rawBody) {
+        body = JSON.parse(rawBody);
+      }
     } catch {
       // Body might be empty for some notifications
     }
@@ -39,7 +110,29 @@ Deno.serve(async (req) => {
     const paymentId = id || body?.data?.id;
     const type = topic || body?.type;
 
-    console.log('Webhook received:', { type, paymentId, body });
+    console.log('Webhook received:', { type, paymentId });
+
+    // Validate webhook signature if secret is configured
+    if (webhookSecret) {
+      const xSignature = req.headers.get('x-signature');
+      const xRequestId = req.headers.get('x-request-id');
+      
+      const isValidSignature = await validateWebhookSignature(
+        xSignature,
+        xRequestId,
+        paymentId,
+        webhookSecret
+      );
+      
+      if (!isValidSignature) {
+        console.error('Invalid webhook signature - potential forgery attempt');
+        return new Response('Invalid signature', { status: 401, headers: corsHeaders });
+      }
+      
+      console.log('Webhook signature validated successfully');
+    } else {
+      console.warn('MERCADOPAGO_WEBHOOK_SECRET not configured - signature validation disabled');
+    }
 
     if (type !== 'payment' || !paymentId) {
       console.log('Ignoring non-payment notification');
