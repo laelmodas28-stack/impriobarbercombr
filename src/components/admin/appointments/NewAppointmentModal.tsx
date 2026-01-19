@@ -424,21 +424,17 @@ export function NewAppointmentModal({
         }
       }
 
-      // Create new profile if needed
+      // Create new profile if needed using RPC function (bypasses RLS)
       if (!clientId) {
-        const newId = crypto.randomUUID();
-        
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({
-            id: newId,
-            user_id: newId,
-            name: newClientName.trim(),
-            phone: newClientPhone.trim() || null,
+        const { data: newUserId, error: profileError } = await supabase
+          .rpc("create_client_profile", {
+            p_name: newClientName.trim(),
+            p_email: newClientEmail?.trim() || null,
+            p_phone: newClientPhone?.trim() || null,
           });
 
         if (profileError) throw profileError;
-        clientId = newId;
+        clientId = newUserId;
       }
 
       // Add to barbershop clients

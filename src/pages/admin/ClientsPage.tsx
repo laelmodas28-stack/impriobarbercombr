@@ -47,18 +47,13 @@ export function ClientsPage() {
       if (!barbershop?.id) throw new Error("Barbearia não encontrada");
       if (!formData.name.trim()) throw new Error("Nome é obrigatório");
       
-      // First create a profile entry (this simulates adding a client without full auth)
-      // In a real scenario, you'd invite the user or they'd sign up themselves
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          user_id: crypto.randomUUID(), // Generate a temporary UUID
-          name: formData.name.trim(),
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-        })
-        .select()
-        .single();
+      // Use RPC function to create profile (bypasses RLS)
+      const { data: userId, error: profileError } = await supabase
+        .rpc("create_client_profile", {
+          p_name: formData.name.trim(),
+          p_email: formData.email.trim() || null,
+          p_phone: formData.phone.trim() || null,
+        });
       
       if (profileError) throw profileError;
       
@@ -67,13 +62,13 @@ export function ClientsPage() {
         .from("barbershop_clients")
         .insert({
           barbershop_id: barbershop.id,
-          user_id: profile.user_id,
+          user_id: userId,
           notes: "Cliente cadastrado manualmente",
         });
       
       if (clientError) throw clientError;
       
-      return profile;
+      return userId;
     },
     onSuccess: () => {
       toast.success("Cliente cadastrado com sucesso!");
