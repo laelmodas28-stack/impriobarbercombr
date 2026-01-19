@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
@@ -7,9 +8,13 @@ import { DataTable, Column } from "@/components/admin/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Plus, Upload, Phone, Mail, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Users, Plus, Upload, Phone, Mail, Calendar, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface Client {
   id: string;
@@ -28,6 +33,59 @@ interface Client {
 export function ClientsPage() {
   const { barbershop, baseUrl } = useBarbershopContext();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+
+  const createClientMutation = useMutation({
+    mutationFn: async () => {
+      if (!barbershop?.id) throw new Error("Barbearia não encontrada");
+      if (!formData.name.trim()) throw new Error("Nome é obrigatório");
+      
+      // First create a profile entry (this simulates adding a client without full auth)
+      // In a real scenario, you'd invite the user or they'd sign up themselves
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: crypto.randomUUID(), // Generate a temporary UUID
+          name: formData.name.trim(),
+          email: formData.email.trim() || null,
+          phone: formData.phone.trim() || null,
+        })
+        .select()
+        .single();
+      
+      if (profileError) throw profileError;
+      
+      // Then link them to the barbershop
+      const { error: clientError } = await supabase
+        .from("barbershop_clients")
+        .insert({
+          barbershop_id: barbershop.id,
+          user_id: profile.user_id,
+          notes: "Cliente cadastrado manualmente",
+        });
+      
+      if (clientError) throw clientError;
+      
+      return profile;
+    },
+    onSuccess: () => {
+      toast.success("Cliente cadastrado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
+      setIsDialogOpen(false);
+      setFormData({ name: "", email: "", phone: "" });
+    },
+    onError: (error: any) => {
+      console.error("Error creating client:", error);
+      toast.error(error.message || "Erro ao cadastrar cliente");
+    },
+  });
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["admin-clients", barbershop?.id],
@@ -165,7 +223,7 @@ export function ClientsPage() {
                 Importar
               </a>
             </Button>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setIsDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               Novo Cliente
             </Button>
@@ -193,6 +251,62 @@ export function ClientsPage() {
           },
         }}
       />
+
+      {/* Add Client Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo cliente na barbearia
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => { e.preventDefault(); createClientMutation.mutate(); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome completo"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createClientMutation.isPending}>
+                {createClientMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Cadastrar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
