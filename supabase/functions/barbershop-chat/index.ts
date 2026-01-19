@@ -453,12 +453,40 @@ IMPORTANTE:
       );
     }
 
+    // Schema for validating booking data from AI response
+    const bookingSchema = z.object({
+      action: z.literal('create_booking'),
+      service_name: z.string().min(1).max(100),
+      professional_name: z.string().max(100).nullable().optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+      time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+    });
+
     // Check if AI wants to create a booking - SECURITY: Only create if user is authenticated
     const jsonMatch = assistantMessage.match(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/);
     
     if (jsonMatch && userId) {
       try {
-        const bookingData = JSON.parse(jsonMatch[0]);
+        // Parse and validate booking data using zod schema
+        const parsedJson = JSON.parse(jsonMatch[0]);
+        const validationResult = bookingSchema.safeParse(parsedJson);
+        
+        if (!validationResult.success) {
+          console.error("Invalid booking data from AI:", validationResult.error.errors);
+          // Don't create booking, just return the AI response without the JSON
+          const cleanResponse = assistantMessage.replace(/\{[\s\S]*"action":\s*"create_booking"[\s\S]*\}/, "").trim();
+          return new Response(
+            JSON.stringify({
+              response: cleanResponse + "\n\n⚠️ Houve um erro ao processar o agendamento. Por favor, tente novamente.",
+              bookingCreated: false,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+        
+        const bookingData = validationResult.data;
         
         // Find service by name
         const service = services?.find(
@@ -469,8 +497,9 @@ IMPORTANTE:
         let professionalId = null;
         let selectedProfessional = null;
         if (bookingData.professional_name) {
+          const professionalName = bookingData.professional_name;
           selectedProfessional = professionals?.find(
-            (p) => p.name.toLowerCase().includes(bookingData.professional_name.toLowerCase())
+            (p) => p.name.toLowerCase().includes(professionalName.toLowerCase())
           );
           professionalId = selectedProfessional?.id || professionals?.[0]?.id;
         } else {
