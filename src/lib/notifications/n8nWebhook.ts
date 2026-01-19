@@ -140,13 +140,6 @@ export async function sendBookingReminderViaWebhook(
  */
 export async function sendTestEmailNotification(barbershopId: string, barbershopName: string): Promise<boolean> {
   try {
-    const settings = await getNotificationSettings(barbershopId);
-    
-    if (!settings?.n8n_webhook_url) {
-      console.log("Email webhook not configured");
-      return false;
-    }
-
     const now = new Date();
     const bookingDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Tomorrow
 
@@ -219,22 +212,24 @@ export async function sendTestEmailNotification(barbershopId: string, barbershop
 </body>
 </html>`,
       notes: "Esta é uma notificação de teste",
-      timestamp: now.toISOString(),
     };
 
-    console.log("Sending test email notification to n8n webhook");
-    
-    await fetch(settings.n8n_webhook_url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // Send to edge function which forwards to n8n webhook using the secret
+    const { data, error } = await supabase.functions.invoke("send-email-webhook", {
+      body: {
+        barbershopId,
+        payload,
+        isTest: true,
       },
-      mode: "no-cors",
-      body: JSON.stringify(payload),
     });
 
-    console.log("Test email notification sent to n8n");
-    return true;
+    if (error) {
+      console.error("Error sending test email notification:", error);
+      return false;
+    }
+
+    console.log("Test email notification sent to n8n", data);
+    return data?.success ?? false;
   } catch (error) {
     console.error("Error sending test email notification:", error);
     return false;
