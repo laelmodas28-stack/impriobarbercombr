@@ -1,0 +1,126 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export interface NotificationTemplate {
+  id: string;
+  barbershop_id: string;
+  name: string;
+  type: "email" | "whatsapp";
+  trigger_event: string;
+  subject: string | null;
+  content: string;
+  is_active: boolean;
+}
+
+export interface TemplateData {
+  clientName: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  serviceName: string;
+  servicePrice: number;
+  professionalName: string;
+  bookingDate: string;
+  bookingTime: string;
+  barbershopName: string;
+  barbershopLogoUrl?: string;
+  notes?: string;
+}
+
+/**
+ * Fetches an active notification template for a specific trigger and type
+ */
+export async function getNotificationTemplate(
+  barbershopId: string,
+  triggerEvent: string,
+  type: "email" | "whatsapp"
+): Promise<NotificationTemplate | null> {
+  const { data, error } = await supabase
+    .from("notification_templates")
+    .select("*")
+    .eq("barbershop_id", barbershopId)
+    .eq("trigger_event", triggerEvent)
+    .eq("type", type)
+    .eq("is_active", true)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching ${type} template for ${triggerEvent}:`, error);
+    return null;
+  }
+
+  return data as NotificationTemplate;
+}
+
+/**
+ * Replaces all placeholders in template content with actual data
+ */
+export function processTemplate(content: string, data: TemplateData): string {
+  // Format date for display
+  const formattedDate = new Date(data.bookingDate + "T00:00:00").toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  // Format price
+  const formattedPrice = `R$ ${data.servicePrice.toFixed(2).replace(".", ",")}`;
+
+  // ImperioApp logo URL
+  const imperioLogoUrl = "https://utxzksrbunutqhcmimew.supabase.co/storage/v1/object/public/assets/imperio-logo.webp";
+
+  // Replace all placeholders
+  let processed = content
+    .replace(/\{\{cliente_nome\}\}/g, data.clientName)
+    .replace(/\{\{cliente_telefone\}\}/g, data.clientPhone || "")
+    .replace(/\{\{cliente_email\}\}/g, data.clientEmail || "")
+    .replace(/\{\{servico_nome\}\}/g, data.serviceName)
+    .replace(/\{\{servico_preco\}\}/g, formattedPrice)
+    .replace(/\{\{profissional_nome\}\}/g, data.professionalName)
+    .replace(/\{\{data_agendamento\}\}/g, formattedDate)
+    .replace(/\{\{hora_agendamento\}\}/g, data.bookingTime)
+    .replace(/\{\{barbearia_nome\}\}/g, data.barbershopName)
+    .replace(/\{\{barbearia_logo_url\}\}/g, data.barbershopLogoUrl || "")
+    .replace(/\{\{imperio_logo_url\}\}/g, imperioLogoUrl)
+    .replace(/\{\{observacoes\}\}/g, data.notes || "");
+
+  return processed;
+}
+
+/**
+ * Gets the processed email template content for a booking confirmation
+ */
+export async function getProcessedEmailTemplate(
+  barbershopId: string,
+  triggerEvent: string,
+  data: TemplateData
+): Promise<{ subject: string; content: string } | null> {
+  const template = await getNotificationTemplate(barbershopId, triggerEvent, "email");
+  
+  if (!template) {
+    console.log(`No active email template found for ${triggerEvent}`);
+    return null;
+  }
+
+  return {
+    subject: processTemplate(template.subject || "", data),
+    content: processTemplate(template.content, data),
+  };
+}
+
+/**
+ * Gets the processed WhatsApp template content for a booking confirmation
+ */
+export async function getProcessedWhatsAppTemplate(
+  barbershopId: string,
+  triggerEvent: string,
+  data: TemplateData
+): Promise<string | null> {
+  const template = await getNotificationTemplate(barbershopId, triggerEvent, "whatsapp");
+  
+  if (!template) {
+    console.log(`No active WhatsApp template found for ${triggerEvent}`);
+    return null;
+  }
+
+  return processTemplate(template.content, data);
+}

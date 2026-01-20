@@ -1,8 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getProcessedEmailTemplate, TemplateData } from "./templateService";
 
-interface BookingNotificationData {
+export interface BookingNotificationData {
   barbershopId: string;
   barbershopName: string;
+  barbershopLogoUrl?: string;
   clientName: string;
   clientEmail?: string | null;
   clientPhone?: string | null;
@@ -52,6 +54,28 @@ export async function sendBookingConfirmationViaWebhook(
       return false;
     }
 
+    // Prepare template data
+    const templateData: TemplateData = {
+      clientName: data.clientName,
+      clientPhone: data.clientPhone || undefined,
+      clientEmail: data.clientEmail || undefined,
+      serviceName: data.serviceName,
+      servicePrice: data.servicePrice,
+      professionalName: data.professionalName,
+      bookingDate: data.bookingDate,
+      bookingTime: data.bookingTime,
+      barbershopName: data.barbershopName,
+      barbershopLogoUrl: data.barbershopLogoUrl,
+      notes: data.notes || undefined,
+    };
+
+    // Try to get processed template from database
+    const emailTemplate = await getProcessedEmailTemplate(
+      data.barbershopId,
+      "booking_confirmation",
+      templateData
+    );
+
     const payload = {
       type: "booking_confirmation",
       barbershop_name: data.barbershopName,
@@ -65,6 +89,10 @@ export async function sendBookingConfirmationViaWebhook(
       booking_time: data.bookingTime,
       notes: data.notes || "",
       timestamp: new Date().toISOString(),
+      // Add processed template content if available
+      email_subject: emailTemplate?.subject || `Confirmação de Agendamento - ${data.barbershopName}`,
+      email_html: emailTemplate?.content || null,
+      use_template: !!emailTemplate,
     };
 
     console.log("Sending booking confirmation to n8n webhook:", settings.n8n_webhook_url);
@@ -79,7 +107,7 @@ export async function sendBookingConfirmationViaWebhook(
       body: JSON.stringify(payload),
     });
 
-    console.log("Booking confirmation sent to n8n");
+    console.log("Booking confirmation sent to n8n with template:", !!emailTemplate);
     return true;
   } catch (error) {
     console.error("Error sending booking confirmation via webhook:", error);
@@ -101,6 +129,28 @@ export async function sendBookingReminderViaWebhook(
       return false;
     }
 
+    // Prepare template data
+    const templateData: TemplateData = {
+      clientName: data.clientName,
+      clientPhone: data.clientPhone || undefined,
+      clientEmail: data.clientEmail || undefined,
+      serviceName: data.serviceName,
+      servicePrice: data.servicePrice,
+      professionalName: data.professionalName,
+      bookingDate: data.bookingDate,
+      bookingTime: data.bookingTime,
+      barbershopName: data.barbershopName,
+      barbershopLogoUrl: data.barbershopLogoUrl,
+      notes: data.notes || undefined,
+    };
+
+    // Try to get processed template from database
+    const emailTemplate = await getProcessedEmailTemplate(
+      data.barbershopId,
+      "booking_reminder",
+      templateData
+    );
+
     const payload = {
       type: "booking_reminder",
       barbershop_name: data.barbershopName,
@@ -114,6 +164,10 @@ export async function sendBookingReminderViaWebhook(
       booking_time: data.bookingTime,
       notes: data.notes || "",
       timestamp: new Date().toISOString(),
+      // Add processed template content if available
+      email_subject: emailTemplate?.subject || `Lembrete de Agendamento - ${data.barbershopName}`,
+      email_html: emailTemplate?.content || null,
+      use_template: !!emailTemplate,
     };
 
     console.log("Sending booking reminder to n8n webhook:", settings.n8n_webhook_url);
@@ -127,7 +181,7 @@ export async function sendBookingReminderViaWebhook(
       body: JSON.stringify(payload),
     });
 
-    console.log("Booking reminder sent to n8n");
+    console.log("Booking reminder sent to n8n with template:", !!emailTemplate);
     return true;
   } catch (error) {
     console.error("Error sending booking reminder via webhook:", error);
