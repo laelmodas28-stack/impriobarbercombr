@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getProcessedWhatsAppTemplate, TemplateData } from "./templateService";
 
 interface SendMessageParams {
   barbershopId: string;
@@ -6,11 +7,13 @@ interface SendMessageParams {
   message: string;
 }
 
-interface BookingNotificationParams {
+export interface BookingNotificationParams {
   barbershopId: string;
   barbershopName: string;
+  barbershopLogoUrl?: string;
   clientName: string;
   clientPhone: string;
+  clientEmail?: string;
   serviceName: string;
   servicePrice: number;
   professionalName: string;
@@ -106,13 +109,33 @@ export async function sendBookingConfirmationWhatsApp(params: BookingNotificatio
     return false;
   }
 
-  const formattedDate = new Date(params.bookingDate + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
+  // Prepare template data
+  const templateData: TemplateData = {
+    clientName: params.clientName,
+    clientPhone: params.clientPhone,
+    clientEmail: params.clientEmail,
+    serviceName: params.serviceName,
+    servicePrice: params.servicePrice,
+    professionalName: params.professionalName,
+    bookingDate: params.bookingDate,
+    bookingTime: params.bookingTime,
+    barbershopName: params.barbershopName,
+    barbershopLogoUrl: params.barbershopLogoUrl,
+    notes: params.notes,
+  };
 
-  const message = `✅ *Agendamento Confirmado!*
+  // Try to get template from database
+  let message = await getProcessedWhatsAppTemplate(params.barbershopId, "booking_confirmation", templateData);
+
+  // Fallback to default message if no template found
+  if (!message) {
+    const formattedDate = new Date(params.bookingDate + "T00:00:00").toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+    });
+
+    message = `✅ *Agendamento Confirmado!*
 
 Olá ${params.clientName}! 👋
 
@@ -126,6 +149,7 @@ Seu agendamento na *${params.barbershopName}* foi confirmado:
 ${params.notes ? `\n📝 *Obs:* ${params.notes}` : ""}
 
 Esperamos você! 😊`;
+  }
 
   return sendWhatsAppMessage({
     barbershopId: params.barbershopId,
@@ -145,13 +169,33 @@ export async function sendBookingReminderWhatsApp(params: BookingNotificationPar
     return false;
   }
 
-  const formattedDate = new Date(params.bookingDate + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
+  // Prepare template data
+  const templateData: TemplateData = {
+    clientName: params.clientName,
+    clientPhone: params.clientPhone,
+    clientEmail: params.clientEmail,
+    serviceName: params.serviceName,
+    servicePrice: params.servicePrice,
+    professionalName: params.professionalName,
+    bookingDate: params.bookingDate,
+    bookingTime: params.bookingTime,
+    barbershopName: params.barbershopName,
+    barbershopLogoUrl: params.barbershopLogoUrl,
+    notes: params.notes,
+  };
 
-  const message = `⏰ *Lembrete de Agendamento*
+  // Try to get template from database
+  let message = await getProcessedWhatsAppTemplate(params.barbershopId, "booking_reminder", templateData);
+
+  // Fallback to default message if no template found
+  if (!message) {
+    const formattedDate = new Date(params.bookingDate + "T00:00:00").toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+    });
+
+    message = `⏰ *Lembrete de Agendamento*
 
 Olá ${params.clientName}! 👋
 
@@ -165,6 +209,7 @@ Este é um lembrete do seu agendamento na *${params.barbershopName}*:
 Contamos com sua presença! 😊
 
 _Caso precise cancelar ou reagendar, entre em contato conosco._`;
+  }
 
   return sendWhatsAppMessage({
     barbershopId: params.barbershopId,
