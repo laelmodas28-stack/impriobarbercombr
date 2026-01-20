@@ -30,7 +30,7 @@ import {
   Send,
   Building,
   Shield,
-  Puzzle,
+  
   Settings,
   Video,
   HelpCircle,
@@ -111,8 +111,7 @@ export const adminRoutes: RouteConfig[] = [
   // Settings
   { id: "settings-barbershop", label: "Perfil da Barbearia", path: "settings/barbershop", icon: Building, parentId: "settings", order: 1, description: "Dados do estabelecimento" },
   { id: "settings-users", label: "Usuarios e Funcoes", path: "settings/users-roles", icon: Shield, parentId: "settings", order: 2, description: "Gerenciar acessos" },
-  { id: "settings-integrations", label: "Integracoes", path: "settings/integrations", icon: Puzzle, parentId: "settings", order: 3, description: "Conectar servicos" },
-  { id: "settings-preferences", label: "Preferencias", path: "settings/preferences", icon: Settings, parentId: "settings", order: 4, description: "Configuracoes gerais" },
+  { id: "settings-preferences", label: "Preferencias", path: "settings/preferences", icon: Settings, parentId: "settings", order: 3, description: "Configuracoes gerais" },
 
   // Help
   { id: "help-tutorials", label: "Tutoriais", path: "help/tutorials", icon: Video, parentId: "help", order: 1, description: "Aprenda a usar o sistema" },

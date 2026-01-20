@@ -79,7 +79,6 @@ import NotificationLogsPage from "./pages/admin/notifications/NotificationLogsPa
 // Settings
 import BarbershopSettingsPage from "./pages/admin/settings/BarbershopSettingsPage";
 import UsersRolesPage from "./pages/admin/settings/UsersRolesPage";
-import IntegrationsPage from "./pages/admin/settings/IntegrationsPage";
 import PreferencesPage from "./pages/admin/settings/PreferencesPage";
 
 // Help
@@ -206,7 +205,6 @@ const App = () => (
                     {/* Settings */}
                     <Route path="settings/barbershop" element={<BarbershopSettingsPage />} />
                     <Route path="settings/users-roles" element={<UsersRolesPage />} />
-                    <Route path="settings/integrations" element={<IntegrationsPage />} />
                     <Route path="settings/preferences" element={<PreferencesPage />} />
                     
                     {/* Help */}
