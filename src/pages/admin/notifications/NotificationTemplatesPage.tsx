@@ -470,25 +470,32 @@ export function NotificationTemplatesPage() {
     }));
   };
 
-  const renderPreviewContent = (content: string) => {
-    const sampleData: Record<string, string> = {
-      "{{cliente_nome}}": "João Silva",
-      "{{cliente_telefone}}": "(11) 99999-9999",
-      "{{servico_nome}}": "Corte + Barba",
-      "{{servico_preco}}": "75,00",
-      "{{profissional_nome}}": "Carlos",
-      "{{data_agendamento}}": "25/01/2026",
-      "{{hora_agendamento}}": "14:30",
-      "{{barbearia_nome}}": barbershop?.name || "Barbearia",
-      "{{barbearia_endereco}}": barbershop?.address || "Rua Exemplo, 123",
-      "{{barbearia_telefone}}": barbershop?.phone || "(11) 1234-5678",
-    };
+  const getSampleData = (): Record<string, string> => ({
+    "{{cliente_nome}}": "João Silva",
+    "{{cliente_telefone}}": "(11) 99999-9999",
+    "{{servico_nome}}": "Corte + Barba",
+    "{{servico_preco}}": "75,00",
+    "{{profissional_nome}}": "Carlos",
+    "{{data_agendamento}}": "25/01/2026",
+    "{{hora_agendamento}}": "14:30",
+    "{{barbearia_nome}}": barbershop?.name || "Barbearia",
+    "{{barbearia_endereco}}": barbershop?.address || "Rua Exemplo, 123",
+    "{{barbearia_telefone}}": barbershop?.phone || "(11) 1234-5678",
+    "{{barbearia_logo_url}}": barbershop?.logo_url || "https://via.placeholder.com/80x80?text=Logo",
+    "{{imperio_logo_url}}": "https://utxzksrbunutqhcmimew.supabase.co/storage/v1/object/public/assets/imperio-logo.webp",
+  });
 
+  const renderPreviewContent = (content: string) => {
+    const sampleData = getSampleData();
     let preview = content;
     Object.entries(sampleData).forEach(([key, value]) => {
       preview = preview.split(key).join(value);
     });
     return preview;
+  };
+
+  const isHtmlContent = (content: string) => {
+    return content.trim().startsWith("<!DOCTYPE") || content.trim().startsWith("<html") || content.includes("<table");
   };
 
   const emailTemplates = templates?.filter((t) => t.type === "email") || [];
@@ -708,7 +715,7 @@ export function NotificationTemplatesPage() {
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className={previewTemplate?.type === "email" && isHtmlContent(previewTemplate?.content || "") ? "max-w-3xl max-h-[90vh]" : "max-w-lg"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -727,15 +734,26 @@ export function NotificationTemplatesPage() {
               )}
               <div>
                 <Label className="text-xs text-muted-foreground">Mensagem</Label>
-                <div
-                  className={`p-4 rounded-lg whitespace-pre-wrap text-sm ${
-                    previewTemplate.type === "whatsapp"
-                      ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
-                      : "bg-muted"
-                  }`}
-                >
-                  {renderPreviewContent(previewTemplate.content)}
-                </div>
+                {previewTemplate.type === "email" && isHtmlContent(previewTemplate.content) ? (
+                  <div className="border rounded-lg overflow-hidden bg-white">
+                    <iframe
+                      srcDoc={renderPreviewContent(previewTemplate.content)}
+                      className="w-full h-[500px] border-0"
+                      title="Email Preview"
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`p-4 rounded-lg whitespace-pre-wrap text-sm ${
+                      previewTemplate.type === "whatsapp"
+                        ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
+                        : "bg-muted"
+                    }`}
+                  >
+                    {renderPreviewContent(previewTemplate.content)}
+                  </div>
+                )}
               </div>
             </div>
           )}
