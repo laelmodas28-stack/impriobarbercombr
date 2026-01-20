@@ -46,116 +46,255 @@ const PLACEHOLDERS = [
   { key: "{{barbearia_nome}}", description: "Nome da barbearia" },
   { key: "{{barbearia_endereco}}", description: "Endereço da barbearia" },
   { key: "{{barbearia_telefone}}", description: "Telefone da barbearia" },
+  { key: "{{barbearia_logo_url}}", description: "Logo da barbearia" },
+  { key: "{{imperio_logo_url}}", description: "Logo do ImperioApp" },
 ];
 
 const DEFAULT_TEMPLATES = {
   email: {
     booking_confirmation: {
       name: "Confirmação de Agendamento - Email",
-      subject: "✅ Agendamento Confirmado - {{barbearia_nome}}",
-      content: `Olá {{cliente_nome}}!
-
-Seu agendamento foi confirmado com sucesso.
-
-📅 Data: {{data_agendamento}}
-🕐 Horário: {{hora_agendamento}}
-💇 Serviço: {{servico_nome}}
-👤 Profissional: {{profissional_nome}}
-💰 Valor: R$ {{servico_preco}}
-
-📍 Endereço: {{barbearia_endereco}}
-
-Caso precise remarcar ou cancelar, entre em contato conosco.
-
-Até breve!
-{{barbearia_nome}}`,
+      subject: "ImperioApp - Confirmação de Agendamento",
+      content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+          <!-- Header com logo ImperioApp -->
+          <tr>
+            <td align="center" style="padding: 30px 20px; background-color: #ffffff;">
+              <img src="{{imperio_logo_url}}" alt="ImperioApp" style="height: 60px; max-width: 200px;" />
+            </td>
+          </tr>
+          
+          <!-- Título -->
+          <tr>
+            <td align="center" style="padding: 0 20px 20px;">
+              <h1 style="margin: 0; color: #1a1a2e; font-size: 22px; font-weight: 600;">{{barbearia_nome}} - Confirmação de Agendamento</h1>
+            </td>
+          </tr>
+          
+          <!-- Card com informações -->
+          <tr>
+            <td style="padding: 0 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1a2e; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 25px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <!-- Logo da barbearia -->
+                        <td width="100" valign="top" style="padding-right: 20px;">
+                          <img src="{{barbearia_logo_url}}" alt="{{barbearia_nome}}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; background-color: #333;" />
+                          <p style="margin: 8px 0 0; color: #ffffff; font-size: 12px; text-align: center;">{{barbearia_nome}}</p>
+                        </td>
+                        <!-- Informações do agendamento -->
+                        <td valign="top" style="color: #ffffff;">
+                          <p style="margin: 0 0 10px; font-size: 14px;"><strong>Serviço:</strong> {{servico_nome}}</p>
+                          <p style="margin: 0 0 10px; font-size: 14px;"><strong>Data:</strong> {{data_agendamento}} {{hora_agendamento}}</p>
+                          <p style="margin: 0 0 10px; font-size: 14px;"><strong>Profissional:</strong> {{profissional_nome}}</p>
+                          <p style="margin: 0; font-size: 14px;"><strong>Valor:</strong> R$ {{servico_preco}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px 20px;">
+              <p style="margin: 0 0 10px; color: #666; font-size: 13px;">Enviado por ImperioApp</p>
+              <p style="margin: 0; color: #999; font-size: 11px;">{{barbearia_endereco}}</p>
+              <p style="margin: 5px 0 0; color: #999; font-size: 11px;">{{barbearia_telefone}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
     },
     booking_reminder: {
       name: "Lembrete de Agendamento - Email",
-      subject: "⏰ Lembrete: Seu agendamento é amanhã! - {{barbearia_nome}}",
-      content: `Olá {{cliente_nome}}!
-
-Este é um lembrete do seu agendamento para amanhã.
-
-📅 Data: {{data_agendamento}}
-🕐 Horário: {{hora_agendamento}}
-💇 Serviço: {{servico_nome}}
-👤 Profissional: {{profissional_nome}}
-
-📍 Endereço: {{barbearia_endereco}}
-
-Estamos te esperando!
-{{barbearia_nome}}`,
+      subject: "ImperioApp - Lembrete de Agendamento",
+      content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+          <!-- Header com logo ImperioApp -->
+          <tr>
+            <td align="center" style="padding: 30px 20px; background-color: #ffffff;">
+              <img src="{{imperio_logo_url}}" alt="ImperioApp" style="height: 60px; max-width: 200px;" />
+            </td>
+          </tr>
+          
+          <!-- Card com lembrete -->
+          <tr>
+            <td style="padding: 0 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1a2e; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="margin: 0 0 20px; color: #ffffff; font-size: 20px; font-weight: 600;">Lembrete de Agendamento</h2>
+                    <p style="margin: 0 0 15px; color: #ffffff; font-size: 15px; line-height: 1.6;">
+                      Você tem <strong>{{servico_nome}}</strong> em <strong>{{data_agendamento}} {{hora_agendamento}}</strong><br/>
+                      com {{profissional_nome}} no(a) <strong>{{barbearia_nome}}</strong>.
+                    </p>
+                    <p style="margin: 0; color: #cccccc; font-size: 13px; line-height: 1.5;">
+                      Caso não puder comparecer, cancele seu horário com antecedência pelo Aplicativo ou entre em contato com o estabelecimento.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px 20px;">
+              <p style="margin: 0 0 10px; color: #666; font-size: 13px;">Enviado por ImperioApp</p>
+              <p style="margin: 0; color: #999; font-size: 11px;">{{barbearia_endereco}}</p>
+              <p style="margin: 5px 0 0; color: #999; font-size: 11px;">{{barbearia_telefone}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
     },
     booking_cancelled: {
       name: "Cancelamento de Agendamento - Email",
-      subject: "❌ Agendamento Cancelado - {{barbearia_nome}}",
-      content: `Olá {{cliente_nome}},
-
-Seu agendamento foi cancelado.
-
-📅 Data: {{data_agendamento}}
-🕐 Horário: {{hora_agendamento}}
-💇 Serviço: {{servico_nome}}
-
-Para reagendar, acesse nosso sistema ou entre em contato.
-
-{{barbearia_nome}}`,
+      subject: "ImperioApp - Agendamento Cancelado",
+      content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+          <!-- Header com logo ImperioApp -->
+          <tr>
+            <td align="center" style="padding: 30px 20px; background-color: #ffffff;">
+              <img src="{{imperio_logo_url}}" alt="ImperioApp" style="height: 60px; max-width: 200px;" />
+            </td>
+          </tr>
+          
+          <!-- Card com cancelamento -->
+          <tr>
+            <td style="padding: 0 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #dc2626; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 30px; text-align: center;">
+                    <h2 style="margin: 0 0 20px; color: #ffffff; font-size: 20px; font-weight: 600;">Agendamento Cancelado</h2>
+                    <p style="margin: 0 0 10px; color: #ffffff; font-size: 15px;">
+                      Olá {{cliente_nome}}, seu agendamento foi cancelado.
+                    </p>
+                    <p style="margin: 0; color: #fecaca; font-size: 14px;">
+                      {{servico_nome}} - {{data_agendamento}} às {{hora_agendamento}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Reagendar -->
+          <tr>
+            <td align="center" style="padding: 25px 20px;">
+              <p style="margin: 0; color: #666; font-size: 14px;">Para reagendar, acesse nosso sistema ou entre em contato.</p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <p style="margin: 0 0 10px; color: #666; font-size: 13px;">Enviado por ImperioApp</p>
+              <p style="margin: 0; color: #999; font-size: 11px;">{{barbearia_endereco}}</p>
+              <p style="margin: 5px 0 0; color: #999; font-size: 11px;">{{barbearia_telefone}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
     },
   },
   whatsapp: {
     booking_confirmation: {
       name: "Confirmação de Agendamento - WhatsApp",
       subject: null,
-      content: `✅ *Agendamento Confirmado!*
+      content: `*{{barbearia_nome}} - Confirmação de Agendamento*
 
-Olá {{cliente_nome}}! 👋
+Olá {{cliente_nome}}!
 
 Seu agendamento foi confirmado:
 
-📅 *Data:* {{data_agendamento}}
-🕐 *Horário:* {{hora_agendamento}}
-💇 *Serviço:* {{servico_nome}}
-👤 *Profissional:* {{profissional_nome}}
-💰 *Valor:* R$ {{servico_preco}}
+*Serviço:* {{servico_nome}}
+*Data:* {{data_agendamento}} às {{hora_agendamento}}
+*Profissional:* {{profissional_nome}}
+*Valor:* R$ {{servico_preco}}
 
-📍 {{barbearia_endereco}}
+{{barbearia_endereco}}
 
-Te esperamos! 💈`,
+_Enviado por ImperioApp_`,
     },
     booking_reminder: {
       name: "Lembrete de Agendamento - WhatsApp",
       subject: null,
-      content: `⏰ *Lembrete de Agendamento*
+      content: `*Lembrete de Agendamento*
 
-Olá {{cliente_nome}}! 👋
+Olá {{cliente_nome}}!
 
-Seu agendamento é *amanhã*:
+Você tem *{{servico_nome}}* em *{{data_agendamento}} às {{hora_agendamento}}* com {{profissional_nome}} no(a) *{{barbearia_nome}}*.
 
-📅 *Data:* {{data_agendamento}}
-🕐 *Horário:* {{hora_agendamento}}
-💇 *Serviço:* {{servico_nome}}
-👤 *Profissional:* {{profissional_nome}}
+Caso não puder comparecer, cancele seu horário com antecedência pelo Aplicativo ou entre em contato com o estabelecimento.
 
-📍 {{barbearia_endereco}}
+{{barbearia_endereco}}
+{{barbearia_telefone}}
 
-Confirma sua presença? 😊`,
+_Enviado por ImperioApp_`,
     },
     booking_cancelled: {
       name: "Cancelamento de Agendamento - WhatsApp",
       subject: null,
-      content: `❌ *Agendamento Cancelado*
+      content: `*Agendamento Cancelado*
 
 Olá {{cliente_nome}},
 
 Seu agendamento foi cancelado:
 
-📅 {{data_agendamento}} às {{hora_agendamento}}
-💇 {{servico_nome}}
+*Serviço:* {{servico_nome}}
+*Data:* {{data_agendamento}} às {{hora_agendamento}}
 
 Para reagendar, acesse nosso sistema ou responda esta mensagem.
 
-{{barbearia_nome}}`,
+{{barbearia_nome}}
+{{barbearia_telefone}}
+
+_Enviado por ImperioApp_`,
     },
   },
 };
