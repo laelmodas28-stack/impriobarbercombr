@@ -819,15 +819,25 @@ function TemplateCard({
             <Eye className="h-4 w-4 mr-1" />
             Prévia
           </Button>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Pencil className="h-4 w-4 mr-1" />
-            Editar
-          </Button>
-          <Button variant="outline" size="sm" className="text-destructive" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-1" />
-            Excluir
-          </Button>
+          {/* Apenas WhatsApp pode ser editado - Email é protegido para evitar quebra do HTML */}
+          {template.type === "whatsapp" && (
+            <>
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Editar
+              </Button>
+              <Button variant="outline" size="sm" className="text-destructive" onClick={onDelete}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
+            </>
+          )}
         </div>
+        {template.type === "email" && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Templates de email são gerenciados pelo sistema para garantir a formatação correta.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
