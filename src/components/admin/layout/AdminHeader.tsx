@@ -2,14 +2,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminBreadcrumb } from "./AdminBreadcrumb";
 import { NotificationDropdown } from "../NotificationDropdown";
@@ -18,27 +11,23 @@ import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Search, Plus, User, Settings, LogOut, ExternalLink } from "lucide-react";
 import { useState } from "react";
-
 export function AdminHeader() {
-  const { user, signOut } = useAuth();
-  const { barbershop, baseUrl } = useBarbershopContext();
+  const {
+    user,
+    signOut
+  } = useAuth();
+  const {
+    barbershop,
+    baseUrl
+  } = useBarbershopContext();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-
   const handleLogout = async () => {
     await signOut();
     navigate("/");
   };
-
-  const userInitials = user?.user_metadata?.full_name
-    ?.split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || user?.email?.slice(0, 2).toUpperCase() || "U";
-
-  return (
-    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-4 border-b border-border bg-header px-6">
+  const userInitials = user?.user_metadata?.full_name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || user?.email?.slice(0, 2).toUpperCase() || "U";
+  return <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-4 border-b border-border bg-header px-6">
       <SidebarTrigger className="-ml-2 text-muted-foreground hover:text-foreground" />
       <Separator orientation="vertical" className="h-6" />
       
@@ -49,13 +38,7 @@ export function AdminHeader() {
       {/* Search */}
       <div className="relative hidden md:block">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Buscar..."
-          className="w-64 pl-9 bg-muted/50 border-border focus:bg-background"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+        
       </div>
 
       {/* Quick Action */}
@@ -119,8 +102,6 @@ export function AdminHeader() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </header>
-  );
+    </header>;
 }
-
 export default AdminHeader;
