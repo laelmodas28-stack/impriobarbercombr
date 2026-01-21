@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { differenceInDays, addDays, isAfter } from "date-fns";
+import { differenceInDays, isAfter } from "date-fns";
 
 export interface TrialStatus {
   isInTrial: boolean;
@@ -12,55 +12,29 @@ export interface TrialStatus {
   isLoading: boolean;
 }
 
-const TRIAL_DAYS = 7;
-
 export const useTrialStatus = (barbershopId?: string): TrialStatus => {
   const { user } = useAuth();
 
-  // Check if user has active subscription
-  const { data: subscription, isLoading: subscriptionLoading } = useQuery({
-    queryKey: ["client-subscription-status", user?.id, barbershopId],
+  // Check barbershop subscription status (platform level)
+  const { data: barbershopSubscription, isLoading } = useQuery({
+    queryKey: ["barbershop-subscription-status", barbershopId],
     queryFn: async () => {
-      if (!user || !barbershopId) return null;
+      if (!barbershopId) return null;
 
       const { data, error } = await supabase
-        .from("client_subscriptions")
+        .from("barbershop_subscriptions")
         .select("*")
-        .eq("user_id", user.id)
         .eq("barbershop_id", barbershopId)
-        .eq("status", "active")
-        .gte("expires_at", new Date().toISOString())
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!barbershopId,
+    enabled: !!barbershopId,
   });
 
-  // Get user profile creation date (trial start)
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["profile-trial", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("created_at")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const isLoading = subscriptionLoading || profileLoading;
-  const hasActiveSubscription = !!subscription;
-
-  // Calculate trial status
-  if (!user || !profile?.created_at) {
+  // If no user or no barbershop, return default
+  if (!user || !barbershopId) {
     return {
       isInTrial: false,
       trialExpired: false,
@@ -71,19 +45,72 @@ export const useTrialStatus = (barbershopId?: string): TrialStatus => {
     };
   }
 
-  const createdAt = new Date(profile.created_at);
-  const trialEndDate = addDays(createdAt, TRIAL_DAYS);
+  // No subscription record - treat as expired trial
+  if (!barbershopSubscription) {
+    return {
+      isInTrial: false,
+      trialExpired: true,
+      daysRemaining: 0,
+      trialEndDate: null,
+      hasActiveSubscription: false,
+      isLoading,
+    };
+  }
+
+  const { plan_type, status, trial_ends_at, subscription_ends_at } = barbershopSubscription;
+
+  // Check if subscription is suspended/cancelled
+  if (status === "suspended" || status === "cancelled") {
+    return {
+      isInTrial: false,
+      trialExpired: true,
+      daysRemaining: 0,
+      trialEndDate: null,
+      hasActiveSubscription: false,
+      isLoading,
+    };
+  }
+
+  // Check if it's a paid subscription
+  if (plan_type !== "trial") {
+    const now = new Date();
+    const subEnd = subscription_ends_at ? new Date(subscription_ends_at) : null;
+    const hasActive = subEnd ? isAfter(subEnd, now) : true;
+
+    return {
+      isInTrial: false,
+      trialExpired: false,
+      daysRemaining: 0,
+      trialEndDate: null,
+      hasActiveSubscription: hasActive,
+      isLoading,
+    };
+  }
+
+  // It's a trial - check expiration
+  const trialEndDate = trial_ends_at ? new Date(trial_ends_at) : null;
   const now = new Date();
+  
+  if (!trialEndDate) {
+    return {
+      isInTrial: true,
+      trialExpired: false,
+      daysRemaining: 7,
+      trialEndDate: null,
+      hasActiveSubscription: false,
+      isLoading,
+    };
+  }
+
   const trialExpired = isAfter(now, trialEndDate);
   const daysRemaining = Math.max(0, differenceInDays(trialEndDate, now));
-  const isInTrial = !trialExpired && !hasActiveSubscription;
 
   return {
-    isInTrial,
-    trialExpired: trialExpired && !hasActiveSubscription,
+    isInTrial: !trialExpired,
+    trialExpired,
     daysRemaining,
     trialEndDate,
-    hasActiveSubscription,
+    hasActiveSubscription: false,
     isLoading,
   };
 };
