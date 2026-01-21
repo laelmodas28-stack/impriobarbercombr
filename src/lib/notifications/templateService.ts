@@ -54,13 +54,12 @@ export async function getNotificationTemplate(
  * Replaces all placeholders in template content with actual data
  */
 export function processTemplate(content: string, data: TemplateData): string {
-  // Format date for display
-  const formattedDate = new Date(data.bookingDate + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  // Format date for display: dd.mm.aaaa format
+  const dateObj = new Date(data.bookingDate + "T00:00:00");
+  const day = dateObj.getDate().toString().padStart(2, '0');
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+  const year = dateObj.getFullYear();
+  const formattedDate = `${day}.${month}.${year}`;
 
   // Format price
   const formattedPrice = `R$ ${data.servicePrice.toFixed(2).replace(".", ",")}`;
@@ -81,7 +80,9 @@ export function processTemplate(content: string, data: TemplateData): string {
     .replace(/\{\{barbearia_nome\}\}/g, data.barbershopName)
     .replace(/\{\{barbearia_logo_url\}\}/g, data.barbershopLogoUrl || "")
     .replace(/\{\{imperio_logo_url\}\}/g, imperioLogoUrl)
-    .replace(/\{\{observacoes\}\}/g, data.notes || "");
+    .replace(/\{\{observacoes\}\}/g, data.notes || "")
+    // Remove barbearia_telefone placeholder (not used)
+    .replace(/\{\{barbearia_telefone\}\}/g, "");
 
   return processed;
 }
