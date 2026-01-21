@@ -162,19 +162,12 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
       body: {
         barbershopId: data.barbershopId,
         instanceName,
-        payload: {
-          notification_type: data.notificationType,
-          client_name: data.clientName,
-          client_email: data.clientEmail,
-          client_phone: phone,
-          service_name: data.serviceName,
-          professional_name: data.professionalName,
-          booking_date: data.bookingDate,
-          booking_time: data.bookingTime,
-          barbershop_name: barbershopName,
-          price: data.price,
-          message: whatsappContent,
-        },
+        phone: phone || "unknown",
+        message: whatsappContent,
+        clientName: data.clientName,
+        serviceName: data.serviceName,
+        bookingDate: data.bookingDate,
+        bookingTime: data.bookingTime,
       },
     });
 
