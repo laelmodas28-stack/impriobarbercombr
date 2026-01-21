@@ -10,7 +10,10 @@ import {
   AlertTriangle, 
   CheckCircle2,
   Loader2,
-  X
+  X,
+  ChevronsUpDown,
+  Check,
+  Search
 } from "lucide-react";
 import { z } from "zod";
 
@@ -39,6 +42,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -105,6 +116,7 @@ export function NewAppointmentModal({
   const [isCreatingClient, setIsCreatingClient] = useState(false);
   const [conflictResult, setConflictResult] = useState<ConflictResult | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -129,6 +141,7 @@ export function NewAppointmentModal({
     setConflictResult(null);
     setFormErrors({});
     setActiveTab("booking");
+    setClientSearchOpen(false);
   }, []);
 
   // Fetch services
@@ -539,29 +552,84 @@ export function NewAppointmentModal({
             </TabsList>
 
             <TabsContent value="booking" className="space-y-4 mt-4">
-              {/* Client */}
+              {/* Client with Search */}
               <div className="space-y-2">
-                <Label htmlFor="client">
+                <Label>
                   Cliente <span className="text-destructive">*</span>
                 </Label>
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
-                  <SelectTrigger id="client" className={cn(formErrors.client && "border-destructive")}>
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients?.map((c) => (
-                      <SelectItem key={c.user_id} value={c.user_id}>
-                        {c.profile?.name || "Cliente"} 
-                        {c.profile?.phone && ` - ${c.profile.phone}`}
-                      </SelectItem>
-                    ))}
-                    {(!clients || clients.length === 0) && (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Nenhum cliente encontrado
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientSearchOpen}
+                      className={cn(
+                        "w-full justify-between font-normal",
+                        !selectedClient && "text-muted-foreground",
+                        formErrors.client && "border-destructive"
+                      )}
+                    >
+                      {selectedClient
+                        ? (() => {
+                            const client = clients?.find((c) => c.user_id === selectedClient);
+                            return client?.profile?.name || "Cliente selecionado";
+                          })()
+                        : "Buscar cliente..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar por nome ou telefone..." />
+                      <CommandList>
+                        <CommandEmpty>
+                          <div className="py-4 text-center text-sm">
+                            <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="mt-2"
+                              onClick={() => {
+                                setClientSearchOpen(false);
+                                setActiveTab("client");
+                              }}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Cadastrar novo cliente
+                            </Button>
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {clients?.map((c) => (
+                            <CommandItem
+                              key={c.user_id}
+                              value={`${c.profile?.name || ""} ${c.profile?.phone || ""}`}
+                              onSelect={() => {
+                                setSelectedClient(c.user_id);
+                                setClientSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedClient === c.user_id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{c.profile?.name || "Cliente sem nome"}</span>
+                                {c.profile?.phone && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {c.profile.phone}
+                                  </span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 {formErrors.client && (
                   <p className="text-sm text-destructive">{formErrors.client}</p>
                 )}
