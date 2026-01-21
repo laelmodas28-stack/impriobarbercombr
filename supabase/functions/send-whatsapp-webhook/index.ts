@@ -18,6 +18,8 @@ interface RequestBody {
   serviceName?: string;
   bookingDate?: string;
   bookingTime?: string;
+  barbershopName?: string;
+  barbershopAddress?: string;
   isTest?: boolean;
 }
 
@@ -38,6 +40,8 @@ serve(async (req: Request) => {
   let serviceName: string | undefined;
   let bookingDate: string | undefined;
   let bookingTime: string | undefined;
+  let barbershopName: string | undefined;
+  let barbershopAddress: string | undefined;
 
   try {
     // Validate environment variable
@@ -58,6 +62,8 @@ serve(async (req: Request) => {
     serviceName = body.serviceName;
     bookingDate = body.bookingDate;
     bookingTime = body.bookingTime;
+    barbershopName = body.barbershopName;
+    barbershopAddress = body.barbershopAddress;
     const isTest = body.isTest;
     
     if (!barbershopId || !message) {
@@ -96,6 +102,8 @@ serve(async (req: Request) => {
         serviceName,
         bookingDate,
         bookingTime,
+        barbershopName,
+        barbershopAddress,
         isTest: isTest || false,
         timestamp: new Date().toISOString(),
       }),
