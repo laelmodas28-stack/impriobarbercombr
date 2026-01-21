@@ -102,7 +102,7 @@ export function NewAppointmentModal({
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<"pending" | "confirmed">("confirmed");
+  const [status, setStatus] = useState<"pending" | "confirmed">("pending");
   const [sendNotification, setSendNotification] = useState(true);
   const [priceOverride, setPriceOverride] = useState<string>("");
   
@@ -132,7 +132,7 @@ export function NewAppointmentModal({
     setSelectedDate(undefined);
     setSelectedTime("");
     setNotes("");
-    setStatus("confirmed");
+    setStatus("pending");
     setSendNotification(true);
     setPriceOverride("");
     setNewClientName("");
