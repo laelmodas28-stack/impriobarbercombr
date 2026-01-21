@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
+import { WeeklyCalendar } from "@/components/booking/WeeklyCalendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/Header";
@@ -367,13 +367,10 @@ const Booking = () => {
               <CardContent className="space-y-6">
                 <div>
                   <Label className="mb-3 block">Data</Label>
-                  <Calendar
-                    mode="single"
+                  <WeeklyCalendar
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     disabled={(date) => date < startOfDay(new Date())}
-                    className="rounded-md border border-border mx-auto"
-                    locale={ptBR}
                   />
                 </div>
                 
