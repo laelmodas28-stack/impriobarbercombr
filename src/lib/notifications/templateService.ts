@@ -22,6 +22,7 @@ export interface TemplateData {
   bookingTime: string;
   barbershopName: string;
   barbershopLogoUrl?: string;
+  barbershopAddress?: string;
   notes?: string;
 }
 
@@ -61,8 +62,8 @@ export function processTemplate(content: string, data: TemplateData): string {
   const year = dateObj.getFullYear();
   const formattedDate = `${day}.${month}.${year}`;
 
-  // Format price
-  const formattedPrice = `R$ ${data.servicePrice.toFixed(2).replace(".", ",")}`;
+  // Format price (without R$ since template already has it)
+  const formattedPrice = data.servicePrice.toFixed(2).replace(".", ",");
 
   // ImperioApp logo URL
   const imperioLogoUrl = "https://utxzksrbunutqhcmimew.supabase.co/storage/v1/object/public/assets/imperio-logo.webp";
@@ -81,7 +82,8 @@ export function processTemplate(content: string, data: TemplateData): string {
     .replace(/\{\{barbearia_logo_url\}\}/g, data.barbershopLogoUrl || "")
     .replace(/\{\{imperio_logo_url\}\}/g, imperioLogoUrl)
     .replace(/\{\{observacoes\}\}/g, data.notes || "")
-    // Remove barbearia_telefone placeholder (not used)
+    .replace(/\{\{barbearia_endereco\}\}/g, data.barbershopAddress || "")
+    // Remove barbearia_telefone placeholder (not used in current flow)
     .replace(/\{\{barbearia_telefone\}\}/g, "");
 
   return processed;

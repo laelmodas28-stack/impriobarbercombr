@@ -5,6 +5,7 @@ export interface BookingNotificationData {
   barbershopId: string;
   barbershopName: string;
   barbershopLogoUrl?: string;
+  barbershopAddress?: string;
   clientName: string;
   clientEmail?: string | null;
   clientPhone?: string | null;
@@ -67,6 +68,7 @@ export async function sendBookingConfirmationViaWebhook(
       bookingTime: data.bookingTime,
       barbershopName: data.barbershopName,
       barbershopLogoUrl: data.barbershopLogoUrl,
+      barbershopAddress: data.barbershopAddress,
       notes: data.notes || undefined,
     };
 

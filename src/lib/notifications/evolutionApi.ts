@@ -16,6 +16,7 @@ export interface BookingNotificationParams {
   barbershopId: string;
   barbershopName: string;
   barbershopLogoUrl?: string;
+  barbershopAddress?: string;
   clientName: string;
   clientPhone: string;
   clientEmail?: string;
@@ -164,6 +165,7 @@ export async function sendBookingConfirmationWhatsApp(params: BookingNotificatio
     bookingTime: params.bookingTime,
     barbershopName: params.barbershopName,
     barbershopLogoUrl: params.barbershopLogoUrl,
+    barbershopAddress: params.barbershopAddress,
     notes: params.notes,
   };
 
