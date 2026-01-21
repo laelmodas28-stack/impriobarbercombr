@@ -34,10 +34,19 @@ import {
 } from "lucide-react";
 import imperioLogo from "@/assets/imperio-logo.webp";
 
+type BillingPeriod = 'monthly' | 'quarterly' | 'yearly';
+
+interface PlanPricing {
+  monthly: number;
+  quarterly: number;
+  yearly: number;
+}
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const [showDemoTour, setShowDemoTour] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -47,51 +56,73 @@ const LandingPage = () => {
     }
   };
 
+  // Pricing configuration
+  const basePrices: Record<string, PlanPricing> = {
+    essencial: { monthly: 29.90, quarterly: 80.73, yearly: 287.04 },
+    profissional: { monthly: 49.90, quarterly: 134.73, yearly: 479.04 },
+    completo: { monthly: 69.90, quarterly: 188.73, yearly: 671.04 },
+  };
+
+  const getPrice = (planKey: string) => {
+    return basePrices[planKey][billingPeriod];
+  };
+
+  const getMonthlyEquivalent = (planKey: string) => {
+    const price = basePrices[planKey][billingPeriod];
+    if (billingPeriod === 'quarterly') return price / 3;
+    if (billingPeriod === 'yearly') return price / 12;
+    return price;
+  };
+
+  const getDiscount = () => {
+    if (billingPeriod === 'quarterly') return 10;
+    if (billingPeriod === 'yearly') return 20;
+    return 0;
+  };
+
+  const getPeriodLabel = () => {
+    if (billingPeriod === 'quarterly') return '/trimestre';
+    if (billingPeriod === 'yearly') return '/ano';
+    return '/mês';
+  };
+
+  const formatPrice = (price: number) => {
+    return price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const allFeatures = [
+    "Dashboard financeiro completo",
+    "Relatórios detalhados",
+    "Notificações WhatsApp e e-mail",
+    "Agendamentos ilimitados",
+    "Sistema 100% personalizado",
+    "Suporte via chat",
+  ];
+
   const plans = [
     {
-      name: "Starter",
-      price: "Grátis",
-      period: "para sempre",
-      description: "Perfeito para começar",
+      key: "essencial",
+      name: "Essencial",
+      description: "Para começar sua jornada digital",
       popular: false,
-      features: [
-        { text: "Até 50 agendamentos/mês", included: true },
-        { text: "1 profissional", included: true },
-        { text: "Página personalizada", included: true },
-        { text: "Notificações básicas", included: true },
-        { text: "Relatórios básicos", included: false },
-        { text: "Suporte prioritário", included: false },
-      ]
+      maxProfessionals: 1,
+      professionalsLabel: "1 profissional",
     },
     {
-      name: "Professional",
-      price: "R$ 49",
-      period: "/mês",
-      description: "O mais escolhido",
+      key: "profissional",
+      name: "Profissional",
+      description: "O mais escolhido pelos barbeiros",
       popular: true,
-      features: [
-        { text: "Agendamentos ilimitados", included: true },
-        { text: "Até 5 profissionais", included: true },
-        { text: "Página personalizada", included: true },
-        { text: "Notificações WhatsApp", included: true },
-        { text: "Relatórios completos", included: true },
-        { text: "Suporte prioritário", included: false },
-      ]
+      maxProfessionals: 3,
+      professionalsLabel: "Até 3 profissionais",
     },
     {
-      name: "Enterprise",
-      price: "R$ 99",
-      period: "/mês",
-      description: "Para grandes operações",
+      key: "completo",
+      name: "Completo",
+      description: "Para barbearias em crescimento",
       popular: false,
-      features: [
-        { text: "Agendamentos ilimitados", included: true },
-        { text: "Profissionais ilimitados", included: true },
-        { text: "Multi-unidades", included: true },
-        { text: "API personalizada", included: true },
-        { text: "Relatórios avançados", included: true },
-        { text: "Suporte 24/7 dedicado", included: true },
-      ]
+      maxProfessionals: null,
+      professionalsLabel: "Profissionais ilimitados",
     }
   ];
 
@@ -701,19 +732,65 @@ const LandingPage = () => {
               Escolha o plano ideal
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Comece grátis e escale conforme seu negócio cresce
+              Todos os planos incluem 100% das funcionalidades. Escolha pelo número de profissionais.
             </p>
+
+            {/* Billing Period Selector */}
+            <div className="flex items-center justify-center gap-2 mt-8 p-1.5 bg-muted/50 rounded-xl max-w-md mx-auto">
+              <button
+                onClick={() => setBillingPeriod('monthly')}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                  billingPeriod === 'monthly'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Mensal
+              </button>
+              <button
+                onClick={() => setBillingPeriod('quarterly')}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all relative ${
+                  billingPeriod === 'quarterly'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Trimestral
+                <span className="absolute -top-2 -right-1 text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                  10% OFF
+                </span>
+              </button>
+              <button
+                onClick={() => setBillingPeriod('yearly')}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all relative ${
+                  billingPeriod === 'yearly'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Anual
+                <span className="absolute -top-2 -right-1 text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full">
+                  20% OFF
+                </span>
+              </button>
+            </div>
+
+            {billingPeriod !== 'monthly' && (
+              <p className="text-sm text-primary mt-4 font-medium">
+                🎉 Você está economizando {getDiscount()}% com o plano {billingPeriod === 'quarterly' ? 'trimestral' : 'anual'}!
+              </p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan) => (
               <Card 
-                key={plan.name} 
-                className={`relative bg-card border-border/50 ${
+                key={plan.key} 
+                className={`relative bg-card border-border/50 transition-all duration-300 ${
                   plan.popular 
-                    ? "border-primary/50 shadow-[0_0_40px_-10px_hsl(var(--primary)/0.3)]" 
+                    ? "border-primary/50 shadow-[0_0_40px_-10px_hsl(var(--primary)/0.3)] scale-[1.02]" 
                     : ""
-                }`}
+                } ${billingPeriod === 'yearly' ? 'ring-1 ring-primary/20' : ''}`}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -722,26 +799,43 @@ const LandingPage = () => {
                     </Badge>
                   </div>
                 )}
+                {billingPeriod === 'yearly' && !plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge variant="outline" className="bg-background border-green-500/50 text-green-600">
+                      Mais Vantajoso
+                    </Badge>
+                  </div>
+                )}
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="pt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
+                    {billingPeriod !== 'monthly' && (
+                      <div className="text-sm text-muted-foreground line-through mb-1">
+                        R$ {formatPrice(basePrices[plan.key].monthly * (billingPeriod === 'quarterly' ? 3 : 12))}
+                      </div>
+                    )}
+                    <span className="text-4xl font-bold">R$ {formatPrice(getPrice(plan.key))}</span>
+                    <span className="text-muted-foreground">{getPeriodLabel()}</span>
+                    {billingPeriod !== 'monthly' && (
+                      <div className="text-sm text-primary mt-1 font-medium">
+                        equivale a R$ {formatPrice(getMonthlyEquivalent(plan.key))}/mês
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Professionals Highlight */}
+                  <div className="flex items-center justify-center gap-2 py-3 px-4 bg-primary/10 rounded-lg">
+                    <Users className="w-5 h-5 text-primary" />
+                    <span className="font-semibold text-foreground">{plan.professionalsLabel}</span>
+                  </div>
+
                   <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
+                    {allFeatures.map((feature, i) => (
                       <li key={i} className="flex items-center gap-3 text-sm">
-                        {feature.included ? (
-                          <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                        ) : (
-                          <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
-                        )}
-                        <span className={feature.included ? "" : "text-muted-foreground/60"}>
-                          {feature.text}
-                        </span>
+                        <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -750,11 +844,27 @@ const LandingPage = () => {
                     variant={plan.popular ? "premium" : "outline"}
                     onClick={() => navigate("/registro-barbeiro")}
                   >
-                    {plan.price === "Grátis" ? "Começar Grátis" : "Escolher Plano"}
+                    Começar Agora
                   </Button>
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-12 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" />
+              <span>Pagamento seguro</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-primary" />
+              <span>Cancele quando quiser</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              <span>7 dias de garantia</span>
+            </div>
           </div>
         </div>
       </section>
@@ -778,8 +888,8 @@ const LandingPage = () => {
                 answer: "Seus clientes acessam o link da sua barbearia e escolhem o serviço, profissional e horário disponível. O sistema previne conflitos e envia confirmação automática por WhatsApp."
               },
               {
-                question: "Posso usar em múltiplas unidades?",
-                answer: "Sim, o plano Enterprise permite gerenciar múltiplas barbearias em uma única conta, com relatórios consolidados e gestão centralizada."
+                question: "Qual a diferença entre os planos?",
+                answer: "Todos os planos incluem 100% das funcionalidades. A única diferença é a quantidade de profissionais que você pode cadastrar: Essencial (1), Profissional (até 3) e Completo (ilimitados)."
               },
               {
                 question: "Os dados dos meus clientes são seguros?",
@@ -787,7 +897,7 @@ const LandingPage = () => {
               },
               {
                 question: "Como funcionam os lembretes automáticos?",
-                answer: "O sistema envia lembretes por WhatsApp 24 horas e 2 horas antes de cada agendamento. Isso reduz significativamente o número de faltas e no-shows."
+                answer: "O sistema envia lembretes por WhatsApp e e-mail antes de cada agendamento. Isso reduz significativamente o número de faltas e no-shows."
               },
               {
                 question: "Posso personalizar a página da minha barbearia?",
@@ -802,8 +912,8 @@ const LandingPage = () => {
                 answer: "Você pode cancelar a qualquer momento sem multa. Seus dados ficam disponíveis por 30 dias após o cancelamento para exportação, caso necessário."
               },
               {
-                question: "Oferece suporte técnico?",
-                answer: "Sim. Oferecemos suporte por email e chat, com resposta em até 24 horas. Planos Professional e Enterprise incluem suporte prioritário."
+                question: "Qual a vantagem do plano anual?",
+                answer: "O plano anual oferece 20% de desconto em relação ao mensal, representando a maior economia. O trimestral oferece 10% de desconto."
               }
             ].map((item, index) => (
               <AccordionItem key={index} value={`item-${index}`} className="border border-border/50 rounded-lg px-4">

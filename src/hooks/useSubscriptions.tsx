@@ -12,6 +12,14 @@ export interface SubscriptionPlan {
   is_active: boolean;
   barbershop_id: string;
   created_at: string;
+  // New fields for the pricing model
+  max_professionals: number | null;
+  billing_period: 'monthly' | 'quarterly' | 'yearly';
+  original_price: number | null;
+  discount_percentage: number | null;
+  is_highlighted: boolean;
+  highlight_label: string | null;
+  sort_order: number;
 }
 
 export interface ClientSubscription {
