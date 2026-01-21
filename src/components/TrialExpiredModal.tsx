@@ -11,7 +11,7 @@ import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useAuth } from "@/contexts/AuthContext";
 
-const SUPPORT_WHATSAPP = "5511999999999"; // Configure your support number
+const SUPPORT_WHATSAPP = "5511969332465";
 
 export const TrialExpiredModal = () => {
   const { user } = useAuth();
