@@ -231,26 +231,55 @@ export function NewAppointmentModal({
     queryKey: ["appointment-bookings", selectedProfessional, selectedDate],
     queryFn: async () => {
       if (!selectedProfessional || !selectedDate) return [];
-      const { data, error } = await supabase
+      
+      // First fetch bookings with service info
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
           id,
           booking_time,
           booking_date,
           status,
+          client_id,
           service:services (
             duration_minutes,
-            name
-          ),
-          client:profiles!bookings_client_id_fkey (
             name
           )
         `)
         .eq("professional_id", selectedProfessional)
         .eq("booking_date", format(selectedDate, "yyyy-MM-dd"))
         .in("status", ["pending", "confirmed"]);
-      if (error) throw error;
-      return data as unknown as ExistingBooking[];
+      
+      if (bookingsError) throw bookingsError;
+      if (!bookingsData || bookingsData.length === 0) return [];
+      
+      // Fetch client names separately using user_id
+      const clientIds = [...new Set(bookingsData.map(b => b.client_id).filter(Boolean))];
+      
+      let clientProfiles: Record<string, string> = {};
+      if (clientIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, name")
+          .in("user_id", clientIds);
+        
+        if (profilesData) {
+          clientProfiles = profilesData.reduce((acc, p) => {
+            acc[p.user_id] = p.name || "Cliente";
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+      
+      // Map bookings with client names
+      return bookingsData.map(booking => ({
+        id: booking.id,
+        booking_time: booking.booking_time,
+        booking_date: booking.booking_date,
+        status: booking.status,
+        service: booking.service,
+        client: booking.client_id ? { name: clientProfiles[booking.client_id] || "Cliente" } : null,
+      })) as ExistingBooking[];
     },
     enabled: !!selectedProfessional && !!selectedDate && open,
   });
