@@ -1,14 +1,9 @@
-import { useState } from "react";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { AdminPageScaffold } from "@/components/admin/shared/AdminPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { toast } from "sonner";
-import { HelpCircle, MessageCircle, Mail, Phone, ExternalLink, Send, Loader2, BookOpen, FileQuestion, Bug, Lightbulb } from "lucide-react";
+import { HelpCircle, MessageCircle, Mail, Phone, ExternalLink, FileQuestion } from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -49,11 +44,6 @@ const FAQ_ITEMS: FAQItem[] = [
   },
   {
     category: "Configurações",
-    question: "Como integrar pagamentos online?",
-    answer: "Vá em Configurações > Integrações e configure o MercadoPago com suas credenciais. Após a integração, os clientes poderão pagar online ao agendar.",
-  },
-  {
-    category: "Configurações",
     question: "Como personalizar o tema da minha página?",
     answer: "Em Configurações > Perfil da Barbearia, você pode alterar o logo, cores e informações que aparecem na página pública da sua barbearia.",
   },
@@ -91,28 +81,6 @@ const CONTACT_OPTIONS = [
 
 export function SupportPage() {
   const { barbershop } = useBarbershopContext();
-  const [ticketForm, setTicketForm] = useState({
-    subject: "",
-    category: "general",
-    message: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmitTicket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketForm.subject.trim() || !ticketForm.message.trim()) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast.success("Ticket enviado com sucesso! Responderemos em até 24 horas.");
-    setTicketForm({ subject: "", category: "general", message: "" });
-    setIsSubmitting(false);
-  };
 
   const groupedFAQ = FAQ_ITEMS.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
@@ -156,132 +124,33 @@ export function SupportPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* FAQ Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileQuestion className="w-5 h-5" />
-                Perguntas Frequentes
-              </CardTitle>
-              <CardDescription>Encontre respostas para as dúvidas mais comuns</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                {Object.entries(groupedFAQ).map(([category, items]) => (
-                  <div key={category} className="mb-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">{category}</h4>
-                    {items.map((item, index) => (
-                      <AccordionItem key={index} value={`${category}-${index}`}>
-                        <AccordionTrigger className="text-left text-sm">
-                          {item.question}
-                        </AccordionTrigger>
-                        <AccordionContent className="text-sm text-muted-foreground">
-                          {item.answer}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </div>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
-
-          {/* Support Ticket Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Send className="w-5 h-5" />
-                Abrir Ticket de Suporte
-              </CardTitle>
-              <CardDescription>Descreva seu problema e responderemos em até 24 horas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitTicket} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Assunto *</Label>
-                  <Input
-                    id="subject"
-                    value={ticketForm.subject}
-                    onChange={(e) => setTicketForm(prev => ({ ...prev, subject: e.target.value }))}
-                    placeholder="Resumo do problema"
-                  />
+        {/* FAQ Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileQuestion className="w-5 h-5" />
+              Perguntas Frequentes
+            </CardTitle>
+            <CardDescription>Encontre respostas para as dúvidas mais comuns</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              {Object.entries(groupedFAQ).map(([category, items]) => (
+                <div key={category} className="mb-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">{category}</h4>
+                  {items.map((item, index) => (
+                    <AccordionItem key={index} value={`${category}-${index}`}>
+                      <AccordionTrigger className="text-left text-sm">
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground">
+                        {item.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "general", label: "Dúvida Geral", icon: HelpCircle },
-                      { id: "bug", label: "Reportar Bug", icon: Bug },
-                      { id: "feature", label: "Sugestão", icon: Lightbulb },
-                      { id: "billing", label: "Financeiro", icon: Mail },
-                    ].map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setTicketForm(prev => ({ ...prev, category: cat.id }))}
-                        className={`flex items-center gap-2 p-3 rounded-lg border text-left text-sm transition-colors ${
-                          ticketForm.category === cat.id
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:bg-muted/50"
-                        }`}
-                      >
-                        <cat.icon className={`w-4 h-4 ${ticketForm.category === cat.id ? "text-primary" : "text-muted-foreground"}`} />
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="message">Mensagem *</Label>
-                  <Textarea
-                    id="message"
-                    value={ticketForm.message}
-                    onChange={(e) => setTicketForm(prev => ({ ...prev, message: e.target.value }))}
-                    placeholder="Descreva seu problema em detalhes. Quanto mais informações, mais rápido poderemos ajudar."
-                    rows={5}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4 mr-2" />
-                  )}
-                  {isSubmitting ? "Enviando..." : "Enviar Ticket"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Resources */}
-        <Card className="bg-muted/30">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <BookOpen className="w-6 h-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold mb-1">Documentação Completa</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Acesse nossa documentação para guias detalhados, tutoriais em vídeo e dicas de uso.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Ver Documentação
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Status do Sistema
-                  </Button>
-                </div>
-              </div>
-            </div>
+              ))}
+            </Accordion>
           </CardContent>
         </Card>
       </div>
