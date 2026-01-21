@@ -48,14 +48,15 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
     .eq("barbershop_id", data.barbershopId)
     .single();
 
-  // Fetch barbershop slug for WhatsApp instance name
+  // Fetch barbershop slug and address for WhatsApp instance name
   const { data: barbershop } = await supabase
     .from("barbershops")
-    .select("slug, name")
+    .select("slug, name, address")
     .eq("id", data.barbershopId)
     .single();
 
   const instanceName = barbershop?.slug || `barbershop-${data.barbershopId.substring(0, 8)}`;
+  const barbershopAddress = barbershop?.address || "";
   const barbershopName = barbershop?.name || "Barbearia";
 
   // Build notification type label
@@ -168,6 +169,8 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
         serviceName: data.serviceName,
         bookingDate: data.bookingDate,
         bookingTime: data.bookingTime,
+        barbershopName,
+        barbershopAddress,
       },
     });
 
