@@ -485,6 +485,7 @@ export function NewAppointmentModal({
           barbershopId,
           barbershopName: barbershop?.name || "",
           barbershopAddress: barbershop?.address || "",
+          barbershopLogoUrl: barbershop?.logo_url || "",
           clientName: selectedClientData?.profile?.name || "Cliente",
           clientPhone: selectedClientData?.profile?.phone || "",
           serviceName: selectedServiceData?.name || "",

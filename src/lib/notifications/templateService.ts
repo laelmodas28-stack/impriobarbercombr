@@ -65,8 +65,8 @@ export function processTemplate(content: string, data: TemplateData): string {
   // Format price (without R$ since template already has it)
   const formattedPrice = data.servicePrice.toFixed(2).replace(".", ",");
 
-  // ImperioApp logo URL
-  const imperioLogoUrl = "https://utxzksrbunutqhcmimew.supabase.co/storage/v1/object/public/assets/imperio-logo.webp";
+  // ImperioApp logo URL - using stable public folder path
+  const imperioLogoUrl = "https://imperioapp.lovable.app/images/imperio-logo.webp";
 
   // Replace all placeholders
   let processed = content
