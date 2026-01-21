@@ -86,6 +86,7 @@ serve(async (req: Request) => {
 
     console.log(`Sending WhatsApp message${isTest ? " (TEST)" : ""} via n8n webhook`);
     console.log(`Instance: ${instanceName}, Phone: ${phone || "test"}`);
+    console.log(`Webhook URL being used: ${N8N_WHATSAPP_WEBHOOK_URL.substring(0, 60)}...`);
 
     // Send to n8n webhook with all data including instanceName
     const webhookRes = await fetch(N8N_WHATSAPP_WEBHOOK_URL, {
