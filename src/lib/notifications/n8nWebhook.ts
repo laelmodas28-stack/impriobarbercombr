@@ -304,10 +304,21 @@ export async function sendTestEmailNotification(barbershopId: string, barbershop
 /**
  * Sends a test notification via n8n webhook (WhatsApp)
  */
-export async function sendTestWhatsAppNotification(barbershopId: string, barbershopName: string): Promise<boolean> {
+export async function sendTestWhatsAppNotification(barbershopId: string, barbershopName: string, instanceName?: string): Promise<boolean> {
   try {
     const now = new Date();
     const bookingDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Tomorrow
+
+    // If instanceName not provided, fetch the barbershop slug
+    let finalInstanceName = instanceName;
+    if (!finalInstanceName) {
+      const { data: barbershop } = await supabase
+        .from("barbershops")
+        .select("slug")
+        .eq("id", barbershopId)
+        .single();
+      finalInstanceName = barbershop?.slug || undefined;
+    }
 
     const payload = {
       type: "test_whatsapp_notification",
@@ -315,6 +326,7 @@ export async function sendTestWhatsAppNotification(barbershopId: string, barbers
       // Barbershop info
       barbershop_id: barbershopId,
       barbershop_name: barbershopName,
+      instance_name: finalInstanceName, // Evolution API instance name
       // Client info (normalized phone with +55)
       client_name: "Cliente Teste",
       client_phone: "+5511999999999",
@@ -356,8 +368,12 @@ _Esta é uma mensagem automática de teste._`,
         barbershopId,
         phone: "+5511999999999",
         message: payload.message_template,
+        instanceName: finalInstanceName, // Include instance name for Evolution API
+        clientName: "Cliente Teste",
+        serviceName: "Corte de Cabelo",
+        bookingDate: bookingDate.toISOString().split('T')[0],
+        bookingTime: "14:00",
         isTest: true,
-        payload, // Full payload for n8n processing
       },
     });
 

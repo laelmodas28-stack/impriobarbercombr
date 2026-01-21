@@ -13,6 +13,7 @@ interface RequestBody {
   barbershopId: string;
   phone: string;
   message: string;
+  instanceName?: string;
   clientName?: string;
   serviceName?: string;
   bookingDate?: string;
@@ -32,6 +33,7 @@ serve(async (req: Request) => {
   let barbershopId: string | undefined;
   let phone: string | undefined;
   let message: string | undefined;
+  let instanceName: string | undefined;
   let clientName: string | undefined;
   let serviceName: string | undefined;
   let bookingDate: string | undefined;
@@ -51,6 +53,7 @@ serve(async (req: Request) => {
     barbershopId = body.barbershopId;
     phone = body.phone;
     message = body.message;
+    instanceName = body.instanceName;
     clientName = body.clientName;
     serviceName = body.serviceName;
     bookingDate = body.bookingDate;
@@ -64,9 +67,21 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Sending WhatsApp message${isTest ? " (TEST)" : ""} via n8n webhook to: ${phone || "test"}`);
+    // If instanceName not provided, fetch the barbershop slug
+    if (!instanceName) {
+      const { data: barbershop } = await supabase
+        .from("barbershops")
+        .select("slug")
+        .eq("id", barbershopId)
+        .single();
+      
+      instanceName = barbershop?.slug || undefined;
+    }
 
-    // Send to n8n webhook
+    console.log(`Sending WhatsApp message${isTest ? " (TEST)" : ""} via n8n webhook`);
+    console.log(`Instance: ${instanceName}, Phone: ${phone || "test"}`);
+
+    // Send to n8n webhook with all data including instanceName
     const webhookRes = await fetch(N8N_WHATSAPP_WEBHOOK_URL, {
       method: "POST",
       headers: {
@@ -76,6 +91,7 @@ serve(async (req: Request) => {
         barbershopId,
         phone: phone || "test",
         message,
+        instanceName, // Evolution API instance name (barbershop slug)
         clientName,
         serviceName,
         bookingDate,
@@ -109,6 +125,7 @@ serve(async (req: Request) => {
           status: "failed",
           content: JSON.stringify({
             message_preview: message.substring(0, 200),
+            instance_name: instanceName,
             client_name: clientName,
             service_name: serviceName,
             booking_date: bookingDate,
@@ -129,7 +146,6 @@ serve(async (req: Request) => {
     }
 
     // Determine delivery status from webhook response
-    // n8n typically returns { message: "Workflow was started" } or similar
     const deliveryStatus = webhookData?.success === true ? "delivered" : "sent";
     const workflowMessage = (webhookData?.message as string) || "Workflow started";
 
@@ -142,6 +158,7 @@ serve(async (req: Request) => {
         status: deliveryStatus,
         content: JSON.stringify({
           message_preview: message.substring(0, 200),
+          instance_name: instanceName,
           client_name: clientName,
           service_name: serviceName,
           booking_date: bookingDate,
@@ -165,6 +182,7 @@ serve(async (req: Request) => {
         message: "Mensagem enviada para o webhook",
         webhookStatus: webhookRes.status,
         webhookResponse: workflowMessage,
+        instanceName,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -182,6 +200,7 @@ serve(async (req: Request) => {
           status: "failed",
           content: JSON.stringify({
             message_preview: message?.substring(0, 200) || "WhatsApp message",
+            instance_name: instanceName,
             error_type: "exception",
           }),
           error_message: error instanceof Error ? error.message : "Unknown error",
