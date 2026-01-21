@@ -49,8 +49,9 @@ export async function sendBookingConfirmationViaWebhook(
   try {
     const settings = await getNotificationSettings(data.barbershopId);
     
-    if (!settings?.n8n_webhook_url || !settings.send_booking_confirmation) {
-      console.log("Webhook not configured or confirmations disabled");
+    // Check if confirmations are enabled (but don't require n8n_webhook_url since we use global secret)
+    if (settings?.send_booking_confirmation === false) {
+      console.log("Email confirmations disabled for this barbershop");
       return false;
     }
 
@@ -95,20 +96,24 @@ export async function sendBookingConfirmationViaWebhook(
       use_template: !!emailTemplate,
     };
 
-    console.log("Sending booking confirmation to n8n webhook:", settings.n8n_webhook_url);
+    console.log("Sending booking confirmation via edge function to n8n webhook");
     
-    // Using no-cors because n8n webhooks don't return proper CORS headers by default
-    await fetch(settings.n8n_webhook_url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // Use edge function with global secret instead of per-barbershop webhook
+    const { data: result, error } = await supabase.functions.invoke("send-email-webhook", {
+      body: {
+        barbershopId: data.barbershopId,
+        payload,
+        isTest: false,
       },
-      mode: "no-cors",
-      body: JSON.stringify(payload),
     });
 
-    console.log("Booking confirmation sent to n8n with template:", !!emailTemplate);
-    return true;
+    if (error) {
+      console.error("Error sending booking confirmation via edge function:", error);
+      return false;
+    }
+
+    console.log("Booking confirmation sent via edge function:", result);
+    return result?.success ?? false;
   } catch (error) {
     console.error("Error sending booking confirmation via webhook:", error);
     return false;
@@ -124,8 +129,9 @@ export async function sendBookingReminderViaWebhook(
   try {
     const settings = await getNotificationSettings(data.barbershopId);
     
-    if (!settings?.n8n_webhook_url || !settings.send_booking_reminder) {
-      console.log("Webhook not configured or reminders disabled");
+    // Check if reminders are enabled (but don't require n8n_webhook_url since we use global secret)
+    if (settings?.send_booking_reminder === false) {
+      console.log("Email reminders disabled for this barbershop");
       return false;
     }
 
@@ -170,19 +176,24 @@ export async function sendBookingReminderViaWebhook(
       use_template: !!emailTemplate,
     };
 
-    console.log("Sending booking reminder to n8n webhook:", settings.n8n_webhook_url);
+    console.log("Sending booking reminder via edge function to n8n webhook");
     
-    await fetch(settings.n8n_webhook_url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // Use edge function with global secret instead of per-barbershop webhook
+    const { data: result, error } = await supabase.functions.invoke("send-email-webhook", {
+      body: {
+        barbershopId: data.barbershopId,
+        payload,
+        isTest: false,
       },
-      mode: "no-cors",
-      body: JSON.stringify(payload),
     });
 
-    console.log("Booking reminder sent to n8n with template:", !!emailTemplate);
-    return true;
+    if (error) {
+      console.error("Error sending booking reminder via edge function:", error);
+      return false;
+    }
+
+    console.log("Booking reminder sent via edge function:", result);
+    return result?.success ?? false;
   } catch (error) {
     console.error("Error sending booking reminder via webhook:", error);
     return false;
