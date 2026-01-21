@@ -33,6 +33,15 @@ export const usePushNotifications = (barbershopId?: string) => {
       return false;
     }
 
+    // Check if already denied
+    if (Notification.permission === 'denied') {
+      toast.error('Notificações bloqueadas', {
+        description: 'Clique no ícone de cadeado na barra de endereço do navegador e permita notificações para este site.',
+        duration: 8000,
+      });
+      return false;
+    }
+
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
@@ -40,8 +49,16 @@ export const usePushNotifications = (barbershopId?: string) => {
       if (result === 'granted') {
         toast.success('Notificações ativadas!');
         return true;
+      } else if (result === 'denied') {
+        toast.error('Notificações bloqueadas', {
+          description: 'Para ativar, clique no ícone de cadeado na barra de endereço e permita notificações.',
+          duration: 8000,
+        });
+        return false;
       } else {
-        toast.error('Permissão negada para notificações');
+        toast.info('Permissão pendente', {
+          description: 'Você pode ativar notificações a qualquer momento.',
+        });
         return false;
       }
     } catch (error) {

@@ -134,18 +134,24 @@ export function NotificationDropdown() {
               <div className="flex items-start gap-3">
                 <BellOff className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Notificações desativadas</p>
-                  <p className="text-xs text-muted-foreground">
-                    Ative para receber alertas de agendamentos
+                  <p className="text-sm font-medium">
+                    {permission === 'denied' ? 'Notificações bloqueadas' : 'Notificações desativadas'}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-2 h-7 text-xs"
-                    onClick={handleEnableNotifications}
-                  >
-                    Ativar Notificações
-                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    {permission === 'denied' 
+                      ? 'Clique no cadeado 🔒 na barra de endereço para permitir' 
+                      : 'Ative para receber alertas de agendamentos'}
+                  </p>
+                  {permission !== 'denied' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-xs"
+                      onClick={handleEnableNotifications}
+                    >
+                      Ativar Notificações
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
