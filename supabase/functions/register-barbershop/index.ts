@@ -5,17 +5,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 const ADMIN_EMAIL = "imperiobarberdev@gmail.com";
 const BASE_URL = "https://imperioapp.lovable.app";
 
-// Helper function to get Resend client only when needed
-const getResendClient = () => {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) {
-    console.log("RESEND_API_KEY not configured, email notifications will be skipped");
-    return null;
-  }
-  // Dynamic import to avoid initialization errors
-  return import("https://esm.sh/resend@2.0.0").then(({ Resend }) => new Resend(apiKey));
-};
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -624,203 +613,145 @@ Para reagendar, entre em contato:
       console.error('Erro ao enviar webhook (não crítico):', webhookError);
     }
 
-    // Enviar emails de notificação
+    // Enviar email de boas-vindas via webhook n8n
     try {
-      const accessUrls = {
-        barbershop_page: `${BASE_URL}/b/${barbershopData.slug}`,
-        admin_panel: `${BASE_URL}/b/${barbershopData.slug}/admin`,
-        login_page: `${BASE_URL}/b/${barbershopData.slug}/auth`
-      };
+      const n8nWebhookUrl = Deno.env.get("N8N_WEBHOOK_URL");
+      
+      if (n8nWebhookUrl) {
+        const accessUrls = {
+          barbershop_page: `${BASE_URL}/b/${barbershopData.slug}`,
+          admin_panel: `${BASE_URL}/b/${barbershopData.slug}/admin`,
+          login_page: `${BASE_URL}/b/${barbershopData.slug}/auth`
+        };
 
-      // Email de boas-vindas para o dono da barbearia
-      const welcomeEmailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 40px 0;">
-            <tr>
-              <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                  <!-- Header -->
-                  <tr>
-                    <td style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px; text-align: center;">
-                      <h1 style="color: #d4af37; margin: 0; font-size: 28px; font-weight: bold;">✂️ Império Barber</h1>
-                      <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">Sistema de Gestão para Barbearias</p>
-                    </td>
-                  </tr>
-                  
-                  <!-- Content -->
-                  <tr>
-                    <td style="padding: 40px;">
-                      <h2 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 24px;">Bem-vindo(a), ${owner.full_name}! 🎉</h2>
-                      
-                      <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                        Sua barbearia <strong style="color: #1a1a2e;">${barbershop.name}</strong> foi cadastrada com sucesso no Império Barber!
-                      </p>
-                      
-                      <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                        Agora você tem acesso a todas as ferramentas para gerenciar sua barbearia de forma profissional.
-                      </p>
-                      
-                      <!-- Access Box -->
-                      <div style="background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
-                        <h3 style="color: #1a1a2e; margin: 0 0 15px 0; font-size: 18px;">📧 Dados de Acesso</h3>
-                        <p style="color: #555555; margin: 0 0 8px 0;"><strong>Email:</strong> ${owner.email}</p>
-                        <p style="color: #888888; font-size: 14px; margin: 0;">Use a senha que você cadastrou para fazer login.</p>
-                      </div>
-                      
-                      <!-- Links -->
-                      <h3 style="color: #1a1a2e; margin: 0 0 15px 0; font-size: 18px;">🔗 Seus Links de Acesso</h3>
-                      
-                      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
-                        <tr>
-                          <td style="padding: 10px 0;">
-                            <a href="${accessUrls.login_page}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #1a1a2e; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">Fazer Login</a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 10px 0;">
-                            <a href="${accessUrls.admin_panel}" style="color: #d4af37; text-decoration: none; font-size: 14px;">🔧 Painel Administrativo: ${accessUrls.admin_panel}</a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 10px 0;">
-                            <a href="${accessUrls.barbershop_page}" style="color: #d4af37; text-decoration: none; font-size: 14px;">🏠 Página da Barbearia: ${accessUrls.barbershop_page}</a>
-                          </td>
-                        </tr>
-                      </table>
-                      
-                      <!-- Instructions -->
-                      <div style="background-color: #fff8e1; border-left: 4px solid #d4af37; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
-                        <h4 style="color: #1a1a2e; margin: 0 0 10px 0;">💡 Próximos Passos</h4>
-                        <ol style="color: #555555; margin: 0; padding-left: 20px; line-height: 1.8;">
-                          <li>Acesse o painel administrativo</li>
-                          <li>Configure os serviços oferecidos</li>
-                          <li>Cadastre seus profissionais</li>
-                          <li>Personalize sua barbearia</li>
-                          <li>Comece a receber agendamentos!</li>
-                        </ol>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  <!-- Footer -->
-                  <tr>
-                    <td style="background-color: #1a1a2e; padding: 25px; text-align: center;">
-                      <p style="color: #888888; font-size: 14px; margin: 0;">
-                        © 2024 Império Barber. Todos os direitos reservados.
-                      </p>
-                      <p style="color: #666666; font-size: 12px; margin: 10px 0 0 0;">
-                        Dúvidas? Entre em contato conosco.
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `;
+        // Email de boas-vindas para o dono da barbearia
+        const welcomeEmailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 40px 0;">
+              <tr>
+                <td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px; text-align: center;">
+                        <h1 style="color: #d4af37; margin: 0; font-size: 28px; font-weight: bold;">✂️ Império Barber</h1>
+                        <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">Sistema de Gestão para Barbearias</p>
+                      </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                      <td style="padding: 40px;">
+                        <h2 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 24px;">Bem-vindo(a), ${owner.full_name}! 🎉</h2>
+                        
+                        <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                          Sua barbearia <strong style="color: #1a1a2e;">${barbershop.name}</strong> foi cadastrada com sucesso no Império Barber!
+                        </p>
+                        
+                        <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                          Agora você tem acesso a todas as ferramentas para gerenciar sua barbearia de forma profissional.
+                        </p>
+                        
+                        <!-- Access Box -->
+                        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                          <h3 style="color: #1a1a2e; margin: 0 0 15px 0; font-size: 18px;">📧 Dados de Acesso</h3>
+                          <p style="color: #555555; margin: 0 0 8px 0;"><strong>Email:</strong> ${owner.email}</p>
+                          <p style="color: #888888; font-size: 14px; margin: 0;">Use a senha que você cadastrou para fazer login.</p>
+                        </div>
+                        
+                        <!-- Links -->
+                        <h3 style="color: #1a1a2e; margin: 0 0 15px 0; font-size: 18px;">🔗 Seus Links de Acesso</h3>
+                        
+                        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                          <tr>
+                            <td style="padding: 10px 0;">
+                              <a href="${accessUrls.login_page}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #1a1a2e; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">Fazer Login</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 10px 0;">
+                              <a href="${accessUrls.admin_panel}" style="color: #d4af37; text-decoration: none; font-size: 14px;">🔧 Painel Administrativo: ${accessUrls.admin_panel}</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 10px 0;">
+                              <a href="${accessUrls.barbershop_page}" style="color: #d4af37; text-decoration: none; font-size: 14px;">🏠 Página da Barbearia: ${accessUrls.barbershop_page}</a>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <!-- Instructions -->
+                        <div style="background-color: #fff8e1; border-left: 4px solid #d4af37; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
+                          <h4 style="color: #1a1a2e; margin: 0 0 10px 0;">💡 Próximos Passos</h4>
+                          <ol style="color: #555555; margin: 0; padding-left: 20px; line-height: 1.8;">
+                            <li>Acesse o painel administrativo</li>
+                            <li>Configure os serviços oferecidos</li>
+                            <li>Cadastre seus profissionais</li>
+                            <li>Personalize sua barbearia</li>
+                            <li>Comece a receber agendamentos!</li>
+                          </ol>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="background-color: #1a1a2e; padding: 25px; text-align: center;">
+                        <p style="color: #888888; font-size: 14px; margin: 0;">
+                          © 2024 Império Barber. Todos os direitos reservados.
+                        </p>
+                        <p style="color: #666666; font-size: 12px; margin: 10px 0 0 0;">
+                          Dúvidas? Entre em contato conosco.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `;
 
-      // Try to send emails if Resend is configured
-      try {
-        const resend = await getResendClient();
-        if (resend) {
-          // Enviar email para o dono da barbearia
-          const { error: welcomeError } = await resend.emails.send({
-            from: "Império Barber <onboarding@resend.dev>",
-            to: [owner.email],
-            subject: `🎉 Bem-vindo ao Império Barber - ${barbershop.name}`,
-            html: welcomeEmailHtml,
-          });
+        // Payload para o webhook de email
+        const emailPayload = {
+          barbershopId: barbershopId,
+          to: owner.email,
+          client_email: owner.email,
+          client_name: owner.full_name,
+          email_subject: `🎉 Bem-vindo ao Império Barber - ${barbershop.name}`,
+          email_html: welcomeEmailHtml,
+          barbershop_name: barbershop.name,
+          barbershop_slug: barbershopData.slug,
+          event_type: "barbershop_registration",
+          timestamp: new Date().toISOString(),
+        };
 
-          if (welcomeError) {
-            console.error('Erro ao enviar email de boas-vindas:', welcomeError);
-          } else {
-            console.log('Email de boas-vindas enviado para:', owner.email);
-          }
+        console.log('Sending welcome email via n8n webhook to:', owner.email);
 
-          // Email de notificação para o administrador
-          const adminEmailHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-            </head>
-            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 30px;">
-                <h2 style="color: #1a1a2e; border-bottom: 2px solid #d4af37; padding-bottom: 10px;">🆕 Nova Barbearia Cadastrada</h2>
-                
-                <table style="width: 100%; margin: 20px 0;">
-                  <tr>
-                    <td style="padding: 8px 0; color: #666;">Barbearia:</td>
-                    <td style="padding: 8px 0; font-weight: bold;">${barbershop.name}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666;">Slug:</td>
-                    <td style="padding: 8px 0;"><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 4px;">${barbershopData.slug}</code></td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666;">Proprietário:</td>
-                    <td style="padding: 8px 0;">${owner.full_name}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666;">Email:</td>
-                    <td style="padding: 8px 0;"><a href="mailto:${owner.email}">${owner.email}</a></td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666;">Telefone:</td>
-                    <td style="padding: 8px 0;">${owner.phone || 'Não informado'}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666;">Data/Hora:</td>
-                    <td style="padding: 8px 0;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
-                  </tr>
-                </table>
-                
-                <h3 style="color: #1a1a2e; margin-top: 25px;">Links de Acesso</h3>
-                <ul style="list-style: none; padding: 0;">
-                  <li style="padding: 5px 0;"><a href="${accessUrls.barbershop_page}" style="color: #d4af37;">📍 Página da Barbearia</a></li>
-                  <li style="padding: 5px 0;"><a href="${accessUrls.admin_panel}" style="color: #d4af37;">⚙️ Painel Admin</a></li>
-                  <li style="padding: 5px 0;"><a href="${accessUrls.login_page}" style="color: #d4af37;">🔐 Página de Login</a></li>
-                </ul>
-                
-                <p style="color: #888; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
-                  Este é um email automático do sistema Império Barber.
-                </p>
-              </div>
-            </body>
-            </html>
-          `;
+        const emailResponse = await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailPayload)
+        });
 
-          // Enviar email para o administrador
-          const { error: adminError } = await resend.emails.send({
-            from: "Império Barber <onboarding@resend.dev>",
-            to: [ADMIN_EMAIL],
-            subject: `🆕 Nova Barbearia: ${barbershop.name}`,
-            html: adminEmailHtml,
-          });
-
-          if (adminError) {
-            console.error('Erro ao enviar email para admin:', adminError);
-          } else {
-            console.log('Email de notificação enviado para admin:', ADMIN_EMAIL);
-          }
+        if (emailResponse.ok) {
+          console.log('Welcome email sent successfully via webhook');
         } else {
-          console.log('Email notifications skipped - RESEND_API_KEY not configured');
+          console.error('Failed to send welcome email via webhook:', emailResponse.status);
         }
-      } catch (emailError) {
-        console.error('Error sending emails:', emailError);
-        // Don't fail the registration if email fails
+      } else {
+        console.log('N8N_WEBHOOK_URL not configured, skipping welcome email');
       }
-
     } catch (emailError) {
-      console.error('Erro ao enviar emails (não crítico):', emailError);
+      console.error('Erro ao enviar email de boas-vindas (não crítico):', emailError);
+      // Don't fail the registration if email fails
     }
 
     console.log('Barbershop registration completed successfully');
