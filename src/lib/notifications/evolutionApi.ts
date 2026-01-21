@@ -5,6 +5,11 @@ interface SendMessageParams {
   barbershopId: string;
   phone: string;
   message: string;
+  instanceName?: string;
+  clientName?: string;
+  serviceName?: string;
+  bookingDate?: string;
+  bookingTime?: string;
 }
 
 export interface BookingNotificationParams {
@@ -53,6 +58,24 @@ export async function getWhatsAppSettings(barbershopId: string): Promise<Evoluti
   return data as EvolutionApiSettings;
 }
 
+/**
+ * Get the barbershop slug (used as Evolution API instance name)
+ */
+async function getBarbershopSlug(barbershopId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("barbershops")
+    .select("slug")
+    .eq("id", barbershopId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching barbershop slug:", error);
+    return null;
+  }
+
+  return data?.slug || null;
+}
+
 function formatPhoneNumber(phone: string): string {
   // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, "");
@@ -65,7 +88,16 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-export async function sendWhatsAppMessage({ barbershopId, phone, message }: SendMessageParams): Promise<boolean> {
+export async function sendWhatsAppMessage({ 
+  barbershopId, 
+  phone, 
+  message,
+  instanceName,
+  clientName,
+  serviceName,
+  bookingDate,
+  bookingTime,
+}: SendMessageParams): Promise<boolean> {
   const settings = await getWhatsAppSettings(barbershopId);
   
   if (!settings || !settings.whatsapp_enabled) {
@@ -75,6 +107,12 @@ export async function sendWhatsAppMessage({ barbershopId, phone, message }: Send
 
   const formattedPhone = formatPhoneNumber(phone);
 
+  // Get instance name from slug if not provided
+  let finalInstanceName = instanceName;
+  if (!finalInstanceName) {
+    finalInstanceName = await getBarbershopSlug(barbershopId) || undefined;
+  }
+
   try {
     // Use n8n webhook for WhatsApp via send-whatsapp-webhook edge function
     const { data, error } = await supabase.functions.invoke("send-whatsapp-webhook", {
@@ -82,6 +120,11 @@ export async function sendWhatsAppMessage({ barbershopId, phone, message }: Send
         barbershopId,
         phone: formattedPhone,
         message,
+        instanceName: finalInstanceName,
+        clientName,
+        serviceName,
+        bookingDate,
+        bookingTime,
       },
     });
 
@@ -155,6 +198,10 @@ Esperamos você! 😊`;
     barbershopId: params.barbershopId,
     phone: params.clientPhone,
     message,
+    clientName: params.clientName,
+    serviceName: params.serviceName,
+    bookingDate: params.bookingDate,
+    bookingTime: params.bookingTime,
   });
 }
 
@@ -215,5 +262,9 @@ _Caso precise cancelar ou reagendar, entre em contato conosco._`;
     barbershopId: params.barbershopId,
     phone: params.clientPhone,
     message,
+    clientName: params.clientName,
+    serviceName: params.serviceName,
+    bookingDate: params.bookingDate,
+    bookingTime: params.bookingTime,
   });
 }
