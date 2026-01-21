@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Force redeploy: 2026-01-21T15:25:v2
+// Force redeploy: 2026-01-21T15:30:final
 const N8N_WEBHOOK_URL = Deno.env.get("N8N_WEBHOOK_URL") || "";
 
 interface RequestBody {
