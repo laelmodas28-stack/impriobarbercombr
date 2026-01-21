@@ -714,7 +714,8 @@ Para reagendar, entre em contato:
         };
 
         // Email de boas-vindas para o dono da barbearia (padrão consistente com outros templates)
-        const loginUrl = `${BASE_URL}/b/${barbershopData.slug}/auth`;
+        // Usa /auth geral do ImperioApp - após login, redireciona para a barbearia correta
+        const loginUrl = `${BASE_URL}/auth`;
         
         const welcomeEmailHtml = `<!DOCTYPE html>
 <html>
