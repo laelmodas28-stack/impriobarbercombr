@@ -63,12 +63,10 @@ export const adminRoutes: RouteConfig[] = [
   // Agenda
   { id: "appointments", label: "Agendamentos", path: "agenda/appointments", icon: Calendar, parentId: "agenda", order: 1, description: "Gerenciar agendamentos" },
   { id: "calendar", label: "Calendario", path: "agenda/calendar", icon: CalendarDays, parentId: "agenda", order: 2, description: "Visualizacao em calendario" },
-  { id: "waiting-list", label: "Lista de Espera", path: "agenda/waiting-list", icon: Clock, parentId: "agenda", order: 3, description: "Clientes aguardando vaga" },
 
   // Clients
   { id: "clients-list", label: "Lista de Clientes", path: "clients/list", icon: Users, parentId: "clients", order: 1, description: "Todos os clientes cadastrados" },
-  { id: "clients-history", label: "Historico", path: "clients/history", icon: History, parentId: "clients", order: 2, description: "Historico de atendimentos" },
-  { id: "clients-segments", label: "Segmentos", path: "clients/segments", icon: Tags, parentId: "clients", order: 3, description: "Tags e segmentacao" },
+  { id: "clients-segments", label: "Segmentos", path: "clients/segments", icon: Tags, parentId: "clients", order: 2, description: "Tags e segmentacao" },
 
   // Professionals
   { id: "professionals-list", label: "Equipe", path: "professionals/list", icon: UserCircle, parentId: "professionals", order: 1, description: "Profissionais cadastrados" },
@@ -86,27 +84,15 @@ export const adminRoutes: RouteConfig[] = [
   { id: "finance-cashflow", label: "Fluxo de Caixa", path: "finance/cashflow", icon: TrendingUp, parentId: "finance", order: 3, description: "Entradas e saidas" },
   { id: "finance-payouts", label: "Pagamentos", path: "finance/payouts", icon: CreditCard, parentId: "finance", order: 4, description: "Pagamentos realizados" },
 
-  // Subscriptions
-  { id: "subscriptions-plans", label: "Planos", path: "subscriptions/plans", icon: Crown, parentId: "subscriptions", order: 1, description: "Planos de assinatura" },
-  { id: "subscriptions-invoices", label: "Faturas", path: "subscriptions/invoices", icon: FileText, parentId: "subscriptions", order: 2, description: "Faturas emitidas" },
-  { id: "subscriptions-status", label: "Status", path: "subscriptions/status", icon: Activity, parentId: "subscriptions", order: 3, description: "Status das assinaturas" },
-
   // Reports
   { id: "reports-revenue", label: "Receita", path: "reports/revenue", icon: BarChart3, parentId: "reports", order: 1, description: "Relatorio de receita" },
   { id: "reports-appointments", label: "Agendamentos", path: "reports/appointments", icon: PieChart, parentId: "reports", order: 2, description: "Analise de agendamentos" },
   { id: "reports-retention", label: "Retencao", path: "reports/retention", icon: UserCheck, parentId: "reports", order: 3, description: "Retencao de clientes" },
   { id: "reports-export", label: "Central de Exportacao", path: "reports/export-center", icon: Download, parentId: "reports", order: 4, description: "Exportar dados" },
 
-  // Imports
-  { id: "imports-clients", label: "Importar Clientes", path: "imports/clients", icon: Upload, parentId: "imports", order: 1, description: "Importar base de clientes" },
-  { id: "imports-services", label: "Importar Servicos", path: "imports/services", icon: Upload, parentId: "imports", order: 2, description: "Importar servicos" },
-  { id: "imports-professionals", label: "Importar Profissionais", path: "imports/professionals", icon: Upload, parentId: "imports", order: 3, description: "Importar equipe" },
-  { id: "imports-logs", label: "Logs", path: "imports/logs", icon: FileWarning, parentId: "imports", order: 4, description: "Historico de importacoes" },
-
   // Notifications
   { id: "notifications-templates", label: "Templates", path: "notifications/templates", icon: FileText, parentId: "notifications", order: 1, description: "Modelos de mensagens" },
   { id: "notifications-channels", label: "Canais", path: "notifications/channels", icon: MessageSquare, parentId: "notifications", order: 2, description: "WhatsApp, Email, SMS" },
-  { id: "notifications-logs", label: "Logs de Envio", path: "notifications/logs", icon: Send, parentId: "notifications", order: 3, description: "Historico de envios" },
 
   // Settings
   { id: "settings-barbershop", label: "Perfil da Barbearia", path: "settings/barbershop", icon: Building, parentId: "settings", order: 1, description: "Dados do estabelecimento" },
@@ -114,8 +100,7 @@ export const adminRoutes: RouteConfig[] = [
   { id: "settings-preferences", label: "Preferencias", path: "settings/preferences", icon: Settings, parentId: "settings", order: 3, description: "Configuracoes gerais" },
 
   // Help
-  { id: "help-tutorials", label: "Tutoriais", path: "help/tutorials", icon: Video, parentId: "help", order: 1, description: "Aprenda a usar o sistema" },
-  { id: "help-support", label: "Suporte", path: "help/support", icon: HelpCircle, parentId: "help", order: 2, description: "Entre em contato" },
+  { id: "help-support", label: "Suporte", path: "help/support", icon: HelpCircle, parentId: "help", order: 1, description: "Entre em contato" },
 ];
 
 // Group definitions for sidebar
@@ -125,12 +110,10 @@ export const routeGroups: RouteGroup[] = [
   { id: "professionals", label: "Profissionais", icon: UserCircle, order: 4, children: [] },
   { id: "services", label: "Servicos", icon: Scissors, order: 5, children: [] },
   { id: "finance", label: "Financeiro", icon: Wallet, order: 6, children: [] },
-  { id: "subscriptions", label: "Assinaturas", icon: Crown, order: 7, children: [] },
-  { id: "reports", label: "Relatorios", icon: BarChart3, order: 8, children: [] },
-  { id: "imports", label: "Importacoes", icon: Upload, order: 9, children: [] },
-  { id: "notifications", label: "Notificacoes", icon: Bell, order: 10, children: [] },
-  { id: "settings", label: "Configuracoes", icon: Settings, order: 11, children: [] },
-  { id: "help", label: "Ajuda", icon: HelpCircle, order: 12, children: [] },
+  { id: "reports", label: "Relatorios", icon: BarChart3, order: 7, children: [] },
+  { id: "notifications", label: "Notificacoes", icon: Bell, order: 8, children: [] },
+  { id: "settings", label: "Configuracoes", icon: Settings, order: 9, children: [] },
+  { id: "help", label: "Ajuda", icon: HelpCircle, order: 10, children: [] },
 ];
 
 // Build grouped routes for sidebar rendering
