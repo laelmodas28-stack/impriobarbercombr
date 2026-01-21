@@ -87,22 +87,25 @@ export function ClientsPage() {
     queryFn: async () => {
       if (!barbershop?.id) return [];
       
-      // Get clients with their profiles
+      // Get clients first
       const { data: clientsData, error: clientsError } = await supabase
         .from("barbershop_clients")
-        .select(`
-          id,
-          user_id,
-          created_at,
-          profile:profiles(full_name, email, phone, avatar_url)
-        `)
+        .select("id, user_id, created_at")
         .eq("barbershop_id", barbershop.id);
       
       if (clientsError) throw clientsError;
 
-      // Get bookings count for each client
+      // Get profiles and bookings for each client
       const clientsWithStats = await Promise.all(
         (clientsData || []).map(async (client) => {
+          // Get profile
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("name, email, phone, avatar_url")
+            .eq("user_id", client.user_id)
+            .single();
+          
+          // Get bookings
           const { data: bookings } = await supabase
             .from("bookings")
             .select("id, booking_date")
@@ -112,7 +115,12 @@ export function ClientsPage() {
           
           return {
             ...client,
-            profile: Array.isArray(client.profile) ? client.profile[0] : client.profile,
+            profile: profileData ? {
+              full_name: profileData.name,
+              email: profileData.email,
+              phone: profileData.phone,
+              avatar_url: profileData.avatar_url,
+            } : null,
             bookings_count: bookings?.length || 0,
             last_booking: bookings?.[0]?.booking_date || null,
           };

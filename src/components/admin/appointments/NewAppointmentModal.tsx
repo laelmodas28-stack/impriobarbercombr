@@ -167,20 +167,32 @@ export function NewAppointmentModal({
   const { data: clients } = useQuery({
     queryKey: ["appointment-clients", barbershopId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get clients first
+      const { data: clientsData, error: clientsError } = await supabase
         .from("barbershop_clients")
-        .select(`
-          *,
-          profile:profiles!barbershop_clients_user_id_fkey (
-            id,
-            name,
-            phone
-          )
-        `)
+        .select("id, user_id, created_at, notes")
         .eq("barbershop_id", barbershopId)
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as unknown as Client[];
+      
+      if (clientsError) throw clientsError;
+      
+      // Get profiles for each client
+      const clientsWithProfiles = await Promise.all(
+        (clientsData || []).map(async (client) => {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id, name, phone, email")
+            .eq("user_id", client.user_id)
+            .single();
+          
+          return {
+            ...client,
+            profile: profileData,
+          };
+        })
+      );
+      
+      return clientsWithProfiles as Client[];
     },
     enabled: !!barbershopId && open,
   });
