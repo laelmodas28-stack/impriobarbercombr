@@ -12,10 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminBreadcrumb } from "./AdminBreadcrumb";
+import { NotificationDropdown } from "../NotificationDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Search, Bell, Plus, User, Settings, LogOut, ExternalLink } from "lucide-react";
+import { Search, Plus, User, Settings, LogOut, ExternalLink } from "lucide-react";
 import { useState } from "react";
 
 export function AdminHeader() {
@@ -66,10 +67,7 @@ export function AdminHeader() {
       </Button>
 
       {/* Notifications */}
-      <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-        <Bell className="h-5 w-5" />
-        <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
-      </Button>
+      <NotificationDropdown />
 
       {/* View Site */}
       <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:text-foreground">
