@@ -137,7 +137,13 @@ export function ClientsPage() {
       key: "profile",
       header: "Cliente",
       cell: (item) => (
-        <div className="flex items-center gap-3">
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`${baseUrl}/admin/clients/${item.id}`);
+          }}
+        >
           <Avatar className="h-9 w-9">
             <AvatarImage src={item.profile?.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
@@ -145,7 +151,7 @@ export function ClientsPage() {
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium text-foreground">
+            <p className="font-medium text-foreground hover:text-primary hover:underline">
               {item.profile?.full_name || "Cliente sem nome"}
             </p>
             {item.profile?.email && (
