@@ -40,7 +40,7 @@ import WaitingListPage from "./pages/admin/agenda/WaitingListPage";
 // Clients
 import ClientHistoryPage from "./pages/admin/clients/ClientHistoryPage";
 import ClientSegmentsPage from "./pages/admin/clients/ClientSegmentsPage";
-
+import ClientEditPage from "./pages/admin/clients/ClientEditPage";
 // Professionals
 import ProfessionalsListPage from "./pages/admin/professionals/ProfessionalsListPage";
 import AvailabilityPage from "./pages/admin/professionals/AvailabilityPage";
@@ -161,9 +161,9 @@ const App = () => (
                     
                     {/* Clients */}
                     <Route path="clients/list" element={<ClientsPage />} />
+                    <Route path="clients/:clientId" element={<ClientEditPage />} />
                     <Route path="clients/history" element={<ClientHistoryPage />} />
                     <Route path="clients/segments" element={<ClientSegmentsPage />} />
-                    
                     {/* Professionals */}
                     <Route path="professionals/list" element={<ProfessionalsListPage />} />
                     <Route path="professionals/availability" element={<AvailabilityPage />} />
