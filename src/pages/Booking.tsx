@@ -67,11 +67,37 @@ const Booking = () => {
       
       const { data, error } = await supabase
         .from("bookings")
-        .select("booking_time")
+        .select(`
+          booking_time,
+          service:services (
+            duration_minutes
+          )
+        `)
         .eq("professional_id", selectedProfessional)
         .eq("booking_date", format(selectedDate, "yyyy-MM-dd"))
         .in("status", ["pending", "confirmed"]);
         
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedProfessional && !!selectedDate,
+  });
+
+  // Fetch time blocks for the professional
+  const { data: timeBlocks } = useQuery({
+    queryKey: ["professional-time-blocks", selectedProfessional, selectedDate],
+    queryFn: async () => {
+      if (!selectedProfessional || !selectedDate) return [];
+      
+      const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      
+      const { data, error } = await supabase
+        .from("professional_time_blocks")
+        .select("*")
+        .eq("professional_id", selectedProfessional)
+        .or(`and(is_recurring.eq.true,day_of_week.eq.${dayOfWeek}),and(is_recurring.eq.false,block_date.eq.${dateStr})`);
+      
       if (error) throw error;
       return data;
     },
@@ -121,7 +147,17 @@ const Booking = () => {
     setSelectedTime("");
   }, [selectedProfessional, selectedDate]);
 
-  // Filtrar horários passados e já ocupados
+  // Helper function to convert time to minutes
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Get selected service data for duration
+  const selectedServiceData = services?.find(s => s.id === selectedService);
+  const serviceDuration = selectedServiceData?.duration_minutes || 30;
+
+  // Filtrar horários passados, ocupados e bloqueados
   const getAvailableTimeSlots = () => {
     if (!selectedDate) return timeSlots;
     
@@ -141,12 +177,43 @@ const Booking = () => {
       });
     }
     
-    // Filtrar horários já ocupados pelo profissional
+    // Filtrar slots que conflitam com agendamentos existentes (considerando duração)
     if (existingBookings?.length) {
-      const bookedTimes = existingBookings.map(b => 
-        b.booking_time.substring(0, 5) // "16:00:00" -> "16:00"
-      );
-      availableSlots = availableSlots.filter(slot => !bookedTimes.includes(slot));
+      availableSlots = availableSlots.filter(slot => {
+        const slotStart = timeToMinutes(slot);
+        const slotEnd = slotStart + serviceDuration;
+        
+        for (const booking of existingBookings) {
+          const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
+          const bookingDuration = (booking.service as any)?.duration_minutes || 30;
+          const bookingEnd = bookingStart + bookingDuration;
+          
+          // Conflito existe se: slotStart < bookingEnd AND slotEnd > bookingStart
+          if (slotStart < bookingEnd && slotEnd > bookingStart) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+    
+    // Filtrar slots que conflitam com bloqueios de tempo (almoço, pausas, etc.)
+    if (timeBlocks?.length) {
+      availableSlots = availableSlots.filter(slot => {
+        const slotStart = timeToMinutes(slot);
+        const slotEnd = slotStart + serviceDuration;
+        
+        for (const block of timeBlocks) {
+          const blockStart = timeToMinutes(block.start_time.substring(0, 5));
+          const blockEnd = timeToMinutes(block.end_time.substring(0, 5));
+          
+          // Conflito existe se slot sobrepõe com bloqueio
+          if (slotStart < blockEnd && slotEnd > blockStart) {
+            return false;
+          }
+        }
+        return true;
+      });
     }
     
     return availableSlots;
@@ -214,9 +281,6 @@ const Booking = () => {
       toast.error("Erro ao criar agendamento");
     }
   };
-
-  const selectedServiceData = services?.find(s => s.id === selectedService);
-
 
   return (
     <div className="min-h-screen bg-background">
