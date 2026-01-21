@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar, Crown, Scissors, Star, Users, User, Edit, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { ChatWidget } from "@/components/ChatWidget";
+
 import { BusinessHours } from "@/components/BusinessHours";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -297,7 +297,6 @@ const Home = () => {
       </section>
 
       <Footer />
-      <ChatWidget />
 
       {/* Dialog de Edição */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
