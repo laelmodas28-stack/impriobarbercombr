@@ -234,7 +234,15 @@ const RegisterBarbershop = () => {
       }
       
       toast.success("Barbearia criada com sucesso!");
-      navigate("/admin");
+      
+      // Redirect to the barbershop admin using the slug from the response
+      const barbershopSlug = data?.barbershop?.slug || data?.slug;
+      if (barbershopSlug) {
+        navigate(`/b/${barbershopSlug}/admin`);
+      } else {
+        // Fallback: fetch barbershop slug from user roles
+        navigate("/");
+      }
     } catch (error: any) {
       console.error('Error:', error);
       toast.error("Erro ao criar barbearia. Tente novamente.");
