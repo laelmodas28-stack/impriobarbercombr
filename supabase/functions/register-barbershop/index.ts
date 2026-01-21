@@ -128,7 +128,6 @@ serve(async (req) => {
       .from('barbershops')
       .insert({
         name: barbershop.name,
-        owner_id: userId,
         address: barbershop.address,
         description: barbershop.description,
         phone: owner.phone,
