@@ -30,6 +30,9 @@ const Auth = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [showBarbershopSelector, setShowBarbershopSelector] = useState(false);
   const [availableBarbershops, setAvailableBarbershops] = useState<BarbershopOption[]>([]);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
@@ -224,6 +227,35 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      toast.error("Digite seu email");
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) {
+        toast.error("Erro ao enviar email: " + error.message);
+      } else {
+        toast.success("Email de recuperação enviado! Verifique sua caixa de entrada.");
+        setShowForgotPassword(false);
+        setForgotPasswordEmail("");
+      }
+    } catch (error) {
+      toast.error("Erro ao processar solicitação");
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       {/* Barbershop Selector Modal */}
@@ -266,6 +298,48 @@ const Auth = () => {
               </button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Forgot Password Modal */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recuperar Senha</DialogTitle>
+            <DialogDescription>
+              Digite seu email para receber um link de recuperação de senha.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowForgotPassword(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={forgotPasswordLoading}
+              >
+                {forgotPasswordLoading ? "Enviando..." : "Enviar Email"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -330,7 +404,19 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Senha</Label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotPasswordEmail(loginEmail);
+                          setShowForgotPassword(true);
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Esqueci minha senha
+                      </button>
+                    </div>
                     <Input
                       id="login-password"
                       type="password"
