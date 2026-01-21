@@ -40,8 +40,13 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} {info?.name || "Barbearia"}. Todos os direitos reservados.</p>
+        <div className="border-t border-border mt-8 pt-8">
+          <div className="text-center text-sm text-muted-foreground mb-4">
+            <p>&copy; {new Date().getFullYear()} {info?.name || "Barbearia"}. Todos os direitos reservados.</p>
+          </div>
+          <div className="text-center text-xs text-muted-foreground">
+            <p>Suporte: Imperiobarber92@gmail.com | (11) 96933-2465</p>
+          </div>
         </div>
       </div>
     </footer>

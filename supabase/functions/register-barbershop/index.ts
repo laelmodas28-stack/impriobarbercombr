@@ -780,6 +780,7 @@ Para reagendar, entre em contato:
           <tr>
             <td align="center" style="padding: 20px;">
               <p style="color: #888; font-size: 12px; margin: 0;">Enviado por <strong>ImperioApp</strong></p>
+              <p style="color: #888; font-size: 11px; margin: 8px 0 0;">Suporte: Imperiobarber92@gmail.com | (11) 96933-2465</p>
             </td>
           </tr>
         </table>

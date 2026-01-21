@@ -64,10 +64,10 @@ const CONTACT_OPTIONS = [
   {
     icon: Mail,
     title: "E-mail",
-    description: "suporte@imperio.app",
+    description: "Imperiobarber92@gmail.com",
     action: "Enviar E-mail",
     available: true,
-    href: "mailto:suporte@imperio.app",
+    href: "mailto:Imperiobarber92@gmail.com",
   },
   {
     icon: Phone,

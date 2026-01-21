@@ -330,6 +330,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             <div class="footer">
               <p>Este é um email automático. Caso precise de ajuda, entre em contato conosco.</p>
+              <p>Suporte: Imperiobarber92@gmail.com | (11) 96933-2465</p>
               <p>${barbershop?.name || 'Barbearia'}</p>
             </div>
           </div>

@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { DemoTour } from "@/components/DemoTour";
 import { 
   Calendar, 
   Users, 
@@ -45,7 +44,6 @@ interface PlanPricing {
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const [showDemoTour, setShowDemoTour] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
 
@@ -176,18 +174,15 @@ const LandingPage = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => navigate("/auth")}
+                onClick={() => {
+                  // Limpar contexto de barbearia ao entrar pela LP
+                  localStorage.removeItem("origin_barbershop_slug");
+                  sessionStorage.removeItem("origin_barbershop_slug");
+                  navigate("/auth");
+                }}
                 className="hidden sm:inline-flex"
               >
                 Entrar
-              </Button>
-              <Button 
-                variant="premium" 
-                size="sm" 
-                onClick={() => setShowDemoTour(true)}
-                className="hidden sm:inline-flex"
-              >
-                Solicitar Demo
               </Button>
               <Button 
                 variant="ghost" 
@@ -237,18 +232,15 @@ const LandingPage = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => navigate("/auth")}
+                  onClick={() => {
+                    // Limpar contexto de barbearia ao entrar pela LP
+                    localStorage.removeItem("origin_barbershop_slug");
+                    sessionStorage.removeItem("origin_barbershop_slug");
+                    navigate("/auth");
+                  }}
                   className="w-full"
                 >
                   Entrar
-                </Button>
-                <Button 
-                  variant="premium" 
-                  size="sm" 
-                  onClick={() => setShowDemoTour(true)}
-                  className="w-full"
-                >
-                  Solicitar Demo
                 </Button>
               </div>
             </div>
@@ -285,14 +277,6 @@ const LandingPage = () => {
                 >
                   Começar Gratuitamente
                   <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  className="text-base px-8 h-12"
-                  onClick={() => setShowDemoTour(true)}
-                >
-                  Solicitar Demo
                 </Button>
               </div>
 
@@ -374,7 +358,6 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-        <DemoTour open={showDemoTour} onOpenChange={setShowDemoTour} />
       </section>
 
       {/* Social Proof */}
@@ -966,8 +949,8 @@ const LandingPage = () => {
             <div>
               <h3 className="font-semibold mb-4">Contato</h3>
               <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <div>Email: contato@imperioapp.com.br</div>
-                <div>Telefone: (11) 0000-0000</div>
+                <div>Email: Imperiobarber92@gmail.com</div>
+                <div>Telefone: (11) 96933-2465</div>
                 <Button 
                   variant="outline" 
                   size="sm" 

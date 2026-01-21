@@ -119,8 +119,27 @@ export function AdminSidebar() {
   const currentRole = userRole?.[0]?.role || "admin";
   const roleLabel = currentRole === "super_admin" ? "Super Admin" : currentRole === "admin" ? "Administrador" : "Barbeiro";
 
+  // Get data-tour attribute for route
+  const getTourId = (routeId: string) => {
+    const tourMap: Record<string, string> = {
+      dashboard: "sidebar-dashboard",
+      agenda: "sidebar-agenda",
+      clients: "sidebar-clients",
+      professionals: "sidebar-professionals",
+      services: "sidebar-services",
+      finance: "sidebar-finance",
+      subscriptions: "sidebar-subscriptions",
+      reports: "sidebar-reports",
+      imports: "sidebar-imports",
+      notifications: "sidebar-notifications",
+      settings: "sidebar-settings",
+      help: "sidebar-help",
+    };
+    return tourMap[routeId];
+  };
+
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar" data-tour="sidebar">
       <SidebarHeader className="border-b border-border p-4">
         <Link to={baseUrl} className="flex items-center gap-3">
           {barbershop?.logo_url ? (
@@ -154,7 +173,7 @@ export function AdminSidebar() {
             <SidebarMenu>
               {/* Standalone routes (Dashboard) */}
               {standalone.map((route) => (
-                <SidebarMenuItem key={route.id}>
+                <SidebarMenuItem key={route.id} data-tour={getTourId(route.id)}>
                   <SidebarMenuButton
                     asChild
                     className={`${
@@ -177,7 +196,7 @@ export function AdminSidebar() {
                 const isOpen = openGroups[group.id] || groupActive;
 
                 return (
-                  <SidebarMenuItem key={group.id}>
+                  <SidebarMenuItem key={group.id} data-tour={getTourId(group.id)}>
                     <Collapsible open={isOpen} onOpenChange={() => toggleGroup(group.id)}>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
