@@ -255,6 +255,27 @@ export function NewAppointmentModal({
     enabled: !!selectedProfessional && !!selectedDate && open,
   });
 
+  // Fetch time blocks for the professional
+  const { data: timeBlocks } = useQuery({
+    queryKey: ["professional-time-blocks", selectedProfessional, selectedDate],
+    queryFn: async () => {
+      if (!selectedProfessional || !selectedDate) return [];
+      
+      const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      
+      const { data, error } = await supabase
+        .from("professional_time_blocks")
+        .select("*")
+        .eq("professional_id", selectedProfessional)
+        .or(`and(is_recurring.eq.true,day_of_week.eq.${dayOfWeek}),and(is_recurring.eq.false,block_date.eq.${dateStr})`);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedProfessional && !!selectedDate && open,
+  });
+
   // Generate time slots
   const timeSlots = useMemo(() => {
     const slots: string[] = [];
@@ -273,11 +294,23 @@ export function NewAppointmentModal({
     return slots;
   }, [barbershop]);
 
-  // Filter available time slots
+  // Helper function to convert time to minutes
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Get selected service data (moved before availableTimeSlots to avoid reference error)
+  const selectedServiceData = useMemo(() => {
+    return services?.find((s) => s.id === selectedService);
+  }, [services, selectedService]);
+
+  // Filter available time slots considering bookings, time blocks, and service duration
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return timeSlots;
     
     let available = [...timeSlots];
+    const serviceDuration = selectedServiceData?.duration_minutes || 30;
     
     // Filter past times if today
     if (isToday(selectedDate)) {
@@ -293,19 +326,48 @@ export function NewAppointmentModal({
       });
     }
     
-    // Filter booked times (simple slot-based filtering)
+    // Filter slots that conflict with existing bookings (considering duration)
     if (existingBookings?.length) {
-      const bookedTimes = existingBookings.map((b) => b.booking_time.substring(0, 5));
-      available = available.filter((slot) => !bookedTimes.includes(slot));
+      available = available.filter((slot) => {
+        const slotStart = timeToMinutes(slot);
+        const slotEnd = slotStart + serviceDuration;
+        
+        // Check if this slot would conflict with any existing booking
+        for (const booking of existingBookings) {
+          const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
+          const bookingDuration = booking.service?.duration_minutes || 30;
+          const bookingEnd = bookingStart + bookingDuration;
+          
+          // Conflict exists if: slotStart < bookingEnd AND slotEnd > bookingStart
+          if (slotStart < bookingEnd && slotEnd > bookingStart) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+    
+    // Filter slots that conflict with time blocks (lunch, breaks, etc.)
+    if (timeBlocks?.length) {
+      available = available.filter((slot) => {
+        const slotStart = timeToMinutes(slot);
+        const slotEnd = slotStart + serviceDuration;
+        
+        for (const block of timeBlocks) {
+          const blockStart = timeToMinutes(block.start_time.substring(0, 5));
+          const blockEnd = timeToMinutes(block.end_time.substring(0, 5));
+          
+          // Conflict exists if slot overlaps with block
+          if (slotStart < blockEnd && slotEnd > blockStart) {
+            return false;
+          }
+        }
+        return true;
+      });
     }
     
     return available;
-  }, [selectedDate, timeSlots, existingBookings]);
-
-  // Get selected service data
-  const selectedServiceData = useMemo(() => {
-    return services?.find((s) => s.id === selectedService);
-  }, [services, selectedService]);
+  }, [selectedDate, timeSlots, existingBookings, timeBlocks, selectedServiceData]);
 
   // Calculate final price
   const finalPrice = useMemo(() => {
