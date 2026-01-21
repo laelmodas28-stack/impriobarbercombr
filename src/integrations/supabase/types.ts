@@ -1089,35 +1089,56 @@ export type Database = {
         Row: {
           barbershop_id: string
           benefits: string[] | null
+          billing_period: string | null
           created_at: string
           description: string | null
+          discount_percentage: number | null
           duration_days: number
+          highlight_label: string | null
           id: string
           is_active: boolean | null
+          is_highlighted: boolean | null
+          max_professionals: number | null
           name: string
+          original_price: number | null
           price: number
+          sort_order: number | null
         }
         Insert: {
           barbershop_id: string
           benefits?: string[] | null
+          billing_period?: string | null
           created_at?: string
           description?: string | null
+          discount_percentage?: number | null
           duration_days?: number
+          highlight_label?: string | null
           id?: string
           is_active?: boolean | null
+          is_highlighted?: boolean | null
+          max_professionals?: number | null
           name: string
+          original_price?: number | null
           price: number
+          sort_order?: number | null
         }
         Update: {
           barbershop_id?: string
           benefits?: string[] | null
+          billing_period?: string | null
           created_at?: string
           description?: string | null
+          discount_percentage?: number | null
           duration_days?: number
+          highlight_label?: string | null
           id?: string
           is_active?: boolean | null
+          is_highlighted?: boolean | null
+          max_professionals?: number | null
           name?: string
+          original_price?: number | null
           price?: number
+          sort_order?: number | null
         }
         Relationships: [
           {
