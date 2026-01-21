@@ -83,6 +83,7 @@ interface Client {
     id: string;
     name: string | null;
     phone: string | null;
+    email: string | null;
   } | null;
 }
 
@@ -406,7 +407,7 @@ export function NewAppointmentModal({
         try {
           await sendBookingConfirmationViaWebhook({
             ...notificationParams,
-            clientEmail: null,
+            clientEmail: selectedClientData?.profile?.email || null,
           });
         } catch (notifError) {
           console.warn("Failed to send n8n notification:", notifError);
