@@ -94,107 +94,101 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
       .replace(/\{\{valor\}\}/g, data.price ? `R$ ${data.price.toFixed(2)}` : "—");
   };
 
-  // Send Email notification
-  if (data.clientEmail) {
-    try {
-      const emailContent = emailTemplate 
-        ? replacePlaceholders(emailTemplate.content)
-        : `${typeLabels[data.notificationType]}: ${data.serviceName} em ${data.bookingDate} às ${data.bookingTime}`;
-      
-      const emailSubject = emailTemplate?.subject 
-        ? replacePlaceholders(emailTemplate.subject)
-        : typeLabels[data.notificationType];
+  // ALWAYS send Email webhook notification
+  try {
+    const emailContent = emailTemplate 
+      ? replacePlaceholders(emailTemplate.content)
+      : `${typeLabels[data.notificationType]}: ${data.serviceName} em ${data.bookingDate} às ${data.bookingTime}`;
+    
+    const emailSubject = emailTemplate?.subject 
+      ? replacePlaceholders(emailTemplate.subject)
+      : typeLabels[data.notificationType];
 
-      const { error } = await supabase.functions.invoke("send-email-webhook", {
-        body: {
-          barbershopId: data.barbershopId,
-          payload: {
-            notification_type: data.notificationType,
-            client_name: data.clientName,
-            client_email: data.clientEmail,
-            service_name: data.serviceName,
-            professional_name: data.professionalName,
-            booking_date: data.bookingDate,
-            booking_time: data.bookingTime,
-            barbershop_name: barbershopName,
-            price: data.price,
-            email_subject: emailSubject,
-            email_content: emailContent,
-          },
+    console.log(`[BookingNotifications] Calling EMAIL webhook for ${data.notificationType}`);
+
+    const { error } = await supabase.functions.invoke("send-email-webhook", {
+      body: {
+        barbershopId: data.barbershopId,
+        payload: {
+          notification_type: data.notificationType,
+          client_name: data.clientName,
+          client_email: data.clientEmail,
+          client_phone: data.clientPhone,
+          service_name: data.serviceName,
+          professional_name: data.professionalName,
+          booking_date: data.bookingDate,
+          booking_time: data.bookingTime,
+          barbershop_name: barbershopName,
+          price: data.price,
+          email_subject: emailSubject,
+          email_content: emailContent,
         },
-      });
+      },
+    });
 
-      if (error) {
-        errors.push(`Email: ${error.message}`);
-      } else {
-        emailSent = true;
-        console.log(`Email ${data.notificationType} notification sent to ${data.clientEmail}`);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      errors.push(`Email: ${message}`);
+    if (error) {
+      console.error(`[BookingNotifications] Email webhook error:`, error);
+      errors.push(`Email: ${error.message}`);
+    } else {
+      emailSent = true;
+      console.log(`[BookingNotifications] Email webhook called successfully`);
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[BookingNotifications] Email webhook exception:`, err);
+    errors.push(`Email: ${message}`);
   }
 
-  // Send WhatsApp notification - ALWAYS send for cancellation/reminder regardless of settings
-  const shouldSendWhatsApp = data.clientPhone && (
-    data.notificationType === "cancellation" || 
-    data.notificationType === "reminder" || 
-    settings?.whatsapp_enabled
-  );
-
-  if (shouldSendWhatsApp && data.clientPhone) {
-    try {
-      // Normalize phone number
-      let phone = data.clientPhone.replace(/\D/g, "");
-      if (!phone.startsWith("55")) {
-        phone = `55${phone}`;
-      }
-
-      console.log(`[BookingNotifications] Sending WhatsApp ${data.notificationType} to ${phone}`);
-
-      const whatsappContent = whatsappTemplate
-        ? replacePlaceholders(whatsappTemplate.content)
-        : `*${typeLabels[data.notificationType]}*\n\n` +
-          `👤 Cliente: ${data.clientName}\n` +
-          `✂️ Serviço: ${data.serviceName}\n` +
-          `👨‍💼 Profissional: ${data.professionalName}\n` +
-          `📅 Data: ${data.bookingDate}\n` +
-          `⏰ Horário: ${data.bookingTime}`;
-
-      const { error } = await supabase.functions.invoke("send-whatsapp-webhook", {
-        body: {
-          barbershopId: data.barbershopId,
-          instanceName,
-          payload: {
-            notification_type: data.notificationType,
-            client_name: data.clientName,
-            client_phone: phone,
-            service_name: data.serviceName,
-            professional_name: data.professionalName,
-            booking_date: data.bookingDate,
-            booking_time: data.bookingTime,
-            barbershop_name: barbershopName,
-            price: data.price,
-            message: whatsappContent,
-          },
-        },
-      });
-
-      if (error) {
-        console.error(`[BookingNotifications] WhatsApp error:`, error);
-        errors.push(`WhatsApp: ${error.message}`);
-      } else {
-        whatsappSent = true;
-        console.log(`[BookingNotifications] WhatsApp ${data.notificationType} sent to ${phone}`);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`[BookingNotifications] WhatsApp exception:`, err);
-      errors.push(`WhatsApp: ${message}`);
+  // ALWAYS send WhatsApp webhook notification
+  try {
+    // Normalize phone number if exists
+    let phone = data.clientPhone ? data.clientPhone.replace(/\D/g, "") : null;
+    if (phone && !phone.startsWith("55")) {
+      phone = `55${phone}`;
     }
-  } else if (data.clientPhone) {
-    console.log(`[BookingNotifications] WhatsApp skipped - no phone or disabled. Phone: ${data.clientPhone}, Type: ${data.notificationType}`);
+
+    console.log(`[BookingNotifications] Calling WHATSAPP webhook for ${data.notificationType}`);
+
+    const whatsappContent = whatsappTemplate
+      ? replacePlaceholders(whatsappTemplate.content)
+      : `*${typeLabels[data.notificationType]}*\n\n` +
+        `👤 Cliente: ${data.clientName}\n` +
+        `✂️ Serviço: ${data.serviceName}\n` +
+        `👨‍💼 Profissional: ${data.professionalName}\n` +
+        `📅 Data: ${data.bookingDate}\n` +
+        `⏰ Horário: ${data.bookingTime}`;
+
+    const { error } = await supabase.functions.invoke("send-whatsapp-webhook", {
+      body: {
+        barbershopId: data.barbershopId,
+        instanceName,
+        payload: {
+          notification_type: data.notificationType,
+          client_name: data.clientName,
+          client_email: data.clientEmail,
+          client_phone: phone,
+          service_name: data.serviceName,
+          professional_name: data.professionalName,
+          booking_date: data.bookingDate,
+          booking_time: data.bookingTime,
+          barbershop_name: barbershopName,
+          price: data.price,
+          message: whatsappContent,
+        },
+      },
+    });
+
+    if (error) {
+      console.error(`[BookingNotifications] WhatsApp webhook error:`, error);
+      errors.push(`WhatsApp: ${error.message}`);
+    } else {
+      whatsappSent = true;
+      console.log(`[BookingNotifications] WhatsApp webhook called successfully`);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[BookingNotifications] WhatsApp webhook exception:`, err);
+    errors.push(`WhatsApp: ${message}`);
   }
 
   return { emailSent, whatsappSent, errors };
