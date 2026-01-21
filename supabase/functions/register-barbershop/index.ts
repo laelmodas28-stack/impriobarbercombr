@@ -713,100 +713,80 @@ Para reagendar, entre em contato:
           login_page: `${BASE_URL}/b/${barbershopData.slug}/auth`
         };
 
-        // Email de boas-vindas para o dono da barbearia
-        const welcomeEmailHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 40px 0;">
-              <tr>
-                <td align="center">
-                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                    <!-- Header -->
-                    <tr>
-                      <td style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px; text-align: center;">
-                        <h1 style="color: #d4af37; margin: 0; font-size: 28px; font-weight: bold;">✂️ Império Barber</h1>
-                        <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">Sistema de Gestão para Barbearias</p>
-                      </td>
-                    </tr>
-                    
-                    <!-- Content -->
-                    <tr>
-                      <td style="padding: 40px;">
-                        <h2 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 24px;">Bem-vindo(a), ${owner.full_name}! 🎉</h2>
-                        
-                        <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                          Sua barbearia <strong style="color: #1a1a2e;">${barbershop.name}</strong> foi cadastrada com sucesso no Império Barber!
-                        </p>
-                        
-                        <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                          Agora você tem acesso a todas as ferramentas para gerenciar sua barbearia de forma profissional.
-                        </p>
-                        
-                        <!-- Access Box -->
-                        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
-                          <h3 style="color: #1a1a2e; margin: 0 0 15px 0; font-size: 18px;">📧 Dados de Acesso</h3>
-                          <p style="color: #555555; margin: 0 0 8px 0;"><strong>Email:</strong> ${owner.email}</p>
-                          <p style="color: #888888; font-size: 14px; margin: 0;">Use a senha que você cadastrou para fazer login.</p>
-                        </div>
-                        
-                        <!-- Links -->
-                        <h3 style="color: #1a1a2e; margin: 0 0 15px 0; font-size: 18px;">🔗 Seus Links de Acesso</h3>
-                        
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
-                          <tr>
-                            <td style="padding: 10px 0;">
-                              <a href="${accessUrls.login_page}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #1a1a2e; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">Fazer Login</a>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 10px 0;">
-                              <a href="${accessUrls.admin_panel}" style="color: #d4af37; text-decoration: none; font-size: 14px;">🔧 Painel Administrativo: ${accessUrls.admin_panel}</a>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 10px 0;">
-                              <a href="${accessUrls.barbershop_page}" style="color: #d4af37; text-decoration: none; font-size: 14px;">🏠 Página da Barbearia: ${accessUrls.barbershop_page}</a>
-                            </td>
-                          </tr>
-                        </table>
-                        
-                        <!-- Instructions -->
-                        <div style="background-color: #fff8e1; border-left: 4px solid #d4af37; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
-                          <h4 style="color: #1a1a2e; margin: 0 0 10px 0;">💡 Próximos Passos</h4>
-                          <ol style="color: #555555; margin: 0; padding-left: 20px; line-height: 1.8;">
-                            <li>Acesse o painel administrativo</li>
-                            <li>Configure os serviços oferecidos</li>
-                            <li>Cadastre seus profissionais</li>
-                            <li>Personalize sua barbearia</li>
-                            <li>Comece a receber agendamentos!</li>
-                          </ol>
-                        </div>
-                      </td>
-                    </tr>
-                    
-                    <!-- Footer -->
-                    <tr>
-                      <td style="background-color: #1a1a2e; padding: 25px; text-align: center;">
-                        <p style="color: #888888; font-size: 14px; margin: 0;">
-                          © 2024 Império Barber. Todos os direitos reservados.
-                        </p>
-                        <p style="color: #666666; font-size: 12px; margin: 10px 0 0 0;">
-                          Dúvidas? Entre em contato conosco.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </body>
-          </html>
-        `;
+        // Email de boas-vindas para o dono da barbearia (padrão consistente com outros templates)
+        const loginUrl = `${BASE_URL}/b/${barbershopData.slug}/auth`;
+        
+        const welcomeEmailHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1a2e; border-radius: 16px; overflow: hidden;">
+          <!-- Title -->
+          <tr>
+            <td align="center" style="padding: 40px 40px 20px;">
+              <h1 style="color: #d4af37; margin: 0; font-size: 28px;">🎉 Bem-vindo ao Império Barber!</h1>
+            </td>
+          </tr>
+          
+          <!-- Greeting -->
+          <tr>
+            <td align="center" style="padding: 10px 40px;">
+              <p style="color: #ffffff; font-size: 18px; margin: 0;">Olá, <strong>${owner.full_name}</strong>!</p>
+              <p style="color: #ccc; font-size: 14px; margin: 15px 0 0;">Sua barbearia foi cadastrada com sucesso.</p>
+            </td>
+          </tr>
+          
+          <!-- Barbershop Info Card -->
+          <tr>
+            <td style="padding: 25px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #252545; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 20px; border-bottom: 1px solid #3a3a5a;">
+                    <span style="color: #888; font-size: 12px; text-transform: uppercase;">Barbearia</span><br/>
+                    <span style="color: #d4af37; font-size: 20px; font-weight: bold;">${barbershop.name}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px;">
+                    <span style="color: #888; font-size: 12px; text-transform: uppercase;">Seu Email de Acesso</span><br/>
+                    <span style="color: #fff; font-size: 16px;">${owner.email}</span>
+                    <p style="color: #888; font-size: 12px; margin: 8px 0 0;">Use a senha cadastrada para fazer login.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- CTA Button -->
+          <tr>
+            <td align="center" style="padding: 10px 40px 40px;">
+              <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #1a1a2e; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Acessar Meu Painel
+              </a>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="600" cellpadding="0" cellspacing="0" style="margin-top: 20px;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <p style="color: #888; font-size: 12px; margin: 0;">Enviado por <strong>ImperioApp</strong></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
         // Payload para o webhook de email
         const emailPayload = {
