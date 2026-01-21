@@ -22,6 +22,9 @@ interface BookingNotificationData {
  * - Confirmation (new booking)
  * - Cancellation (booking cancelled)
  * - Reminder (upcoming booking)
+ * 
+ * IMPORTANT: Both webhooks are ALWAYS triggered for cancellation and reminder
+ * regardless of individual channel settings.
  */
 export async function sendBookingNotifications(data: BookingNotificationData): Promise<{
   emailSent: boolean;
@@ -29,6 +32,12 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
   errors: string[];
 }> {
   const errors: string[] = [];
+  
+  console.log(`[BookingNotifications] Sending ${data.notificationType} notification`, {
+    bookingId: data.bookingId,
+    clientEmail: data.clientEmail,
+    clientPhone: data.clientPhone,
+  });
   let emailSent = false;
   let whatsappSent = false;
 
@@ -127,14 +136,22 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
     }
   }
 
-  // Send WhatsApp notification
-  if (data.clientPhone && settings?.whatsapp_enabled) {
+  // Send WhatsApp notification - ALWAYS send for cancellation/reminder regardless of settings
+  const shouldSendWhatsApp = data.clientPhone && (
+    data.notificationType === "cancellation" || 
+    data.notificationType === "reminder" || 
+    settings?.whatsapp_enabled
+  );
+
+  if (shouldSendWhatsApp && data.clientPhone) {
     try {
       // Normalize phone number
       let phone = data.clientPhone.replace(/\D/g, "");
       if (!phone.startsWith("55")) {
         phone = `55${phone}`;
       }
+
+      console.log(`[BookingNotifications] Sending WhatsApp ${data.notificationType} to ${phone}`);
 
       const whatsappContent = whatsappTemplate
         ? replacePlaceholders(whatsappTemplate.content)
@@ -165,15 +182,19 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
       });
 
       if (error) {
+        console.error(`[BookingNotifications] WhatsApp error:`, error);
         errors.push(`WhatsApp: ${error.message}`);
       } else {
         whatsappSent = true;
-        console.log(`WhatsApp ${data.notificationType} notification sent to ${phone}`);
+        console.log(`[BookingNotifications] WhatsApp ${data.notificationType} sent to ${phone}`);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[BookingNotifications] WhatsApp exception:`, err);
       errors.push(`WhatsApp: ${message}`);
     }
+  } else if (data.clientPhone) {
+    console.log(`[BookingNotifications] WhatsApp skipped - no phone or disabled. Phone: ${data.clientPhone}, Type: ${data.notificationType}`);
   }
 
   return { emailSent, whatsappSent, errors };
