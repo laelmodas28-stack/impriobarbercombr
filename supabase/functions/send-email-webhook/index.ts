@@ -44,7 +44,7 @@ serve(async (req: Request) => {
     
     // Extract email and content for logging
     recipientEmail = (payload?.client_email as string) || (payload?.to as string) || "unknown";
-    messageContent = (payload?.subject as string) || "Email notification";
+    messageContent = (payload?.email_subject as string) || (payload?.subject as string) || "Email notification";
     
     if (!barbershopId || !payload) {
       return new Response(
@@ -53,7 +53,7 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Sending email notification${isTest ? " (TEST)" : ""} via n8n webhook`);
+    console.log(`Sending email notification${isTest ? " (TEST)" : ""} via n8n webhook to: ${recipientEmail}`);
 
     // Send to n8n webhook
     const webhookRes = await fetch(N8N_WEBHOOK_URL, {
@@ -69,53 +69,83 @@ serve(async (req: Request) => {
       }),
     });
 
+    // Capture response text and try to parse as JSON
+    const responseText = await webhookRes.text();
+    let webhookData: Record<string, unknown> = {};
+    try {
+      webhookData = JSON.parse(responseText);
+    } catch {
+      webhookData = { raw_response: responseText };
+    }
+
+    console.log("n8n webhook response status:", webhookRes.status);
+    console.log("n8n webhook response data:", webhookData);
+
     if (!webhookRes.ok) {
-      const errorText = await webhookRes.text();
-      console.error("Error calling n8n webhook:", errorText);
+      console.error("Error calling n8n webhook:", responseText);
       
-      // Log failed notification
+      // Log failed notification with webhook response
       if (!isTest && barbershopId) {
         await supabase.from("notification_logs").insert({
           barbershop_id: barbershopId,
           channel: "email",
           recipient_contact: recipientEmail || "unknown",
           status: "failed",
-          content: messageContent,
-          error_message: errorText,
+          content: JSON.stringify({
+            subject: messageContent,
+            webhook_status: webhookRes.status,
+            webhook_response: webhookData,
+          }),
+          error_message: `Webhook error: ${webhookRes.status} - ${responseText.substring(0, 500)}`,
           sent_at: new Date().toISOString(),
         });
-        console.log("Notification failure logged");
+        console.log("Notification failure logged with webhook response");
       }
       
       return new Response(
-        JSON.stringify({ success: false, message: "Erro ao enviar email via webhook" }),
+        JSON.stringify({ success: false, message: "Erro ao enviar email via webhook", webhookStatus: webhookRes.status }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const webhookData = await webhookRes.json().catch(() => ({}));
-    console.log("n8n webhook response:", webhookData);
+    // Determine delivery status from webhook response
+    // n8n typically returns { message: "Workflow was started" } or similar
+    const deliveryStatus = webhookData?.success === true ? "delivered" : "sent";
+    const workflowMessage = (webhookData?.message as string) || "Workflow started";
 
-    // Log successful notification
+    // Log successful notification with webhook response details
     if (!isTest && barbershopId) {
       const { error: logError } = await supabase.from("notification_logs").insert({
         barbershop_id: barbershopId,
         channel: "email",
         recipient_contact: recipientEmail || "unknown",
-        status: "sent",
-        content: messageContent,
+        status: deliveryStatus,
+        content: JSON.stringify({
+          subject: messageContent,
+          client_name: payload?.client_name,
+          service_name: payload?.service_name,
+          booking_date: payload?.booking_date,
+          booking_time: payload?.booking_time,
+          webhook_status: webhookRes.status,
+          webhook_response: workflowMessage,
+        }),
         sent_at: new Date().toISOString(),
       });
       
       if (logError) {
         console.error("Error logging notification:", logError);
       } else {
-        console.log("Notification logged successfully");
+        console.log("Notification logged successfully with status:", deliveryStatus);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Email enviado para o webhook" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Email enviado para o webhook",
+        webhookStatus: webhookRes.status,
+        webhookResponse: workflowMessage,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -130,7 +160,10 @@ serve(async (req: Request) => {
           channel: "email",
           recipient_contact: recipientEmail || "unknown",
           status: "failed",
-          content: messageContent || "Email notification",
+          content: JSON.stringify({
+            subject: messageContent || "Email notification",
+            error_type: "exception",
+          }),
           error_message: error instanceof Error ? error.message : "Unknown error",
           sent_at: new Date().toISOString(),
         });
