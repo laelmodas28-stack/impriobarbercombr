@@ -114,15 +114,54 @@ export function BarbershopSettingsPage() {
     updateMutation.mutate({ ...formData, business_hours: businessHours });
   };
 
-  const handleLogoUpload = (file: File) => {
-    // For now just create a local URL - in production this would upload to storage
-    const url = URL.createObjectURL(file);
-    setFormData(prev => ({ ...prev, logo_url: url }));
+  const handleLogoUpload = async (file: File) => {
+    if (!barbershop?.id) return;
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${barbershop.id}/logo-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('barbershop-assets')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('barbershop-assets')
+        .getPublicUrl(fileName);
+      
+      setFormData(prev => ({ ...prev, logo_url: publicUrl }));
+      toast.success("Logo enviado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao enviar logo:", error);
+      toast.error(error.message || "Erro ao enviar logo");
+    }
   };
 
-  const handleCoverUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setFormData(prev => ({ ...prev, cover_url: url }));
+  const handleCoverUpload = async (file: File) => {
+    if (!barbershop?.id) return;
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${barbershop.id}/cover-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('barbershop-assets')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('barbershop-assets')
+        .getPublicUrl(fileName);
+      
+      setFormData(prev => ({ ...prev, cover_url: publicUrl }));
+      toast.success("Imagem de capa enviada com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao enviar capa:", error);
+      toast.error(error.message || "Erro ao enviar capa");
+    }
   };
 
   const handleHoursChange = (day: string, field: "open" | "close" | "enabled", value: string | boolean) => {
