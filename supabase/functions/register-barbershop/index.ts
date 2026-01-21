@@ -176,10 +176,42 @@ serve(async (req) => {
     }
 
     // 3. Create barbershop
+    // Generate slug from barbershop name
+    const generateSlug = (name: string): string => {
+      return name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Remove consecutive hyphens
+        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    };
+
+    let baseSlug = generateSlug(barbershop.name);
+    let slug = baseSlug;
+    let slugSuffix = 1;
+
+    // Check for slug uniqueness
+    while (true) {
+      const { data: existingSlug } = await supabaseAdmin
+        .from('barbershops')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (!existingSlug) break;
+      slug = `${baseSlug}-${slugSuffix}`;
+      slugSuffix++;
+    }
+
+    console.log('Generated slug:', slug);
+
     const { data: barbershopData, error: barbershopError } = await supabaseAdmin
       .from('barbershops')
       .insert({
         name: barbershop.name,
+        slug: slug,
         address: barbershop.address,
         description: barbershop.description,
         phone: owner.phone,
