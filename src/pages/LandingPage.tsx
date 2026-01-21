@@ -777,7 +777,7 @@ const LandingPage = () => {
 
             {billingPeriod !== 'monthly' && (
               <p className="text-sm text-primary mt-4 font-medium">
-                🎉 Você está economizando {getDiscount()}% com o plano {billingPeriod === 'quarterly' ? 'trimestral' : 'anual'}!
+                Você está economizando {getDiscount()}% com o plano {billingPeriod === 'quarterly' ? 'trimestral' : 'anual'}
               </p>
             )}
           </div>
@@ -796,13 +796,6 @@ const LandingPage = () => {
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-primary text-primary-foreground shadow-lg">
                       Mais Popular
-                    </Badge>
-                  </div>
-                )}
-                {billingPeriod === 'yearly' && !plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge variant="outline" className="bg-background border-green-500/50 text-green-600">
-                      Mais Vantajoso
                     </Badge>
                   </div>
                 )}
