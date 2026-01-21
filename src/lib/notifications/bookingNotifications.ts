@@ -83,16 +83,22 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
   const emailTemplate = templates?.find((t) => t.type === "email");
   const whatsappTemplate = templates?.find((t) => t.type === "whatsapp");
 
-  // Replace placeholders in template
+  // Replace placeholders in template (price format already without R$ prefix)
+  const formatPrice = (price?: number) => price ? price.toFixed(2).replace(".", ",") : "—";
+  
   const replacePlaceholders = (content: string): string => {
     return content
       .replace(/\{\{cliente_nome\}\}/g, data.clientName)
       .replace(/\{\{servico_nome\}\}/g, data.serviceName)
       .replace(/\{\{profissional_nome\}\}/g, data.professionalName)
       .replace(/\{\{data_agendamento\}\}/g, data.bookingDate)
+      .replace(/\{\{hora_agendamento\}\}/g, data.bookingTime)
       .replace(/\{\{horario_agendamento\}\}/g, data.bookingTime)
       .replace(/\{\{barbearia_nome\}\}/g, barbershopName)
-      .replace(/\{\{valor\}\}/g, data.price ? `R$ ${data.price.toFixed(2)}` : "—");
+      .replace(/\{\{barbearia_endereco\}\}/g, barbershopAddress)
+      .replace(/\{\{servico_preco\}\}/g, formatPrice(data.price))
+      .replace(/\{\{valor\}\}/g, data.price ? `R$ ${formatPrice(data.price)}` : "—")
+      .replace(/\{\{barbearia_telefone\}\}/g, "");
   };
 
   // ALWAYS send Email webhook notification

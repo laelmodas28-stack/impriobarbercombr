@@ -455,6 +455,7 @@ export function NewAppointmentModal({
         const notificationParams = {
           barbershopId,
           barbershopName: barbershop?.name || "",
+          barbershopAddress: barbershop?.address || "",
           clientName: selectedClientData?.profile?.name || "Cliente",
           clientPhone: selectedClientData?.profile?.phone || "",
           serviceName: selectedServiceData?.name || "",
