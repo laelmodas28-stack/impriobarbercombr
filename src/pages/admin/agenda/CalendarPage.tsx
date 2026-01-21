@@ -76,14 +76,15 @@ export function CalendarPage() {
       const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
       const monthEnd = format(endOfMonth(currentMonth), "yyyy-MM-dd");
       
-      const { data, error } = await supabase
+      // Get bookings without the profile join
+      const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select(`
           id,
           booking_date,
           booking_time,
           status,
-          client:profiles!bookings_client_id_fkey (name),
+          client_id,
           service:services (name),
           professional:professionals (name)
         `)
@@ -93,7 +94,27 @@ export function CalendarPage() {
         .order("booking_time", { ascending: true });
       
       if (error) throw error;
-      return data as unknown as Booking[];
+      
+      // Get client names for each booking
+      const bookingsWithClients = await Promise.all(
+        (bookingsData || []).map(async (booking) => {
+          let clientName = null;
+          if (booking.client_id) {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("name")
+              .eq("user_id", booking.client_id)
+              .single();
+            clientName = profileData?.name || null;
+          }
+          return {
+            ...booking,
+            client: { name: clientName },
+          };
+        })
+      );
+      
+      return bookingsWithClients as unknown as Booking[];
     },
     enabled: !!barbershop?.id,
   });

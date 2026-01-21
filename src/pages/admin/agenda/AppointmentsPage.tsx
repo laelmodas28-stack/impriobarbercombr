@@ -115,10 +115,7 @@ export function AppointmentsPage() {
           price,
           notes,
           created_at,
-          client:profiles!bookings_client_id_fkey (
-            name,
-            phone
-          ),
+          client_id,
           service:services (
             name,
             duration_minutes
@@ -147,9 +144,29 @@ export function AppointmentsPage() {
         query = query.lt("booking_date", today);
       }
       
-      const { data, error } = await query.limit(100);
+      const { data: bookingsData, error } = await query.limit(100);
       if (error) throw error;
-      return data as unknown as Booking[];
+      
+      // Get client names for each booking
+      const bookingsWithClients = await Promise.all(
+        (bookingsData || []).map(async (booking: any) => {
+          let client = null;
+          if (booking.client_id) {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("name, phone")
+              .eq("user_id", booking.client_id)
+              .single();
+            client = profileData;
+          }
+          return {
+            ...booking,
+            client,
+          };
+        })
+      );
+      
+      return bookingsWithClients as unknown as Booking[];
     },
     enabled: !!barbershop?.id,
   });
