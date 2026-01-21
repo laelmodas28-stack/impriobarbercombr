@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,14 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  let barbershopId: string | undefined;
+  let phone: string | undefined;
+  let message: string | undefined;
+
   try {
     // Validate environment variable
     if (!N8N_WHATSAPP_WEBHOOK_URL) {
@@ -30,7 +39,11 @@ serve(async (req: Request) => {
       );
     }
 
-    const { barbershopId, phone, message, isTest }: RequestBody = await req.json();
+    const body: RequestBody = await req.json();
+    barbershopId = body.barbershopId;
+    phone = body.phone;
+    message = body.message;
+    const isTest = body.isTest;
     
     if (!barbershopId || !message) {
       return new Response(
@@ -59,6 +72,21 @@ serve(async (req: Request) => {
     if (!webhookRes.ok) {
       const errorText = await webhookRes.text();
       console.error("Error calling n8n webhook:", errorText);
+      
+      // Log failed notification
+      if (!isTest && barbershopId) {
+        await supabase.from("notification_logs").insert({
+          barbershop_id: barbershopId,
+          channel: "whatsapp",
+          recipient_contact: phone || "unknown",
+          status: "failed",
+          content: message,
+          error_message: errorText,
+          sent_at: new Date().toISOString(),
+        });
+        console.log("Notification failure logged");
+      }
+      
       return new Response(
         JSON.stringify({ success: false, message: "Erro ao enviar mensagem via webhook" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -68,6 +96,24 @@ serve(async (req: Request) => {
     const webhookData = await webhookRes.json().catch(() => ({}));
     console.log("n8n webhook response:", webhookData);
 
+    // Log successful notification
+    if (!isTest && barbershopId) {
+      const { error: logError } = await supabase.from("notification_logs").insert({
+        barbershop_id: barbershopId,
+        channel: "whatsapp",
+        recipient_contact: phone || "unknown",
+        status: "sent",
+        content: message,
+        sent_at: new Date().toISOString(),
+      });
+      
+      if (logError) {
+        console.error("Error logging notification:", logError);
+      } else {
+        console.log("Notification logged successfully");
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: "Mensagem enviada para o webhook" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -75,6 +121,24 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error("Error in send-whatsapp-webhook:", error);
+    
+    // Try to log the error
+    if (barbershopId) {
+      try {
+        await supabase.from("notification_logs").insert({
+          barbershop_id: barbershopId,
+          channel: "whatsapp",
+          recipient_contact: phone || "unknown",
+          status: "failed",
+          content: message || "WhatsApp message",
+          error_message: error instanceof Error ? error.message : "Unknown error",
+          sent_at: new Date().toISOString(),
+        });
+      } catch (logErr) {
+        console.error("Failed to log notification error:", logErr);
+      }
+    }
+    
     return new Response(
       JSON.stringify({ success: false, message: "Erro interno" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
