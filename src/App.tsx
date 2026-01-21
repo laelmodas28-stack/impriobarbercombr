@@ -85,6 +85,14 @@ import PreferencesPage from "./pages/admin/settings/PreferencesPage";
 import TutorialsPage from "./pages/admin/help/TutorialsPage";
 import SupportPage from "./pages/admin/help/SupportPage";
 
+// Super Admin
+import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
+import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
+import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
+import BarbershopsPage from "./pages/superadmin/BarbershopsPage";
+import SuperAdminSubscriptionsPage from "./pages/superadmin/SubscriptionsPage";
+import LogsPage from "./pages/superadmin/LogsPage";
+
 const queryClient = new QueryClient();
 
 class ErrorBoundary extends React.Component<
@@ -220,6 +228,16 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/registro-barbeiro" element={<RegisterBarbershop />} />
+
+                {/* Super Admin Routes */}
+                <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+                <Route path="/superadmin" element={<SuperAdminLayout />}>
+                  <Route index element={<SuperAdminDashboard />} />
+                  <Route path="barbershops" element={<BarbershopsPage />} />
+                  <Route path="subscriptions" element={<SuperAdminSubscriptionsPage />} />
+                  <Route path="logs" element={<LogsPage />} />
+                </Route>
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AuthProvider>
