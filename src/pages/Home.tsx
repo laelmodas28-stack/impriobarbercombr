@@ -117,7 +117,6 @@ const Home = () => {
       <section className="relative py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent" />
         <div className="container mx-auto text-center relative z-10">
-          <Crown className="w-16 h-16 mx-auto mb-6 text-primary animate-pulse" />
           <div className="flex items-center justify-center gap-3 mb-6">
             <h1 className="text-5xl md:text-6xl font-bold">
               Bem-vindo ao <span className="text-primary">{barbershop?.name || "Barbearia"}</span>
