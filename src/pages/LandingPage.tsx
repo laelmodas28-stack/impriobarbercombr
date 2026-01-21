@@ -96,7 +96,7 @@ const LandingPage = () => {
     "Notificações WhatsApp e e-mail",
     "Agendamentos ilimitados",
     "Sistema 100% personalizado",
-    "Suporte via chat",
+    "Suporte via WhatsApp",
   ];
 
   const plans = [
