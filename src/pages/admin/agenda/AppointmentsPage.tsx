@@ -41,6 +41,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sendNotificationForBooking } from "@/lib/notifications/bookingNotifications";
 
 interface Booking {
   id: string;
@@ -184,6 +185,16 @@ export function AppointmentsPage() {
       
       toast.success(`Status atualizado para ${STATUS_CONFIG[newStatus as keyof typeof STATUS_CONFIG]?.label || newStatus}`);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+
+      // Send cancellation notification via webhooks
+      if (newStatus === "cancelled") {
+        const result = await sendNotificationForBooking(bookingId, "cancellation");
+        if (result.success) {
+          toast.success("Notificação de cancelamento enviada");
+        } else if (result.errors.length > 0) {
+          console.error("Notification errors:", result.errors);
+        }
+      }
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Erro ao atualizar status");

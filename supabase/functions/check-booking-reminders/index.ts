@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const N8N_WEBHOOK_URL = Deno.env.get("N8N_WEBHOOK_URL") || "";
+const N8N_WHATSAPP_WEBHOOK_URL = Deno.env.get("N8N_WHATSAPP_WEBHOOK_URL") || "";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,40 +21,47 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Checking for upcoming bookings to send reminders...");
 
-    // Buscar configurações de notificação de todas as barbearias
-    const { data: notificationSettings, error: settingsError } = await supabase
-      .from("notification_settings")
-      .select("*")
-      .eq("enabled", true);
+    // Fetch all barbershop settings with reminders enabled
+    const { data: allSettings, error: settingsError } = await supabase
+      .from("barbershop_settings")
+      .select("*, barbershop:barbershops(id, name, slug)")
+      .eq("send_booking_reminders", true);
 
     if (settingsError) throw settingsError;
 
-    console.log(`Found ${notificationSettings?.length || 0} barbershops with notifications enabled`);
+    console.log(`Found ${allSettings?.length || 0} barbershops with reminders enabled`);
 
-    const notifications = [];
+    const notifications: any[] = [];
 
-    for (const settings of notificationSettings || []) {
-      const reminderMinutes = settings.reminder_minutes || 30;
+    for (const settings of allSettings || []) {
+      const reminderHours = settings.reminder_hours_before || 2;
+      const barbershopId = settings.barbershop_id;
+      const barbershopName = settings.barbershop?.name || "Barbearia";
+      const instanceName = settings.barbershop?.slug || `barbershop-${barbershopId.substring(0, 8)}`;
       
-      // Calcular o horário alvo (now + reminder_minutes)
+      // Calculate the target time window for reminders
       const now = new Date();
-      const targetTime = new Date(now.getTime() + reminderMinutes * 60000);
+      const targetTime = new Date(now.getTime() + reminderHours * 60 * 60000);
       
-      // Criar janela de tempo (5 minutos antes e depois do target)
-      const windowStart = new Date(targetTime.getTime() - 5 * 60000);
-      const windowEnd = new Date(targetTime.getTime() + 5 * 60000);
+      // Create time window (15 minutes before and after target)
+      const windowStart = new Date(targetTime.getTime() - 15 * 60000);
+      const windowEnd = new Date(targetTime.getTime() + 15 * 60000);
 
-      // Buscar agendamentos que acontecerão dentro da janela de tempo
+      console.log(`Checking reminders for barbershop ${barbershopId}, target: ${targetTime.toISOString()}`);
+
+      // Fetch bookings that are within the reminder window
       const { data: bookings, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
-          *,
-          client:profiles!bookings_client_id_fkey(full_name),
+          id,
+          booking_date,
+          booking_time,
+          price,
+          client_id,
           service:services(name),
-          professional:professionals(name),
-          barbershop:barbershops(name)
+          professional:professionals(name)
         `)
-        .eq("barbershop_id", settings.barbershop_id)
+        .eq("barbershop_id", barbershopId)
         .in("status", ["pending", "confirmed"])
         .gte("booking_date", now.toISOString().split('T')[0])
         .lte("booking_date", targetTime.toISOString().split('T')[0]);
@@ -61,73 +71,177 @@ const handler = async (req: Request): Promise<Response> => {
         continue;
       }
 
-      // Filtrar bookings que estão na janela de tempo correta
+      // Filter bookings within the exact time window
       const relevantBookings = (bookings || []).filter(booking => {
         const bookingDateTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
         return bookingDateTime >= windowStart && bookingDateTime <= windowEnd;
       });
 
-      console.log(`Found ${relevantBookings.length} bookings for barbershop ${settings.barbershop_id}`);
+      console.log(`Found ${relevantBookings.length} bookings in reminder window for ${barbershopId}`);
 
       for (const booking of relevantBookings) {
-        // Verificar se já enviamos lembrete para este agendamento
-        const { data: alreadySent } = await supabase
-          .from("booking_reminders_sent")
+        // Check if reminder was already sent
+        const { data: existingLog } = await supabase
+          .from("notification_logs")
           .select("id")
-          .eq("booking_id", booking.id)
-          .single();
+          .eq("barbershop_id", barbershopId)
+          .eq("channel", "email")
+          .ilike("content", `%"booking_id":"${booking.id}"%`)
+          .ilike("content", `%"notification_type":"reminder"%`)
+          .limit(1);
 
-        if (alreadySent) {
+        if (existingLog && existingLog.length > 0) {
           console.log(`Reminder already sent for booking ${booking.id}`);
           continue;
         }
 
-        // Buscar email do cliente
-        const { data: auth } = await supabase.auth.admin.getUserById(booking.client_id);
-        
-        if (!auth?.user?.email) {
-          console.log(`No email found for client ${booking.client_id}`);
-          continue;
+        // Fetch client profile
+        let clientData = { name: "Cliente", email: null as string | null, phone: null as string | null };
+        if (booking.client_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, email, phone")
+            .eq("user_id", booking.client_id)
+            .single();
+          
+          if (profile) {
+            clientData = {
+              name: profile.name || "Cliente",
+              email: profile.email,
+              phone: profile.phone,
+            };
+          }
         }
 
-        try {
-          // Enviar notificação
-          await supabase.functions.invoke("send-booking-notification", {
-            body: {
-              bookingId: booking.id,
-              clientEmail: auth.user.email,
-              clientName: booking.client?.full_name || "Cliente",
-              clientPhone: auth.user.phone,
-              serviceName: booking.service?.name || "Serviço",
-              professionalName: booking.professional?.name || "Profissional",
-              bookingDate: booking.booking_date,
-              bookingTime: booking.booking_time,
-              barbershopId: booking.barbershop_id,
-              isReminder: true,
-            },
-          });
+        const serviceName = (booking.service as any)?.name || "Serviço";
+        const professionalName = (booking.professional as any)?.name || "Profissional";
 
-          // Marcar como enviado
-          await supabase
-            .from("booking_reminders_sent")
-            .insert({ booking_id: booking.id });
+        // Send Email reminder via webhook
+        if (clientData.email && N8N_WEBHOOK_URL) {
+          try {
+            const emailPayload = {
+              notification_type: "reminder",
+              booking_id: booking.id,
+              client_name: clientData.name,
+              client_email: clientData.email,
+              service_name: serviceName,
+              professional_name: professionalName,
+              booking_date: booking.booking_date,
+              booking_time: booking.booking_time,
+              barbershop_name: barbershopName,
+              price: booking.price,
+              email_subject: `Lembrete: Seu agendamento é hoje às ${booking.booking_time.substring(0, 5)}`,
+              timestamp: new Date().toISOString(),
+            };
 
-          notifications.push({
-            booking_id: booking.id,
-            client: auth.user.email,
-            time: `${booking.booking_date} ${booking.booking_time}`,
-            status: "sent",
-          });
+            const emailRes = await fetch(N8N_WEBHOOK_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(emailPayload),
+            });
 
-          console.log(`Reminder sent for booking ${booking.id} to ${auth.user.email}`);
-        } catch (notifError: any) {
-          console.error(`Error sending reminder for booking ${booking.id}:`, notifError);
-          notifications.push({
-            booking_id: booking.id,
-            client: auth.user.email,
-            status: "error",
-            error: notifError?.message || "Unknown error",
-          });
+            const emailResponseText = await emailRes.text();
+            
+            // Log email notification
+            await supabase.from("notification_logs").insert({
+              barbershop_id: barbershopId,
+              channel: "email",
+              recipient_contact: clientData.email,
+              status: emailRes.ok ? "sent" : "failed",
+              content: JSON.stringify({
+                notification_type: "reminder",
+                booking_id: booking.id,
+                subject: emailPayload.email_subject,
+                webhook_status: emailRes.status,
+                webhook_response: emailResponseText.substring(0, 500),
+              }),
+              error_message: emailRes.ok ? null : `Webhook error: ${emailRes.status}`,
+              sent_at: new Date().toISOString(),
+            });
+
+            if (emailRes.ok) {
+              console.log(`Email reminder sent for booking ${booking.id} to ${clientData.email}`);
+              notifications.push({
+                booking_id: booking.id,
+                channel: "email",
+                recipient: clientData.email,
+                status: "sent",
+              });
+            }
+          } catch (emailErr: any) {
+            console.error(`Error sending email reminder:`, emailErr);
+          }
+        }
+
+        // Send WhatsApp reminder via webhook
+        if (clientData.phone && settings.whatsapp_enabled && N8N_WHATSAPP_WEBHOOK_URL) {
+          try {
+            // Normalize phone number
+            let phone = clientData.phone.replace(/\D/g, "");
+            if (!phone.startsWith("55")) {
+              phone = `55${phone}`;
+            }
+
+            const whatsappPayload = {
+              notification_type: "reminder",
+              booking_id: booking.id,
+              instanceName,
+              client_name: clientData.name,
+              client_phone: phone,
+              service_name: serviceName,
+              professional_name: professionalName,
+              booking_date: booking.booking_date,
+              booking_time: booking.booking_time,
+              barbershop_name: barbershopName,
+              price: booking.price,
+              message: `*🔔 Lembrete de Agendamento*\n\n` +
+                `Olá ${clientData.name}!\n\n` +
+                `Este é um lembrete do seu agendamento:\n\n` +
+                `✂️ Serviço: ${serviceName}\n` +
+                `👨‍💼 Profissional: ${professionalName}\n` +
+                `📅 Data: ${booking.booking_date}\n` +
+                `⏰ Horário: ${booking.booking_time.substring(0, 5)}\n\n` +
+                `Te esperamos! 💈`,
+              timestamp: new Date().toISOString(),
+            };
+
+            const whatsappRes = await fetch(N8N_WHATSAPP_WEBHOOK_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(whatsappPayload),
+            });
+
+            const whatsappResponseText = await whatsappRes.text();
+
+            // Log WhatsApp notification
+            await supabase.from("notification_logs").insert({
+              barbershop_id: barbershopId,
+              channel: "whatsapp",
+              recipient_contact: phone,
+              status: whatsappRes.ok ? "sent" : "failed",
+              content: JSON.stringify({
+                notification_type: "reminder",
+                booking_id: booking.id,
+                instance_name: instanceName,
+                webhook_status: whatsappRes.status,
+                webhook_response: whatsappResponseText.substring(0, 500),
+              }),
+              error_message: whatsappRes.ok ? null : `Webhook error: ${whatsappRes.status}`,
+              sent_at: new Date().toISOString(),
+            });
+
+            if (whatsappRes.ok) {
+              console.log(`WhatsApp reminder sent for booking ${booking.id} to ${phone}`);
+              notifications.push({
+                booking_id: booking.id,
+                channel: "whatsapp",
+                recipient: phone,
+                status: "sent",
+              });
+            }
+          } catch (whatsappErr: any) {
+            console.error(`Error sending WhatsApp reminder:`, whatsappErr);
+          }
         }
       }
     }
