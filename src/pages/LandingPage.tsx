@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -984,6 +985,17 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/5511969332465?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20Imp%C3%A9rio%20App."
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg transition-all hover:scale-110"
+        aria-label="Fale conosco no WhatsApp"
+      >
+        <FaWhatsapp className="w-7 h-7" />
+      </a>
     </div>
   );
 };

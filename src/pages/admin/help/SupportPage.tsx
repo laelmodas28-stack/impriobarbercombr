@@ -59,13 +59,17 @@ const FAQ_ITEMS: FAQItem[] = [
   },
 ];
 
+const WHATSAPP_NUMBER = "5511969332465";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Olá! Preciso de ajuda com o Império App.")}`;
+
 const CONTACT_OPTIONS = [
   {
     icon: MessageCircle,
-    title: "Chat ao Vivo",
-    description: "Fale conosco em tempo real",
-    action: "Iniciar Chat",
+    title: "WhatsApp",
+    description: "(11) 96933-2465",
+    action: "Falar no WhatsApp",
     available: true,
+    href: WHATSAPP_URL,
   },
   {
     icon: Mail,
@@ -73,13 +77,15 @@ const CONTACT_OPTIONS = [
     description: "suporte@imperio.app",
     action: "Enviar E-mail",
     available: true,
+    href: "mailto:suporte@imperio.app",
   },
   {
     icon: Phone,
     title: "Telefone",
-    description: "(11) 99999-9999",
+    description: "(11) 96933-2465",
     action: "Ligar Agora",
     available: true,
+    href: "tel:+5511969332465",
   },
 ];
 
@@ -137,9 +143,11 @@ export function SupportPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold">{option.title}</h3>
                     <p className="text-sm text-muted-foreground mb-3">{option.description}</p>
-                    <Button variant="outline" size="sm" className="w-full">
-                      {option.action}
-                      <ExternalLink className="w-3 h-3 ml-2" />
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a href={option.href} target="_blank" rel="noopener noreferrer">
+                        {option.action}
+                        <ExternalLink className="w-3 h-3 ml-2" />
+                      </a>
                     </Button>
                   </div>
                 </div>
