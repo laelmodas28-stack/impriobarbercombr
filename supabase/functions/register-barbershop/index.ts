@@ -1,11 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const ADMIN_EMAIL = "imperiobarberdev@gmail.com";
-const BASE_URL = "https://impriobarbercombr.lovable.app";
+const BASE_URL = "https://imperioapp.lovable.app";
+
+// Helper function to get Resend client only when needed
+const getResendClient = () => {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) {
+    console.log("RESEND_API_KEY not configured, email notifications will be skipped");
+    return null;
+  }
+  // Dynamic import to avoid initialization errors
+  return import("https://esm.sh/resend@2.0.0").then(({ Resend }) => new Resend(apiKey));
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -718,85 +727,96 @@ Para reagendar, entre em contato:
         </html>
       `;
 
-      // Enviar email para o dono da barbearia
-      const { error: welcomeError } = await resend.emails.send({
-        from: "Império Barber <onboarding@resend.dev>",
-        to: [owner.email],
-        subject: `🎉 Bem-vindo ao Império Barber - ${barbershop.name}`,
-        html: welcomeEmailHtml,
-      });
+      // Try to send emails if Resend is configured
+      try {
+        const resend = await getResendClient();
+        if (resend) {
+          // Enviar email para o dono da barbearia
+          const { error: welcomeError } = await resend.emails.send({
+            from: "Império Barber <onboarding@resend.dev>",
+            to: [owner.email],
+            subject: `🎉 Bem-vindo ao Império Barber - ${barbershop.name}`,
+            html: welcomeEmailHtml,
+          });
 
-      if (welcomeError) {
-        console.error('Erro ao enviar email de boas-vindas:', welcomeError);
-      } else {
-        console.log('Email de boas-vindas enviado para:', owner.email);
-      }
+          if (welcomeError) {
+            console.error('Erro ao enviar email de boas-vindas:', welcomeError);
+          } else {
+            console.log('Email de boas-vindas enviado para:', owner.email);
+          }
 
-      // Email de notificação para o administrador
-      const adminEmailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-        </head>
-        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 30px;">
-            <h2 style="color: #1a1a2e; border-bottom: 2px solid #d4af37; padding-bottom: 10px;">🆕 Nova Barbearia Cadastrada</h2>
-            
-            <table style="width: 100%; margin: 20px 0;">
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Barbearia:</td>
-                <td style="padding: 8px 0; font-weight: bold;">${barbershop.name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Slug:</td>
-                <td style="padding: 8px 0;"><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 4px;">${barbershopData.slug}</code></td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Proprietário:</td>
-                <td style="padding: 8px 0;">${owner.full_name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Email:</td>
-                <td style="padding: 8px 0;"><a href="mailto:${owner.email}">${owner.email}</a></td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Telefone:</td>
-                <td style="padding: 8px 0;">${owner.phone || 'Não informado'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Data/Hora:</td>
-                <td style="padding: 8px 0;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
-              </tr>
-            </table>
-            
-            <h3 style="color: #1a1a2e; margin-top: 25px;">Links de Acesso</h3>
-            <ul style="list-style: none; padding: 0;">
-              <li style="padding: 5px 0;"><a href="${accessUrls.barbershop_page}" style="color: #d4af37;">📍 Página da Barbearia</a></li>
-              <li style="padding: 5px 0;"><a href="${accessUrls.admin_panel}" style="color: #d4af37;">⚙️ Painel Admin</a></li>
-              <li style="padding: 5px 0;"><a href="${accessUrls.login_page}" style="color: #d4af37;">🔐 Página de Login</a></li>
-            </ul>
-            
-            <p style="color: #888; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
-              Este é um email automático do sistema Império Barber.
-            </p>
-          </div>
-        </body>
-        </html>
-      `;
+          // Email de notificação para o administrador
+          const adminEmailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+            </head>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 30px;">
+                <h2 style="color: #1a1a2e; border-bottom: 2px solid #d4af37; padding-bottom: 10px;">🆕 Nova Barbearia Cadastrada</h2>
+                
+                <table style="width: 100%; margin: 20px 0;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #666;">Barbearia:</td>
+                    <td style="padding: 8px 0; font-weight: bold;">${barbershop.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #666;">Slug:</td>
+                    <td style="padding: 8px 0;"><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 4px;">${barbershopData.slug}</code></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #666;">Proprietário:</td>
+                    <td style="padding: 8px 0;">${owner.full_name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #666;">Email:</td>
+                    <td style="padding: 8px 0;"><a href="mailto:${owner.email}">${owner.email}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #666;">Telefone:</td>
+                    <td style="padding: 8px 0;">${owner.phone || 'Não informado'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #666;">Data/Hora:</td>
+                    <td style="padding: 8px 0;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
+                  </tr>
+                </table>
+                
+                <h3 style="color: #1a1a2e; margin-top: 25px;">Links de Acesso</h3>
+                <ul style="list-style: none; padding: 0;">
+                  <li style="padding: 5px 0;"><a href="${accessUrls.barbershop_page}" style="color: #d4af37;">📍 Página da Barbearia</a></li>
+                  <li style="padding: 5px 0;"><a href="${accessUrls.admin_panel}" style="color: #d4af37;">⚙️ Painel Admin</a></li>
+                  <li style="padding: 5px 0;"><a href="${accessUrls.login_page}" style="color: #d4af37;">🔐 Página de Login</a></li>
+                </ul>
+                
+                <p style="color: #888; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
+                  Este é um email automático do sistema Império Barber.
+                </p>
+              </div>
+            </body>
+            </html>
+          `;
 
-      // Enviar email para o administrador
-      const { error: adminError } = await resend.emails.send({
-        from: "Império Barber <onboarding@resend.dev>",
-        to: [ADMIN_EMAIL],
-        subject: `🆕 Nova Barbearia: ${barbershop.name}`,
-        html: adminEmailHtml,
-      });
+          // Enviar email para o administrador
+          const { error: adminError } = await resend.emails.send({
+            from: "Império Barber <onboarding@resend.dev>",
+            to: [ADMIN_EMAIL],
+            subject: `🆕 Nova Barbearia: ${barbershop.name}`,
+            html: adminEmailHtml,
+          });
 
-      if (adminError) {
-        console.error('Erro ao enviar email para admin:', adminError);
-      } else {
-        console.log('Email de notificação enviado para admin:', ADMIN_EMAIL);
+          if (adminError) {
+            console.error('Erro ao enviar email para admin:', adminError);
+          } else {
+            console.log('Email de notificação enviado para admin:', ADMIN_EMAIL);
+          }
+        } else {
+          console.log('Email notifications skipped - RESEND_API_KEY not configured');
+        }
+      } catch (emailError) {
+        console.error('Error sending emails:', emailError);
+        // Don't fail the registration if email fails
       }
 
     } catch (emailError) {
