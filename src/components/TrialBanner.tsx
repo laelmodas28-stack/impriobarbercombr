@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
-const SUPPORT_WHATSAPP = "5511999999999"; // Configure your support number
+const SUPPORT_WHATSAPP = "5511969332465";
 
 export const TrialBanner = () => {
   const { barbershop } = useBarbershopContext();
