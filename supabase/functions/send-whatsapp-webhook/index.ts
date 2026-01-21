@@ -13,6 +13,10 @@ interface RequestBody {
   barbershopId: string;
   phone: string;
   message: string;
+  clientName?: string;
+  serviceName?: string;
+  bookingDate?: string;
+  bookingTime?: string;
   isTest?: boolean;
 }
 
@@ -28,6 +32,10 @@ serve(async (req: Request) => {
   let barbershopId: string | undefined;
   let phone: string | undefined;
   let message: string | undefined;
+  let clientName: string | undefined;
+  let serviceName: string | undefined;
+  let bookingDate: string | undefined;
+  let bookingTime: string | undefined;
 
   try {
     // Validate environment variable
@@ -43,6 +51,10 @@ serve(async (req: Request) => {
     barbershopId = body.barbershopId;
     phone = body.phone;
     message = body.message;
+    clientName = body.clientName;
+    serviceName = body.serviceName;
+    bookingDate = body.bookingDate;
+    bookingTime = body.bookingTime;
     const isTest = body.isTest;
     
     if (!barbershopId || !message) {
@@ -52,7 +64,7 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Sending WhatsApp message${isTest ? " (TEST)" : ""} via n8n webhook`);
+    console.log(`Sending WhatsApp message${isTest ? " (TEST)" : ""} via n8n webhook to: ${phone || "test"}`);
 
     // Send to n8n webhook
     const webhookRes = await fetch(N8N_WHATSAPP_WEBHOOK_URL, {
@@ -64,58 +76,96 @@ serve(async (req: Request) => {
         barbershopId,
         phone: phone || "test",
         message,
+        clientName,
+        serviceName,
+        bookingDate,
+        bookingTime,
         isTest: isTest || false,
         timestamp: new Date().toISOString(),
       }),
     });
 
+    // Capture response text and try to parse as JSON
+    const responseText = await webhookRes.text();
+    let webhookData: Record<string, unknown> = {};
+    try {
+      webhookData = JSON.parse(responseText);
+    } catch {
+      webhookData = { raw_response: responseText };
+    }
+
+    console.log("n8n webhook response status:", webhookRes.status);
+    console.log("n8n webhook response data:", webhookData);
+
     if (!webhookRes.ok) {
-      const errorText = await webhookRes.text();
-      console.error("Error calling n8n webhook:", errorText);
+      console.error("Error calling n8n webhook:", responseText);
       
-      // Log failed notification
+      // Log failed notification with webhook response
       if (!isTest && barbershopId) {
         await supabase.from("notification_logs").insert({
           barbershop_id: barbershopId,
           channel: "whatsapp",
           recipient_contact: phone || "unknown",
           status: "failed",
-          content: message,
-          error_message: errorText,
+          content: JSON.stringify({
+            message_preview: message.substring(0, 200),
+            client_name: clientName,
+            service_name: serviceName,
+            booking_date: bookingDate,
+            booking_time: bookingTime,
+            webhook_status: webhookRes.status,
+            webhook_response: webhookData,
+          }),
+          error_message: `Webhook error: ${webhookRes.status} - ${responseText.substring(0, 500)}`,
           sent_at: new Date().toISOString(),
         });
-        console.log("Notification failure logged");
+        console.log("Notification failure logged with webhook response");
       }
       
       return new Response(
-        JSON.stringify({ success: false, message: "Erro ao enviar mensagem via webhook" }),
+        JSON.stringify({ success: false, message: "Erro ao enviar mensagem via webhook", webhookStatus: webhookRes.status }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const webhookData = await webhookRes.json().catch(() => ({}));
-    console.log("n8n webhook response:", webhookData);
+    // Determine delivery status from webhook response
+    // n8n typically returns { message: "Workflow was started" } or similar
+    const deliveryStatus = webhookData?.success === true ? "delivered" : "sent";
+    const workflowMessage = (webhookData?.message as string) || "Workflow started";
 
-    // Log successful notification
+    // Log successful notification with webhook response details
     if (!isTest && barbershopId) {
       const { error: logError } = await supabase.from("notification_logs").insert({
         barbershop_id: barbershopId,
         channel: "whatsapp",
         recipient_contact: phone || "unknown",
-        status: "sent",
-        content: message,
+        status: deliveryStatus,
+        content: JSON.stringify({
+          message_preview: message.substring(0, 200),
+          client_name: clientName,
+          service_name: serviceName,
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          webhook_status: webhookRes.status,
+          webhook_response: workflowMessage,
+        }),
         sent_at: new Date().toISOString(),
       });
       
       if (logError) {
         console.error("Error logging notification:", logError);
       } else {
-        console.log("Notification logged successfully");
+        console.log("Notification logged successfully with status:", deliveryStatus);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Mensagem enviada para o webhook" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Mensagem enviada para o webhook",
+        webhookStatus: webhookRes.status,
+        webhookResponse: workflowMessage,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -130,7 +180,10 @@ serve(async (req: Request) => {
           channel: "whatsapp",
           recipient_contact: phone || "unknown",
           status: "failed",
-          content: message || "WhatsApp message",
+          content: JSON.stringify({
+            message_preview: message?.substring(0, 200) || "WhatsApp message",
+            error_type: "exception",
+          }),
           error_message: error instanceof Error ? error.message : "Unknown error",
           sent_at: new Date().toISOString(),
         });
