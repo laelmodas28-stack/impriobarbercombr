@@ -11,6 +11,8 @@ import {
 import { NotificationBell } from "./NotificationBell";
 import { VideoTutorials } from "./VideoTutorials";
 import { ThemeToggle } from "./ThemeToggle";
+import { TrialBanner } from "./TrialBanner";
+import { TrialExpiredModal } from "./TrialExpiredModal";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,8 +90,11 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <>
+      <TrialExpiredModal />
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <TrialBanner />
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link to={homeLink} className="flex items-center gap-3 group">
           {barbershopInfo?.logo_url ? (
             <img 
@@ -156,6 +161,7 @@ const Header = () => {
         </nav>
       </div>
     </header>
+    </>
   );
 };
 
