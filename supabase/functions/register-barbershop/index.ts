@@ -84,33 +84,85 @@ serve(async (req) => {
 
     console.log('Starting barbershop registration for:', owner.email);
 
-    // 1. Create user in Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: owner.email,
-      password: owner.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: owner.full_name,
-        phone: owner.phone,
-      }
-    });
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === owner.email);
 
-    if (authError) {
-      console.error('Error creating user:', authError);
-      
-      // Translate common auth errors to Portuguese
-      let errorMessage = authError.message;
-      if (authError.code === 'email_exists' || authError.message.includes('already been registered')) {
-        errorMessage = 'Este email já está cadastrado. Tente fazer login ou use outro email.';
+    let userId: string;
+    let isExistingUser = false;
+
+    if (existingUser) {
+      // User exists - check if they're already a barbershop admin
+      const { data: existingRoles } = await supabaseAdmin
+        .from('user_roles')
+        .select('role, barbershop_id, barbershops(name)')
+        .eq('user_id', existingUser.id)
+        .eq('role', 'admin');
+
+      if (existingRoles && existingRoles.length > 0) {
+        // User is already an admin of at least one barbershop
+        const barbershopNames = existingRoles
+          .map((r: any) => r.barbershops?.name)
+          .filter(Boolean)
+          .join(', ');
+
+        console.log('User already admin of barbershop(s):', barbershopNames);
+        
+        return new Response(
+          JSON.stringify({ 
+            error: `Este email já está cadastrado como administrador da barbearia "${barbershopNames || 'existente'}". Faça login para acessar seu painel ou use outro email para criar uma nova barbearia.`,
+            code: 'ALREADY_ADMIN'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
       }
-      
-      return new Response(
-        JSON.stringify({ error: errorMessage }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+
+      // User exists but is only a client - we can proceed
+      console.log('Existing client user, upgrading to barbershop admin:', existingUser.id);
+      userId = existingUser.id;
+      isExistingUser = true;
+
+      // Update password for the existing user
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: owner.password,
+        user_metadata: {
+          full_name: owner.full_name,
+          phone: owner.phone,
+        }
+      });
+
+      if (updateError) {
+        console.error('Error updating existing user:', updateError);
+      }
+    } else {
+      // Create new user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: owner.email,
+        password: owner.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: owner.full_name,
+          phone: owner.phone,
+        }
+      });
+
+      if (authError) {
+        console.error('Error creating user:', authError);
+        
+        let errorMessage = authError.message;
+        if (authError.code === 'email_exists' || authError.message.includes('already been registered')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login ou use outro email.';
+        }
+        
+        return new Response(
+          JSON.stringify({ error: errorMessage }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      userId = authData.user.id;
+      console.log('New user created:', userId);
     }
-
-    const userId = authData.user.id;
     console.log('User created:', userId);
 
     // 2. Update profile to admin
