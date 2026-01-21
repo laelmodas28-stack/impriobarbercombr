@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Mail, MessageSquare, Plus, Pencil, Trash2, Eye, Copy, CheckCircle2, Clock, Calendar } from "lucide-react";
+import { FileText, Mail, MessageSquare, Plus, Pencil, Trash2, Eye, Copy, CheckCircle2, Clock, Calendar, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { toast } from "sonner";
@@ -403,6 +403,60 @@ export function NotificationTemplatesPage() {
     },
   });
 
+  // Mutation para restaurar templates de email ao padrão
+  const resetEmailTemplatesMutation = useMutation({
+    mutationFn: async () => {
+      if (!barbershop?.id) throw new Error("Barbearia não encontrada");
+
+      // Para cada evento, atualizar ou criar o template padrão de email
+      const events = ["booking_confirmation", "booking_reminder", "booking_cancelled"] as const;
+      
+      for (const event of events) {
+        const defaultTemplate = DEFAULT_TEMPLATES.email[event];
+        const existingTemplate = emailTemplates.find(t => t.trigger_event === event);
+
+        const payload = {
+          barbershop_id: barbershop.id,
+          name: defaultTemplate.name,
+          type: "email" as const,
+          trigger_event: event,
+          subject: defaultTemplate.subject,
+          content: defaultTemplate.content,
+          is_active: true,
+        };
+
+        if (existingTemplate) {
+          // Atualizar template existente
+          const { error } = await supabase
+            .from("notification_templates")
+            .update(payload)
+            .eq("id", existingTemplate.id);
+          if (error) throw error;
+        } else {
+          // Criar novo template
+          const { error } = await supabase
+            .from("notification_templates")
+            .insert(payload);
+          if (error) throw error;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
+      toast.success("Templates de email restaurados ao padrão!");
+    },
+    onError: (error) => {
+      console.error("Error resetting email templates:", error);
+      toast.error("Erro ao restaurar templates");
+    },
+  });
+
+  const handleResetEmailTemplates = () => {
+    if (confirm("Restaurar todos os templates de email ao padrão do sistema? Esta ação não pode ser desfeita.")) {
+      resetEmailTemplatesMutation.mutate();
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -416,6 +470,11 @@ export function NotificationTemplatesPage() {
   };
 
   const handleNewTemplate = () => {
+    // Só permite criar novos templates de WhatsApp
+    if (activeTab === "email") {
+      toast.error("Templates de email são gerenciados pelo sistema");
+      return;
+    }
     resetForm();
     setFormData((prev) => ({ ...prev, type: activeTab }));
     setDialogOpen(true);
@@ -515,8 +574,8 @@ export function NotificationTemplatesPage() {
       title="Templates de Notificação"
       subtitle="Configure mensagens automáticas para email e WhatsApp"
       icon={FileText}
-      actionLabel="Novo Template"
-      onAction={handleNewTemplate}
+      actionLabel={activeTab === "whatsapp" ? "Novo Template" : undefined}
+      onAction={activeTab === "whatsapp" ? handleNewTemplate : undefined}
     >
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "email" | "whatsapp")}>
         <TabsList className="mb-6">
@@ -538,27 +597,42 @@ export function NotificationTemplatesPage() {
               <CardContent className="py-12 text-center">
                 <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-semibold mb-2">Nenhum template de email</h3>
-                <p className="text-muted-foreground mb-4">Crie templates para envios automáticos por email</p>
-                <Button onClick={handleNewTemplate}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Template
+                <p className="text-muted-foreground mb-4">Templates de email são gerenciados pelo sistema</p>
+                <Button onClick={handleResetEmailTemplates} disabled={resetEmailTemplatesMutation.isPending}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  {resetEmailTemplatesMutation.isPending ? "Criando..." : "Criar Templates Padrão"}
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
-              {emailTemplates.map((template) => (
-                <TemplateCard
-                  key={template.id}
-                  template={template}
-                  onEdit={() => handleEditTemplate(template)}
-                  onDelete={() => deleteMutation.mutate(template.id)}
-                  onToggle={(active) => toggleActiveMutation.mutate({ id: template.id, is_active: active })}
-                  onPreview={() => handlePreview(template)}
-                  getTriggerLabel={getTriggerLabel}
-                  getTriggerIcon={getTriggerIcon}
-                />
-              ))}
+            <div className="space-y-4">
+              {/* Botão de restaurar padrão */}
+              <div className="flex justify-end">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleResetEmailTemplates}
+                  disabled={resetEmailTemplatesMutation.isPending}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  {resetEmailTemplatesMutation.isPending ? "Restaurando..." : "Restaurar Padrão"}
+                </Button>
+              </div>
+              
+              <div className="grid gap-4">
+                {emailTemplates.map((template) => (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    onEdit={() => handleEditTemplate(template)}
+                    onDelete={() => deleteMutation.mutate(template.id)}
+                    onToggle={(active) => toggleActiveMutation.mutate({ id: template.id, is_active: active })}
+                    onPreview={() => handlePreview(template)}
+                    getTriggerLabel={getTriggerLabel}
+                    getTriggerIcon={getTriggerIcon}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </TabsContent>
