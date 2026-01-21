@@ -103,8 +103,7 @@ const Header = () => {
             </div>
           )}
           <div className="hidden sm:block">
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <Crown className="text-primary w-5 h-5" />
+            <h1 className="text-xl font-bold">
               {barbershopInfo?.name || "Barbearia"}
             </h1>
           </div>
