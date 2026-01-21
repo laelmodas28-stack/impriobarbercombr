@@ -1,4 +1,4 @@
-import { MessageCircle, Lock, Crown } from "lucide-react";
+import { MessageCircle, Lock, Crown, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,8 @@ import {
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const SUPPORT_WHATSAPP = "5511969332465";
 
@@ -17,6 +19,7 @@ export const TrialExpiredModal = () => {
   const { user } = useAuth();
   const { barbershop } = useBarbershopContext();
   const { trialExpired, isLoading, hasActiveSubscription } = useTrialStatus(barbershop?.id);
+  const navigate = useNavigate();
 
   // Only show if user is logged in, trial expired, and no subscription
   const shouldShow = !!user && trialExpired && !hasActiveSubscription && !isLoading;
@@ -26,6 +29,11 @@ export const TrialExpiredModal = () => {
       `Olá! Gostaria de assinar um plano para continuar usando o sistema da barbearia ${barbershop?.name || ""}. Meu período de teste expirou.`
     );
     window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${message}`, "_blank");
+  };
+
+  const handleLogoutAndRedirect = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   if (!shouldShow) {
@@ -72,6 +80,16 @@ export const TrialExpiredModal = () => {
           >
             <MessageCircle className="w-5 h-5" />
             Falar com Suporte para Assinar
+          </Button>
+
+          <Button
+            onClick={handleLogoutAndRedirect}
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+            size="sm"
+          >
+            <LogOut className="w-4 h-4" />
+            Entrar com outra conta
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
