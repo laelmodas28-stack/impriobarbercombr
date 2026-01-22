@@ -40,23 +40,39 @@ interface EvolutionApiSettings {
   whatsapp_send_booking_reminder: boolean;
 }
 
+/**
+ * Get WhatsApp settings from notification_settings table
+ * Falls back to default values if table/columns don't exist
+ */
 export async function getWhatsAppSettings(barbershopId: string): Promise<EvolutionApiSettings | null> {
-  const { data, error } = await supabase
-    .from("barbershop_settings")
-    .select(`
-      whatsapp_enabled,
-      whatsapp_send_booking_confirmation,
-      whatsapp_send_booking_reminder
-    `)
-    .eq("barbershop_id", barbershopId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("notification_settings")
+      .select("send_whatsapp, enabled")
+      .eq("barbershop_id", barbershopId)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Error fetching WhatsApp settings:", error);
-    return null;
+    if (error || !data) {
+      // Return default settings if no record found
+      return {
+        whatsapp_enabled: false,
+        whatsapp_send_booking_confirmation: false,
+        whatsapp_send_booking_reminder: false,
+      };
+    }
+
+    return {
+      whatsapp_enabled: data.send_whatsapp ?? false,
+      whatsapp_send_booking_confirmation: data.enabled ?? false,
+      whatsapp_send_booking_reminder: data.enabled ?? false,
+    };
+  } catch {
+    return {
+      whatsapp_enabled: false,
+      whatsapp_send_booking_confirmation: false,
+      whatsapp_send_booking_reminder: false,
+    };
   }
-
-  return data as EvolutionApiSettings;
 }
 
 /**

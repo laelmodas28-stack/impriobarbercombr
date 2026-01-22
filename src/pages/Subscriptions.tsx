@@ -181,7 +181,7 @@ const Subscriptions = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Válido até</p>
                   <p className="text-lg font-semibold">
-                    {format(new Date(activeSubscription.expires_at), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                    {format(new Date(activeSubscription.end_date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
                   </p>
                 </div>
               </div>
@@ -252,10 +252,10 @@ const Subscriptions = () => {
                         Benefícios:
                       </p>
                       <ul className="space-y-1 ml-6">
-                        {plan.benefits && plan.benefits.length > 0 ? (
-                          plan.benefits.map((benefit, idx) => (
+                        {plan.services_included && plan.services_included.length > 0 ? (
+                          plan.services_included.map((service, idx) => (
                             <li key={idx} className="text-sm text-muted-foreground">
-                              • {benefit}
+                              • {service}
                             </li>
                           ))
                         ) : (
@@ -318,7 +318,7 @@ const Subscriptions = () => {
                     <div>
                       <p className="font-semibold">{subscription.plan?.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(subscription.started_at), "dd/MM/yyyy")} - {format(new Date(subscription.expires_at), "dd/MM/yyyy")}
+                        {format(new Date(subscription.start_date), "dd/MM/yyyy")} - {format(new Date(subscription.end_date), "dd/MM/yyyy")}
                       </p>
                     </div>
                     <div className="text-right">

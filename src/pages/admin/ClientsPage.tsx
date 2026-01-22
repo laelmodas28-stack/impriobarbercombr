@@ -18,7 +18,7 @@ import { toast } from "sonner";
 
 interface Client {
   id: string;
-  user_id: string;
+  client_id: string;
   created_at: string;
   profile: {
     full_name: string | null;
@@ -47,28 +47,20 @@ export function ClientsPage() {
       if (!barbershop?.id) throw new Error("Barbearia não encontrada");
       if (!formData.name.trim()) throw new Error("Nome é obrigatório");
       
-      // Use RPC function to create profile (bypasses RLS)
-      const { data: userId, error: profileError } = await supabase
-        .rpc("create_client_profile", {
-          p_name: formData.name.trim(),
-          p_email: formData.email.trim() || null,
-          p_phone: formData.phone.trim() || null,
-        });
-      
-      if (profileError) throw profileError;
-      
-      // Then link them to the barbershop
+      // Create client directly in barbershop_clients with info stored there
       const { error: clientError } = await supabase
         .from("barbershop_clients")
         .insert({
           barbershop_id: barbershop.id,
-          user_id: userId,
-          notes: "Cliente cadastrado manualmente",
+          client_id: crypto.randomUUID(), // Generate a placeholder ID
+          email: formData.email.trim() || null,
+          phone: formData.phone.trim() || null,
+          notes: `Cliente cadastrado manualmente: ${formData.name.trim()}`,
         });
       
       if (clientError) throw clientError;
       
-      return userId;
+      return true;
     },
     onSuccess: () => {
       toast.success("Cliente cadastrado com sucesso!");
@@ -87,10 +79,10 @@ export function ClientsPage() {
     queryFn: async () => {
       if (!barbershop?.id) return [];
       
-      // Get clients first
+      // Get clients with their profile info
       const { data: clientsData, error: clientsError } = await supabase
         .from("barbershop_clients")
-        .select("id, user_id, created_at")
+        .select("id, client_id, created_at, email, phone, notes")
         .eq("barbershop_id", barbershop.id);
       
       if (clientsError) throw clientsError;
@@ -98,29 +90,38 @@ export function ClientsPage() {
       // Get profiles and bookings for each client
       const clientsWithStats = await Promise.all(
         (clientsData || []).map(async (client) => {
-          // Get profile
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("name, email, phone, avatar_url")
-            .eq("user_id", client.user_id)
-            .single();
+          // Get profile if client_id exists
+          let profileData = null;
+          if (client.client_id) {
+            const { data } = await supabase
+              .from("profiles")
+              .select("full_name, phone, avatar_url")
+              .eq("id", client.client_id)
+              .single();
+            profileData = data;
+          }
           
           // Get bookings
           const { data: bookings } = await supabase
             .from("bookings")
             .select("id, booking_date")
             .eq("barbershop_id", barbershop.id)
-            .eq("client_id", client.user_id)
+            .eq("client_id", client.client_id)
             .order("booking_date", { ascending: false });
           
           return {
             ...client,
             profile: profileData ? {
-              full_name: profileData.name,
-              email: profileData.email,
-              phone: profileData.phone,
+              full_name: profileData.full_name,
+              email: client.email,
+              phone: profileData.phone || client.phone,
               avatar_url: profileData.avatar_url,
-            } : null,
+            } : {
+              full_name: client.notes?.replace("Cliente cadastrado manualmente: ", "") || null,
+              email: client.email,
+              phone: client.phone,
+              avatar_url: null,
+            },
             bookings_count: bookings?.length || 0,
             last_booking: bookings?.[0]?.booking_date || null,
           };

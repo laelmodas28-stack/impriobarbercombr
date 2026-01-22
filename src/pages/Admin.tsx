@@ -95,15 +95,12 @@ const Admin = () => {
       setInstagram(barbershop.instagram || "");
       setWhatsapp(barbershop.whatsapp || "");
       setAddress(barbershop.address || "");
-      // Extract times from business_hours JSON
-      const bh = barbershop.business_hours as any;
-      if (bh) {
-        setOpeningTime(bh.opening_time?.substring(0, 5) || "09:00");
-        setClosingTime(bh.closing_time?.substring(0, 5) || "19:00");
-        setMensagemPersonalizada(bh.mensagem_personalizada || "Profissional e acolhedor");
-        if (bh.opening_days && bh.opening_days.length > 0) {
-          setSelectedDays(bh.opening_days);
-        }
+      // Use opening_time and closing_time directly from barbershops table
+      setOpeningTime(barbershop.opening_time?.substring(0, 5) || "09:00");
+      setClosingTime(barbershop.closing_time?.substring(0, 5) || "19:00");
+      setMensagemPersonalizada(barbershop.mensagem_personalizada || "Profissional e acolhedor");
+      if (barbershop.opening_days && barbershop.opening_days.length > 0) {
+        setSelectedDays(barbershop.opening_days);
       }
     }
   }, [barbershop]);
@@ -172,16 +169,17 @@ const Admin = () => {
     enabled: isAdmin && !!barbershop,
   });
 
+  // Gallery query - using 'gallery' table (not gallery_images)
   const { data: gallery, refetch: refetchGallery } = useQuery({
     queryKey: ["admin-gallery", barbershop?.id],
     queryFn: async () => {
       if (!barbershop) return [];
       
       const { data, error } = await supabase
-        .from("gallery_images")
+        .from("gallery")
         .select("*")
         .eq("barbershop_id", barbershop.id)
-        .order("order_index");
+        .order("display_order");
       
       if (error) throw error;
       return data;
@@ -372,11 +370,11 @@ const Admin = () => {
       const nextOrder = (gallery?.length || 0);
 
       const { error: insertError } = await supabase
-        .from('gallery_images')
+        .from('gallery')
         .insert({
           barbershop_id: barbershop.id,
           image_url: publicUrl,
-          order_index: nextOrder
+          display_order: nextOrder
         });
 
       if (insertError) {
@@ -408,7 +406,7 @@ const Admin = () => {
 
       // Deletar do banco
       const { error } = await supabase
-        .from('gallery_images')
+        .from('gallery')
         .delete()
         .eq('id', galleryId);
 
@@ -428,7 +426,7 @@ const Admin = () => {
     try {
       const { error } = await supabase
         .from('barbershops')
-        .update({ theme_primary_color: themeColor })
+        .update({ primary_color: themeColor })
         .eq('id', barbershop.id);
 
       if (error) throw error;
@@ -450,23 +448,20 @@ const Admin = () => {
     if (!barbershop) return;
     
     try {
-      // Store business hours in JSON format
-      const businessHoursData = {
-        opening_time: openingTime,
-        closing_time: closingTime,
-        opening_days: selectedDays,
-        mensagem_personalizada: mensagemPersonalizada
-      };
-
       const { error } = await supabase
         .from('barbershops')
         .update({
           instagram,
           whatsapp,
           address,
-          business_hours: businessHoursData
+          opening_time: openingTime,
+          closing_time: closingTime,
+          opening_days: selectedDays,
+          mensagem_personalizada: mensagemPersonalizada
         })
         .eq('id', barbershop.id);
+
+      if (error) throw error;
 
       if (error) throw error;
 

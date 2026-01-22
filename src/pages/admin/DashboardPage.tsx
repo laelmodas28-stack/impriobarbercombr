@@ -82,9 +82,9 @@ export function DashboardPage() {
 
   // Calculate metrics
   const completedBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "completed");
-  const totalRevenue = completedBookings.reduce((acc, b) => acc + (b.price || b.service?.price || 0), 0);
+  const totalRevenue = completedBookings.reduce((acc, b) => acc + (b.total_price || b.service?.price || 0), 0);
   const prevCompletedBookings = previousBookings.filter((b) => b.status === "confirmed" || b.status === "completed");
-  const prevRevenue = prevCompletedBookings.reduce((acc, b) => acc + (b.price || 0), 0);
+  const prevRevenue = prevCompletedBookings.reduce((acc, b) => acc + ((b as any).total_price || 0), 0);
   
   const revenueGrowth = prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100) : 0;
   const bookingsGrowth = prevCompletedBookings.length > 0 
@@ -247,7 +247,7 @@ export function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">
-                        R$ {(booking.price || booking.service?.price || 0).toFixed(2)}
+                        R$ {(booking.total_price || booking.service?.price || 0).toFixed(2)}
                       </p>
                       <p className="text-xs text-muted-foreground">{booking.professional?.name}</p>
                     </div>
