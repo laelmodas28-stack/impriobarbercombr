@@ -2,35 +2,18 @@ import { Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
 
-interface BusinessHoursData {
-  days?: string[];
-  open?: string;
-  close?: string;
-}
-
 export const BusinessHours = () => {
   const { barbershop } = useBarbershopContext();
 
-  // Parse business_hours JSON field
-  const getBusinessHours = (): BusinessHoursData => {
-    if (!barbershop?.business_hours) return {};
-    
-    try {
-      if (typeof barbershop.business_hours === 'string') {
-        return JSON.parse(barbershop.business_hours);
-      }
-      return barbershop.business_hours as BusinessHoursData;
-    } catch {
-      return {};
-    }
-  };
-
-  const hours = getBusinessHours();
-
-  const formatTime = (time: string | undefined) => {
+  const formatTime = (time: string | null | undefined) => {
     if (!time) return "";
     return time.substring(0, 5);
   };
+
+  // Use opening_time/closing_time and opening_days from barbershop
+  const openTime = barbershop?.opening_time;
+  const closeTime = barbershop?.closing_time;
+  const days = barbershop?.opening_days;
 
   return (
     <Card className="p-6 border-border">
@@ -39,14 +22,14 @@ export const BusinessHours = () => {
         <div className="flex-1">
           <h3 className="font-semibold mb-2">Horário de Atendimento</h3>
           <p className="text-sm text-muted-foreground mb-2">
-            {hours.open && hours.close 
-              ? `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+            {openTime && closeTime 
+              ? `${formatTime(openTime)} - ${formatTime(closeTime)}`
               : '09:00 - 19:00'
             }
           </p>
           <p className="text-sm text-muted-foreground">
-            {hours.days && hours.days.length > 0
-              ? hours.days.join(", ")
+            {days && days.length > 0
+              ? days.join(", ")
               : 'Segunda a Sábado'
             }
           </p>

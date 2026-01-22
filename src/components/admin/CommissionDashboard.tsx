@@ -75,13 +75,13 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
   const [editingCommission, setEditingCommission] = useState<string | null>(null);
   const [newCommissionRate, setNewCommissionRate] = useState<string>("");
 
-  // Fetch commission rates from professionals table (uses commission_percentage column)
+  // Fetch commission rates from professional_commissions table
   const { data: professionalRates, refetch: refetchCommissions } = useQuery({
     queryKey: ["professional-rates", barbershopId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("professionals")
-        .select("id, commission_percentage")
+        .from("professional_commissions")
+        .select("professional_id, commission_rate")
         .eq("barbershop_id", barbershopId);
       if (error) throw error;
       return data || [];
@@ -107,8 +107,8 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
 
   // Get commission rate for a professional
   const getCommissionRate = (professionalId: string): number => {
-    const prof = professionalRates?.find(r => r.id === professionalId);
-    return prof?.commission_percentage ? Number(prof.commission_percentage) : 50; // Default 50%
+    const rate = professionalRates?.find(r => r.professional_id === professionalId);
+    return rate?.commission_rate ? Number(rate.commission_rate) : 50; // Default 50%
   };
 
   // Filter bookings by date range and professional
@@ -227,10 +227,14 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
     }
 
     try {
+      // Upsert commission rate in professional_commissions table
       const { error } = await supabase
-        .from("professionals")
-        .update({ commission_percentage: rate })
-        .eq("id", professionalId);
+        .from("professional_commissions")
+        .upsert({ 
+          professional_id: professionalId, 
+          barbershop_id: barbershopId,
+          commission_rate: rate 
+        }, { onConflict: 'professional_id,barbershop_id' });
 
       if (error) throw error;
 

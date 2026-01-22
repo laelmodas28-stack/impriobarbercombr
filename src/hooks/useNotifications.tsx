@@ -27,13 +27,13 @@ export const useNotifications = () => {
     enabled: !!user,
   });
 
-  const unreadCount = notifications?.filter(n => !n.is_read).length || 0;
+  const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase
         .from("notifications")
-        .update({ is_read: true })
+        .update({ read: true })
         .eq("id", notificationId);
       
       if (error) throw error;
@@ -49,9 +49,9 @@ export const useNotifications = () => {
       
       const { error } = await supabase
         .from("notifications")
-        .update({ is_read: true })
+        .update({ read: true })
         .eq("user_id", user.id)
-        .eq("is_read", false);
+        .eq("read", false);
       
       if (error) throw error;
     },

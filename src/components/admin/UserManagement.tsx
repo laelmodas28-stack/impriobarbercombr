@@ -43,10 +43,10 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["admin-users", barbershopId],
     queryFn: async () => {
-      // 1. Fetch clients from barbershop_clients table (use user_id, not client_id)
+      // 1. Fetch clients from barbershop_clients table (use client_id, not user_id)
       const { data: barbershopClients, error: clientsError } = await supabase
         .from("barbershop_clients")
-        .select("user_id")
+        .select("client_id")
         .eq("barbershop_id", barbershopId);
 
       if (clientsError) throw clientsError;
@@ -60,7 +60,7 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
       if (rolesError) throw rolesError;
 
       // Combine unique user IDs
-      const clientIds = barbershopClients?.map(c => c.user_id) || [];
+      const clientIds = barbershopClients?.map(c => c.client_id) || [];
       const roleUserIds = rolesInBarbershop?.map(r => r.user_id) || [];
       const uniqueUserIds = [...new Set([...clientIds, ...roleUserIds])];
 
@@ -72,18 +72,18 @@ export const UserManagement = ({ barbershopId }: UserManagementProps) => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .in("user_id", uniqueUserIds)
-        .order("name");
+        .in("id", uniqueUserIds)
+        .order("full_name");
 
       if (profilesError) throw profilesError;
 
       // Map profiles with their roles for current barbershop
       const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
-        const userRole = rolesInBarbershop?.find(r => r.user_id === profile.user_id);
+        const userRole = rolesInBarbershop?.find(r => r.user_id === profile.id);
         
         return {
-          id: profile.user_id,
-          name: profile.name || "Sem nome",
+          id: profile.id,
+          name: profile.full_name || "Sem nome",
           phone: profile.phone,
           created_at: profile.created_at,
           role: (userRole?.role as AppRole) || "client",

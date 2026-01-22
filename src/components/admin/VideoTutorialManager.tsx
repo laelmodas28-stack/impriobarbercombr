@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +32,8 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [categoryId, setCategoryId] = useState("general");
+  const [categoryTitle, setCategoryTitle] = useState("Geral");
 
   const { data: videos, isLoading } = useQuery({
     queryKey: ["tutorial-videos", barbershopId],
@@ -40,7 +42,7 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
         .from("tutorial_videos")
         .select("*")
         .eq("barbershop_id", barbershopId)
-        .order("order_index");
+        .order("display_order");
       
       if (error) throw error;
       return data;
@@ -57,7 +59,9 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
             description: videoData.description,
             video_url: videoData.video_url,
             is_active: videoData.is_active,
-            order_index: videoData.order_index,
+            display_order: videoData.display_order,
+            category_id: videoData.category_id,
+            category_title: videoData.category_title,
           })
           .eq("id", editingVideo.id);
         if (error) throw error;
@@ -70,7 +74,9 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
             description: videoData.description,
             video_url: videoData.video_url!,
             is_active: videoData.is_active,
-            order_index: videoData.order_index,
+            display_order: videoData.display_order,
+            category_id: videoData.category_id || "general",
+            category_title: videoData.category_title || "Geral",
           });
         if (error) throw error;
       }
@@ -110,6 +116,8 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
     setVideoUrl("");
     setIsActive(true);
     setVideoSource("upload");
+    setCategoryId("general");
+    setCategoryTitle("Geral");
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +167,8 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
     setDescription(video.description || "");
     setVideoUrl(video.video_url || "");
     setIsActive(video.is_active ?? true);
+    setCategoryId(video.category_id || "general");
+    setCategoryTitle(video.category_title || "Geral");
     setIsDialogOpen(true);
   };
 
@@ -175,7 +185,9 @@ export const VideoTutorialManager = ({ barbershopId }: VideoTutorialManagerProps
       description: description || null,
       video_url: videoUrl || null,
       is_active: isActive,
-      order_index: videos?.length || 0,
+      display_order: videos?.length || 0,
+      category_id: categoryId,
+      category_title: categoryTitle,
     });
   };
 

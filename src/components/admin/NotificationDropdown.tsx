@@ -179,10 +179,10 @@ export function NotificationDropdown() {
                   key={notification.id}
                   className={cn(
                     "flex items-start gap-3 p-3 cursor-pointer rounded-lg",
-                    !notification.is_read && "bg-primary/5"
+                    !notification.read && "bg-primary/5"
                   )}
                   onClick={() => {
-                    if (!notification.is_read) {
+                    if (!notification.read) {
                       markAsRead.mutate(notification.id);
                     }
                   }}
@@ -194,11 +194,11 @@ export function NotificationDropdown() {
                     <div className="flex items-center justify-between">
                       <p className={cn(
                         "text-sm",
-                        !notification.is_read && "font-medium"
+                        !notification.read && "font-medium"
                       )}>
                         {notification.title}
                       </p>
-                      {!notification.is_read && (
+                      {!notification.read && (
                         <div className="h-2 w-2 rounded-full bg-primary" />
                       )}
                     </div>

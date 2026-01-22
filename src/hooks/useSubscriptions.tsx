@@ -1,50 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Tables } from "@/integrations/supabase/types";
 
-export interface SubscriptionPlan {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  duration_days: number;
-  benefits: string[] | null;
-  is_active: boolean;
-  barbershop_id: string;
-  created_at: string;
-  // New fields for the pricing model
-  max_professionals: number | null;
-  billing_period: 'monthly' | 'quarterly' | 'yearly';
-  original_price: number | null;
-  discount_percentage: number | null;
-  is_highlighted: boolean;
-  highlight_label: string | null;
-  sort_order: number;
-}
-
-export interface ClientSubscription {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  barbershop_id: string;
-  started_at: string;
-  expires_at: string;
-  status: string | null;
-  created_at: string;
-  payment_method: string | null;
-  transaction_id: string | null;
-  mercadopago_preference_id: string | null;
+// Use database types directly
+type SubscriptionPlan = Tables<"subscription_plans">;
+type ClientSubscription = Tables<"client_subscriptions"> & {
   plan?: SubscriptionPlan;
   barbershop?: {
     name: string;
     logo_url: string | null;
   };
-}
+};
+
+export type { SubscriptionPlan, ClientSubscription };
 
 export const useSubscriptions = (barbershopId?: string) => {
   const { user } = useAuth();
 
-  // Buscar planos disponíveis
+  // Fetch available plans
   const { data: plans, isLoading: plansLoading, refetch: refetchPlans } = useQuery({
     queryKey: ["subscription-plans", barbershopId],
     queryFn: async () => {
@@ -58,12 +32,12 @@ export const useSubscriptions = (barbershopId?: string) => {
         .order("price");
       
       if (error) throw error;
-      return data as SubscriptionPlan[];
+      return data;
     },
     enabled: !!barbershopId,
   });
 
-  // Buscar assinaturas do cliente
+  // Fetch client subscriptions
   const { data: clientSubscriptions, isLoading: subscriptionsLoading, refetch: refetchSubscriptions } = useQuery({
     queryKey: ["client-subscriptions", user?.id],
     queryFn: async () => {
@@ -76,7 +50,7 @@ export const useSubscriptions = (barbershopId?: string) => {
           plan:subscription_plans(*),
           barbershop:barbershops(name, logo_url)
         `)
-        .eq("user_id", user.id)
+        .eq("client_id", user.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -85,7 +59,7 @@ export const useSubscriptions = (barbershopId?: string) => {
     enabled: !!user,
   });
 
-  // Buscar todas as assinaturas (para admin)
+  // Fetch all subscriptions (for admin)
   const { data: allSubscriptions, refetch: refetchAllSubscriptions } = useQuery({
     queryKey: ["all-subscriptions", barbershopId],
     queryFn: async () => {
@@ -96,19 +70,19 @@ export const useSubscriptions = (barbershopId?: string) => {
         .select(`
           *,
           plan:subscription_plans(name, price),
-          client:profiles(name, phone)
+          client:profiles(full_name, phone)
         `)
         .eq("barbershop_id", barbershopId)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data as unknown as (ClientSubscription & { client?: { name: string; phone: string } })[];
+      return data as unknown as (ClientSubscription & { client?: { full_name: string; phone: string } })[];
     },
     enabled: !!barbershopId,
   });
 
   const activeSubscription = clientSubscriptions?.find(
-    sub => sub.status === 'active' && new Date(sub.expires_at) >= new Date()
+    sub => sub.status === 'active' && new Date(sub.end_date) >= new Date()
   );
 
   return {
