@@ -108,7 +108,7 @@ export function TutorialsPage() {
           .eq("id", editingVideo.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("tutorial_videos")
           .insert({
             barbershop_id: barbershop.id,

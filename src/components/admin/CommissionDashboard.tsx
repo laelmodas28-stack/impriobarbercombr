@@ -45,7 +45,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 
 interface Booking {
   id: string;
-  price: number | null;
+  price?: number | null;
+  total_price?: number | null;
   booking_date: string;
   status: string | null;
   professional_id: string | null;
@@ -147,7 +148,7 @@ export const CommissionDashboard = ({ barbershopId, bookings, professionals }: C
         bookingsCount: 0
       };
 
-      const amount = Number(booking.price || 0);
+      const amount = Number(booking.total_price || booking.price || 0);
       const rate = getCommissionRate(booking.professional_id || "");
       const commission = amount * (rate / 100);
 
