@@ -15,6 +15,19 @@ const Index = () => {
   // Ler slug de origem (localStorage para persistência, sessionStorage como fallback)
   const originSlug = localStorage.getItem("origin_barbershop_slug") || sessionStorage.getItem("origin_barbershop_slug");
 
+  // Buscar barbearia oficial (is_official = true)
+  const { data: officialBarbershop, isLoading: officialLoading } = useQuery({
+    queryKey: ["official-barbershop"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("barbershops")
+        .select("slug, name, logo_url")
+        .eq("is_official", true)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   // Buscar dados da barbearia de origem para o loader
   const { data: originBarbershop } = useQuery({
     queryKey: ["origin-barbershop-loader", originSlug],
@@ -30,13 +43,19 @@ const Index = () => {
     enabled: !!originSlug,
   });
 
-  // Redirecionamento imediato se usuário logado veio de uma barbearia (não oficial)
-  // Executar ANTES de qualquer outra lógica para evitar flash da tela genérica
+  // PRIORIDADE 1: Redirecionar para barbearia oficial se existir
   useEffect(() => {
-    if (!authLoading && user && originSlug) {
+    if (!officialLoading && officialBarbershop?.slug) {
+      navigate(`/b/${officialBarbershop.slug}`, { replace: true });
+    }
+  }, [officialLoading, officialBarbershop, navigate]);
+
+  // PRIORIDADE 2: Redirecionamento se usuário logado veio de uma barbearia
+  useEffect(() => {
+    if (!authLoading && !officialLoading && !officialBarbershop && user && originSlug) {
       navigate(`/b/${originSlug}`, { replace: true });
     }
-  }, [authLoading, user, originSlug, navigate]);
+  }, [authLoading, officialLoading, officialBarbershop, user, originSlug, navigate]);
 
   // Buscar barbearia do usuário (se for admin)
   const { data: userBarbershop, isLoading: barbershopLoading } = useQuery({
@@ -84,8 +103,18 @@ const Index = () => {
     }
   };
 
-  // BLOQUEIO ABSOLUTO: Se usuário logado com originSlug, SEMPRE mostra loader
-  // Nunca renderiza a página "Sistema de Barbearias" para clientes de barbearias
+  // BLOQUEIO: Se há barbearia oficial, sempre mostra loader enquanto redireciona
+  if (officialLoading || officialBarbershop) {
+    return (
+      <BarbershopLoader 
+        logoUrl={officialBarbershop?.logo_url} 
+        name={officialBarbershop?.name} 
+        message="Carregando..."
+      />
+    );
+  }
+
+  // BLOQUEIO: Se usuário logado com originSlug, mostra loader
   if (user && originSlug) {
     return (
       <BarbershopLoader 
