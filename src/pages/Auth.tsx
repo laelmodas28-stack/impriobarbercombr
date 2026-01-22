@@ -93,7 +93,7 @@ const Auth = () => {
     const { data: clientAssociations } = await supabase
       .from("barbershop_clients")
       .select("barbershop_id")
-      .eq("user_id", userId)
+      .eq("client_id", userId)
       .order("created_at", { ascending: false });
 
     if (clientAssociations && clientAssociations.length > 0) {

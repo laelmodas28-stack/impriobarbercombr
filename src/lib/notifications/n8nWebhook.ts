@@ -25,20 +25,37 @@ interface N8nSettings {
 
 /**
  * Fetches notification settings for a barbershop
+ * Falls back to default values if the table doesn't exist
  */
 export async function getNotificationSettings(barbershopId: string): Promise<N8nSettings | null> {
-  const { data, error } = await supabase
-    .from("barbershop_settings")
-    .select("n8n_webhook_url, send_booking_confirmation, send_booking_reminder")
-    .eq("barbershop_id", barbershopId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("notification_settings")
+      .select("enabled, send_to_client")
+      .eq("barbershop_id", barbershopId)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Error fetching notification settings:", error);
-    return null;
+    if (error || !data) {
+      // Return default settings if no record found
+      return {
+        n8n_webhook_url: null,
+        send_booking_confirmation: true,
+        send_booking_reminder: true,
+      };
+    }
+
+    return {
+      n8n_webhook_url: null, // Webhook URL is stored as a secret
+      send_booking_confirmation: data.enabled ?? true,
+      send_booking_reminder: data.send_to_client ?? true,
+    };
+  } catch {
+    return {
+      n8n_webhook_url: null,
+      send_booking_confirmation: true,
+      send_booking_reminder: true,
+    };
   }
-
-  return data as N8nSettings;
 }
 
 /**

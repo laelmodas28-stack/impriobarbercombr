@@ -83,26 +83,8 @@ const Booking = () => {
     enabled: !!selectedProfessional && !!selectedDate,
   });
 
-  // Fetch time blocks for the professional
-  const { data: timeBlocks } = useQuery({
-    queryKey: ["professional-time-blocks", selectedProfessional, selectedDate],
-    queryFn: async () => {
-      if (!selectedProfessional || !selectedDate) return [];
-      
-      const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
-      
-      const { data, error } = await supabase
-        .from("professional_time_blocks")
-        .select("*")
-        .eq("professional_id", selectedProfessional)
-        .or(`and(is_recurring.eq.true,day_of_week.eq.${dayOfWeek}),and(is_recurring.eq.false,block_date.eq.${dateStr})`);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedProfessional && !!selectedDate,
-  });
+  // Time blocks - table doesn't exist yet, using empty array
+  const timeBlocks: { start_time: string; end_time: string }[] = [];
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -125,9 +107,8 @@ const Booking = () => {
   // Gerar slots de horário dinamicamente baseado nos horários do banco
   const generateTimeSlots = () => {
     const slots: string[] = [];
-    const bh = barbershop?.business_hours as any;
-    const openTime = bh?.opening_time || "08:00";
-    const closeTime = bh?.closing_time || "19:00";
+    const openTime = barbershop?.opening_time || "08:00";
+    const closeTime = barbershop?.closing_time || "19:00";
     
     const [openHour] = openTime.split(':').map(Number);
     const [closeHour] = closeTime.split(':').map(Number);
@@ -240,7 +221,7 @@ const Booking = () => {
         barbershop_id: barbershop.id,
         booking_date: format(selectedDate, "yyyy-MM-dd"),
         booking_time: selectedTime,
-        price: service.price,
+        total_price: service.price,
         notes: notes,
         status: "pending"
       }).select().single();
@@ -250,8 +231,8 @@ const Booking = () => {
       // Buscar dados do perfil do cliente
       const { data: profile } = await supabase
         .from("profiles")
-        .select("name, phone")
-        .eq("user_id", user.id)
+        .select("full_name, phone")
+        .eq("id", user.id)
         .single();
 
       // Enviar notificação
@@ -261,7 +242,7 @@ const Booking = () => {
             bookingId: booking?.id,
             barbershopId: barbershop.id,
             clientEmail: user.email,
-            clientName: profile?.name || "Cliente",
+            clientName: profile?.full_name || "Cliente",
             clientPhone: profile?.phone,
             date: format(selectedDate, "yyyy-MM-dd"),
             time: selectedTime,

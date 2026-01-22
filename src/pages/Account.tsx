@@ -84,7 +84,7 @@ const Account = () => {
   // Set form values when profile loads
   useEffect(() => {
     if (profile) {
-      setFullName(profile.name || "");
+      setFullName(profile.full_name || "");
       setPhone(profile.phone || "");
     }
   }, [profile]);
@@ -118,10 +118,10 @@ const Account = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
-          name: fullName.trim(),
+          full_name: fullName.trim(),
           phone: phone.trim() || null,
         })
-        .eq("user_id", user.id);
+        .eq("id", user.id);
 
       if (error) throw error;
 
@@ -137,7 +137,7 @@ const Account = () => {
   };
 
   const handleCancel = () => {
-    setFullName(profile?.name || "");
+    setFullName(profile?.full_name || "");
     setPhone(profile?.phone || "");
     setIsEditing(false);
   };
@@ -311,7 +311,7 @@ const Account = () => {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Nome</p>
-                    <p className="text-lg font-semibold">{profile?.name || "Não informado"}</p>
+                    <p className="text-lg font-semibold">{profile?.full_name || "Não informado"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
@@ -387,7 +387,7 @@ const Account = () => {
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold text-primary">
-                              R$ {(booking.price || 0).toFixed(2)}
+                              R$ {(booking.total_price || 0).toFixed(2)}
                             </p>
                           </div>
                         </div>
