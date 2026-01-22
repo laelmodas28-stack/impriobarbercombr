@@ -1,29 +1,31 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBarbershopContext } from "@/hooks/useBarbershopContext";
-import { AdminPageScaffold } from "@/components/admin/shared/AdminPageScaffold";
+import { PageHeader } from "@/components/admin/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  CreditCard, 
-  Users,
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
   Calendar,
-  ArrowUpRight,
-  ArrowDownRight
+  Users,
+  CreditCard,
+  BarChart3,
 } from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -34,54 +36,21 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
+  LineChart,
+  Line,
 } from "recharts";
 
-const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
-type Period = "today" | "week" | "month" | "quarter" | "year";
+const COLORS = ["hsl(var(--primary))", "#22c55e", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899"];
 
 export function FinanceOverviewPage() {
   const { barbershop } = useBarbershopContext();
-  const [period, setPeriod] = useState<Period>("month");
+  const [dateRange, setDateRange] = useState({
+    start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+    end: format(endOfMonth(new Date()), "yyyy-MM-dd"),
+  });
+  const [periodFilter, setPeriodFilter] = useState("month");
 
-  const getDateRange = (p: Period) => {
-    const now = new Date();
-    switch (p) {
-      case "today":
-        return { start: format(now, "yyyy-MM-dd"), end: format(now, "yyyy-MM-dd") };
-      case "week":
-        return { 
-          start: format(startOfWeek(now, { locale: ptBR }), "yyyy-MM-dd"), 
-          end: format(endOfWeek(now, { locale: ptBR }), "yyyy-MM-dd") 
-        };
-      case "month":
-        return { 
-          start: format(startOfMonth(now), "yyyy-MM-dd"), 
-          end: format(endOfMonth(now), "yyyy-MM-dd") 
-        };
-      case "quarter":
-        return { 
-          start: format(subMonths(now, 3), "yyyy-MM-dd"), 
-          end: format(now, "yyyy-MM-dd") 
-        };
-      case "year":
-        return { 
-          start: format(subMonths(now, 12), "yyyy-MM-dd"), 
-          end: format(now, "yyyy-MM-dd") 
-        };
-    }
-  };
-
-  const dateRange = getDateRange(period);
-
-  // Fetch bookings for revenue
+  // Fetch bookings
   const { data: bookings, isLoading: loadingBookings } = useQuery({
     queryKey: ["finance-bookings", barbershop?.id, dateRange],
     queryFn: async () => {
@@ -90,29 +59,12 @@ export function FinanceOverviewPage() {
         .from("bookings")
         .select(`
           *,
-          professional:professionals(name),
-          service:services(name)
+          professional:professionals!inner(barbershop_id, name),
+          service:services(name, price)
         `)
-        .eq("barbershop_id", barbershop.id)
+        .eq("professional.barbershop_id", barbershop.id)
         .gte("booking_date", dateRange.start)
         .lte("booking_date", dateRange.end);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!barbershop?.id,
-  });
-
-  // Fetch payment transactions
-  const { data: transactions, isLoading: loadingTransactions } = useQuery({
-    queryKey: ["finance-transactions", barbershop?.id, dateRange],
-    queryFn: async () => {
-      if (!barbershop?.id) return [];
-      const { data, error } = await supabase
-        .from("payment_transactions")
-        .select("*")
-        .eq("barbershop_id", barbershop.id)
-        .gte("created_at", dateRange.start)
-        .lte("created_at", dateRange.end + "T23:59:59");
       if (error) throw error;
       return data || [];
     },
@@ -151,24 +103,24 @@ export function FinanceOverviewPage() {
           plan:subscription_plans(name, price)
         `)
         .eq("barbershop_id", barbershop.id)
-        .gte("started_at", dateRange.start)
-        .lte("started_at", dateRange.end + "T23:59:59");
+        .gte("start_date", dateRange.start)
+        .lte("start_date", dateRange.end);
       if (error) throw error;
       return data || [];
     },
     enabled: !!barbershop?.id,
   });
 
-  const isLoading = loadingBookings || loadingTransactions || loadingPayouts || loadingSubscriptions;
+  const isLoading = loadingBookings || loadingPayouts || loadingSubscriptions;
 
   // Calculate metrics
   const completedBookings = bookings?.filter(b => b.status === "completed") || [];
   const cancelledBookings = bookings?.filter(b => b.status === "cancelled") || [];
   
-  const totalRevenue = completedBookings.reduce((sum, b) => sum + Number(b.price || 0), 0);
+  const totalRevenue = completedBookings.reduce((sum, b) => sum + Number(b.total_price || 0), 0);
   const subscriptionRevenue = subscriptions?.reduce((sum, s) => sum + Number(s.plan?.price || 0), 0) || 0;
-  const totalPayouts = payouts?.filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.amount || 0), 0) || 0;
-  const pendingPayouts = payouts?.filter(p => p.status === "pending").reduce((sum, p) => sum + Number(p.amount || 0), 0) || 0;
+  const totalPayouts = payouts?.filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.commission_amount || 0), 0) || 0;
+  const pendingPayouts = payouts?.filter(p => p.status === "pending").reduce((sum, p) => sum + Number(p.commission_amount || 0), 0) || 0;
   
   const grossRevenue = totalRevenue + subscriptionRevenue;
   const netRevenue = grossRevenue - totalPayouts;
@@ -178,7 +130,7 @@ export function FinanceOverviewPage() {
   // Revenue by service
   const revenueByService = completedBookings.reduce((acc, booking) => {
     const serviceName = booking.service?.name || "Outros";
-    acc[serviceName] = (acc[serviceName] || 0) + Number(booking.price || 0);
+    acc[serviceName] = (acc[serviceName] || 0) + Number(booking.total_price || 0);
     return acc;
   }, {} as Record<string, number>);
 
@@ -190,7 +142,7 @@ export function FinanceOverviewPage() {
   // Revenue by professional
   const revenueByProfessional = completedBookings.reduce((acc, booking) => {
     const profName = booking.professional?.name || "Outros";
-    acc[profName] = (acc[profName] || 0) + Number(booking.price || 0);
+    acc[profName] = (acc[profName] || 0) + Number(booking.total_price || 0);
     return acc;
   }, {} as Record<string, number>);
 
@@ -201,329 +153,285 @@ export function FinanceOverviewPage() {
   // Daily revenue for chart
   const dailyRevenue = completedBookings.reduce((acc, booking) => {
     const date = booking.booking_date;
-    acc[date] = (acc[date] || 0) + Number(booking.price || 0);
+    acc[date] = (acc[date] || 0) + Number(booking.total_price || 0);
     return acc;
   }, {} as Record<string, number>);
 
   const dailyChartData = Object.entries(dailyRevenue)
     .map(([date, value]) => ({ 
       date: format(new Date(date), "dd/MM", { locale: ptBR }), 
-      faturamento: value 
+      value 
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const MetricCard = ({ 
-    title, 
-    value, 
-    icon: Icon, 
-    trend, 
-    trendLabel,
-    variant = "default" 
-  }: { 
-    title: string; 
-    value: string; 
-    icon: any; 
-    trend?: number;
-    trendLabel?: string;
-    variant?: "default" | "success" | "warning" | "danger";
-  }) => {
-    const variantStyles = {
-      default: "bg-card",
-      success: "bg-green-500/10 border-green-500/20",
-      warning: "bg-yellow-500/10 border-yellow-500/20",
-      danger: "bg-red-500/10 border-red-500/20",
-    };
+  const handlePeriodChange = (period: string) => {
+    setPeriodFilter(period);
+    const today = new Date();
+    let start: Date;
+    let end: Date = today;
 
-    return (
-      <Card className={variantStyles[variant]}>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">{title}</p>
-              <p className="text-2xl font-bold mt-1">{value}</p>
-              {trend !== undefined && (
-                <div className="flex items-center gap-1 mt-2">
-                  {trend >= 0 ? (
-                    <ArrowUpRight className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className={`text-sm ${trend >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    {Math.abs(trend).toFixed(1)}%
-                  </span>
-                  {trendLabel && (
-                    <span className="text-xs text-muted-foreground">{trendLabel}</span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Icon className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    switch (period) {
+      case "7d":
+        start = subDays(today, 7);
+        break;
+      case "30d":
+        start = subDays(today, 30);
+        break;
+      case "month":
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+        break;
+      default:
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+    }
+
+    setDateRange({
+      start: format(start, "yyyy-MM-dd"),
+      end: format(end, "yyyy-MM-dd"),
+    });
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Visão Geral Financeira" subtitle="Análise completa das finanças" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
   return (
-    <AdminPageScaffold
-      title="Visão Geral Financeira"
-      subtitle="Resumo financeiro da barbearia"
-      icon={Wallet}
-      actions={
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Hoje</SelectItem>
-            <SelectItem value="week">Esta Semana</SelectItem>
-            <SelectItem value="month">Este Mês</SelectItem>
-            <SelectItem value="quarter">Último Trimestre</SelectItem>
-            <SelectItem value="year">Último Ano</SelectItem>
-          </SelectContent>
-        </Select>
-      }
-    >
-      {isLoading ? (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-          <Skeleton className="h-80" />
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              title="Receita Bruta"
-              value={`R$ ${grossRevenue.toFixed(2)}`}
-              icon={DollarSign}
-              variant="success"
-            />
-            <MetricCard
-              title="Receita Líquida"
-              value={`R$ ${netRevenue.toFixed(2)}`}
-              icon={TrendingUp}
-            />
-            <MetricCard
-              title="Ticket Médio"
-              value={`R$ ${averageTicket.toFixed(2)}`}
-              icon={CreditCard}
-            />
-            <MetricCard
-              title="Atendimentos"
-              value={completedBookings.length.toString()}
-              icon={Calendar}
-            />
-          </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Visão Geral Financeira"
+        subtitle="Análise completa das finanças da barbearia"
+        actions={
+          <Select value={periodFilter} onValueChange={handlePeriodChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="month">Este mês</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
 
-          {/* Secondary metrics */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Assinaturas</p>
-                    <p className="text-xl font-bold mt-1">R$ {subscriptionRevenue.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {subscriptions?.length || 0} ativas no período
-                    </p>
-                  </div>
-                  <Badge variant="secondary">{subscriptions?.length || 0}</Badge>
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <DollarSign className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Receita Bruta</p>
+                <p className="text-2xl font-bold">R$ {grossRevenue.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Receita Líquida</p>
+                <p className="text-2xl font-bold">R$ {netRevenue.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <CreditCard className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl font-bold">R$ {averageTicket.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-500/10">
+                <TrendingDown className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Taxa Cancelamento</p>
+                <p className="text-2xl font-bold">{cancellationRate.toFixed(1)}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <Tabs defaultValue="daily" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="daily">Receita Diária</TabsTrigger>
+          <TabsTrigger value="services">Por Serviço</TabsTrigger>
+          <TabsTrigger value="professionals">Por Profissional</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="daily">
+          <Card className="card-elevated">
+            <CardHeader>
+              <CardTitle>Receita por Dia</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {dailyChartData.length === 0 ? (
+                <div className="flex items-center justify-center h-80 text-muted-foreground">
+                  Sem dados para o período selecionado
                 </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={dailyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip 
+                      formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--primary))' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Comissões Pagas</p>
-                    <p className="text-xl font-bold mt-1">R$ {totalPayouts.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      R$ {pendingPayouts.toFixed(2)} pendentes
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-orange-500 border-orange-500">
-                    {payouts?.length || 0}
-                  </Badge>
+        <TabsContent value="services">
+          <Card className="card-elevated">
+            <CardHeader>
+              <CardTitle>Receita por Serviço</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {serviceChartData.length === 0 ? (
+                <div className="flex items-center justify-center h-80 text-muted-foreground">
+                  Sem dados para o período selecionado
                 </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={serviceChartData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis type="number" className="text-xs" />
+                    <YAxis dataKey="name" type="category" width={100} className="text-xs" />
+                    <Tooltip 
+                      formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                    />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Taxa de Cancelamento</p>
-                    <p className="text-xl font-bold mt-1">{cancellationRate.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {cancelledBookings.length} de {bookings?.length || 0} agendamentos
-                    </p>
-                  </div>
-                  <Badge 
-                    variant={cancellationRate > 10 ? "destructive" : "secondary"}
-                  >
-                    {cancelledBookings.length}
-                  </Badge>
+        <TabsContent value="professionals">
+          <Card className="card-elevated">
+            <CardHeader>
+              <CardTitle>Receita por Profissional</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {professionalChartData.length === 0 ? (
+                <div className="flex items-center justify-center h-80 text-muted-foreground">
+                  Sem dados para o período selecionado
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={professionalChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={100}
+                      fill="hsl(var(--primary))"
+                      dataKey="value"
+                    >
+                      {professionalChartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-          {/* Charts */}
-          <Tabs defaultValue="revenue" className="w-full">
-            <TabsList>
-              <TabsTrigger value="revenue">Faturamento</TabsTrigger>
-              <TabsTrigger value="services">Por Serviço</TabsTrigger>
-              <TabsTrigger value="professionals">Por Profissional</TabsTrigger>
-            </TabsList>
+      {/* Additional Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Agendamentos</p>
+                <p className="text-xl font-bold">{bookings?.length || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <TabsContent value="revenue" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evolução do Faturamento</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {dailyChartData.length > 0 ? (
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={dailyChartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis 
-                            dataKey="date" 
-                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                          />
-                          <YAxis 
-                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                            tickFormatter={(v) => `R$${v}`}
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: "hsl(var(--popover))", 
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px"
-                            }}
-                            formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Faturamento"]}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="faturamento" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth={2}
-                            dot={{ fill: "hsl(var(--primary))" }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="h-80 flex items-center justify-center text-muted-foreground">
-                      Nenhum dado disponível para o período selecionado
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Assinaturas</p>
+                <p className="text-xl font-bold">{subscriptions?.length || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <TabsContent value="services" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Receita por Serviço</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {serviceChartData.length > 0 ? (
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={serviceChartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            outerRadius={120}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {serviceChartData.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]}
-                            contentStyle={{ 
-                              backgroundColor: "hsl(var(--popover))", 
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px"
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="h-80 flex items-center justify-center text-muted-foreground">
-                      Nenhum dado disponível
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="professionals" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Receita por Profissional</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {professionalChartData.length > 0 ? (
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={professionalChartData} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis 
-                            type="number"
-                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                            tickFormatter={(v) => `R$${v}`}
-                          />
-                          <YAxis 
-                            type="category"
-                            dataKey="name"
-                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                            width={100}
-                          />
-                          <Tooltip 
-                            formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]}
-                            contentStyle={{ 
-                              backgroundColor: "hsl(var(--popover))", 
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px"
-                            }}
-                          />
-                          <Bar 
-                            dataKey="value" 
-                            fill="hsl(var(--primary))" 
-                            radius={[0, 4, 4, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="h-80 flex items-center justify-center text-muted-foreground">
-                      Nenhum dado disponível
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
-    </AdminPageScaffold>
+        <Card className="card-elevated">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Comissões Pendentes</p>
+                <p className="text-xl font-bold">R$ {pendingPayouts.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 

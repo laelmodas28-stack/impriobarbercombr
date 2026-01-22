@@ -5,7 +5,7 @@ import { ptBR } from "date-fns/locale";
 
 interface Booking {
   id: string;
-  price: number | null;
+  total_price: number | null;
   booking_date: string;
   status: string | null;
   professional?: { name: string } | null;
@@ -33,7 +33,7 @@ const DashboardMetrics = ({ bookings }: DashboardMetricsProps) => {
 
   // Total faturado no mês
   const totalRevenue = completedBookings.reduce(
-    (sum, booking) => sum + Number(booking.price || 0),
+    (sum, booking) => sum + Number(booking.total_price || 0),
     0
   );
 

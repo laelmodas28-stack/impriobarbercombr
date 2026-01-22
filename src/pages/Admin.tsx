@@ -121,7 +121,7 @@ const Admin = () => {
         .from("bookings")
         .select(`
           *,
-          client:profiles!bookings_client_id_fkey(name, phone),
+          client:profiles!bookings_client_id_fkey(full_name, phone),
           service:services(name),
           professional:professionals(name)
         `)
@@ -640,7 +640,7 @@ const Admin = () => {
                             <p><span className="text-muted-foreground">Serviço:</span> {booking.service?.name}</p>
                             <p><span className="text-muted-foreground">Profissional:</span> {booking.professional?.name}</p>
                             <p><span className="text-muted-foreground">Horário:</span> {booking.booking_time}</p>
-                            <p><span className="text-muted-foreground">Valor:</span> R$ {booking.price}</p>
+                            <p><span className="text-muted-foreground">Valor:</span> R$ {booking.total_price}</p>
                           </div>
                           <div className="flex gap-2">
                             <Button 
@@ -839,7 +839,7 @@ const Admin = () => {
 
             {/* Tema */}
             <ThemeSelector 
-              currentTheme={barbershop?.theme_primary_color || "#D4AF37"}
+              currentTheme={barbershop?.primary_color || "#D4AF37"}
               onThemeChange={handleThemeChange}
             />
 
@@ -1030,7 +1030,7 @@ const Admin = () => {
                         <div className="aspect-square rounded-lg overflow-hidden border border-border bg-card">
                           <img
                             src={item.image_url}
-                            alt={item.caption || "Foto da galeria"}
+                            alt={item.title || item.description || "Foto da galeria"}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -1089,7 +1089,7 @@ const Admin = () => {
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                                 <p><span className="text-muted-foreground">Preço:</span> R$ {plan.price}</p>
                                 <p><span className="text-muted-foreground">Duração:</span> {plan.duration_days} dias</p>
-                                <p><span className="text-muted-foreground">Benefícios:</span> {plan.benefits?.length || 0}</p>
+                                <p><span className="text-muted-foreground">Serviços:</span> {plan.services_included?.length || 0}</p>
                                 <p><span className="text-muted-foreground">Status:</span> {plan.is_active ? "Ativo" : "Inativo"}</p>
                               </div>
                             </div>
@@ -1122,9 +1122,9 @@ const Admin = () => {
                         className="flex justify-between items-center p-4 bg-card/30 rounded-lg"
                       >
                         <div>
-                          <p className="font-semibold">{subscription.client?.name || "Cliente"}</p>
+                          <p className="font-semibold">{subscription.client?.full_name || "Cliente"}</p>
                           <p className="text-sm text-muted-foreground">
-                            {subscription.plan?.name} - {format(new Date(subscription.started_at), "dd/MM/yyyy")} até {format(new Date(subscription.expires_at), "dd/MM/yyyy")}
+                            {subscription.plan?.name} - {format(new Date(subscription.start_date), "dd/MM/yyyy")} até {format(new Date(subscription.end_date), "dd/MM/yyyy")}
                           </p>
                         </div>
                         <div className="text-right">
@@ -1211,7 +1211,7 @@ const Admin = () => {
                         <p className="text-sm text-muted-foreground">Expirando em 7 dias</p>
                         <p className="text-2xl font-bold text-amber-500">
                           {allSubscriptions.filter(s => {
-                          const endDate = new Date(s.expires_at);
+                          const endDate = new Date(s.end_date);
                             const today = new Date();
                             const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                             return s.status === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0;

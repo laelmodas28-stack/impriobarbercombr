@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  History,
   Calendar,
   DollarSign,
   Clock,
@@ -24,24 +22,12 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface ClientProfile {
-  id: string;
-  user_id: string;
-  created_at: string;
-  profile: {
-    name: string | null;
-    email: string | null;
-    phone: string | null;
-    avatar_url: string | null;
-  } | null;
-}
-
 interface Booking {
   id: string;
   booking_date: string;
   booking_time: string;
   status: string;
-  price: number | null;
+  total_price: number | null;
   service: {
     name: string;
   } | null;
@@ -60,28 +46,32 @@ export function ClientHistoryPage() {
       if (!clientId) return null;
       const { data, error } = await supabase
         .from("barbershop_clients")
-        .select(`
-          id,
-          user_id,
-          created_at,
-          profile:profiles!barbershop_clients_user_id_fkey(name, email, phone, avatar_url)
-        `)
+        .select("id, client_id, created_at, phone, email, notes")
         .eq("id", clientId)
         .maybeSingle();
+      
       if (error) throw error;
       if (!data) return null;
+      
+      // Get profile data
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, phone, avatar_url")
+        .eq("id", data.client_id)
+        .maybeSingle();
+      
       return {
         ...data,
-        profile: Array.isArray(data.profile) ? data.profile[0] : data.profile,
-      } as ClientProfile;
+        profile: profileData,
+      };
     },
     enabled: !!clientId,
   });
 
   const { data: bookings = [], isLoading: loadingBookings } = useQuery({
-    queryKey: ["admin-client-bookings", client?.user_id, barbershop?.id],
+    queryKey: ["admin-client-bookings", client?.client_id, barbershop?.id],
     queryFn: async () => {
-      if (!client?.user_id || !barbershop?.id) return [];
+      if (!client?.client_id || !barbershop?.id) return [];
       const { data, error } = await supabase
         .from("bookings")
         .select(`
@@ -89,39 +79,39 @@ export function ClientHistoryPage() {
           booking_date,
           booking_time,
           status,
-          price,
+          total_price,
           service:services(name),
           professional:professionals(name)
         `)
         .eq("barbershop_id", barbershop.id)
-        .eq("client_id", client.user_id)
+        .eq("client_id", client.client_id)
         .order("booking_date", { ascending: false });
       if (error) throw error;
       return data as Booking[];
     },
-    enabled: !!client?.user_id && !!barbershop?.id,
+    enabled: !!client?.client_id && !!barbershop?.id,
   });
 
   const { data: subscriptions = [] } = useQuery({
-    queryKey: ["admin-client-subscriptions", client?.user_id, barbershop?.id],
+    queryKey: ["admin-client-subscriptions", client?.client_id, barbershop?.id],
     queryFn: async () => {
-      if (!client?.user_id || !barbershop?.id) return [];
+      if (!client?.client_id || !barbershop?.id) return [];
       const { data, error } = await supabase
         .from("client_subscriptions")
         .select(`
           id,
           status,
-          started_at,
-          expires_at,
+          start_date,
+          end_date,
           plan:subscription_plans(name, price)
         `)
         .eq("barbershop_id", barbershop.id)
-        .eq("user_id", client.user_id)
+        .eq("client_id", client.client_id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!client?.user_id && !!barbershop?.id,
+    enabled: !!client?.client_id && !!barbershop?.id,
   });
 
   // Calculate stats
@@ -129,7 +119,7 @@ export function ClientHistoryPage() {
     (b) => b.status === "completed" || b.status === "confirmed"
   );
   const cancelledBookings = bookings.filter((b) => b.status === "cancelled");
-  const totalSpent = completedBookings.reduce((acc, b) => acc + (b.price || 0), 0);
+  const totalSpent = completedBookings.reduce((acc, b) => acc + (b.total_price || 0), 0);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
@@ -175,25 +165,25 @@ export function ClientHistoryPage() {
             <Avatar className="h-20 w-20">
               <AvatarImage src={client.profile?.avatar_url || undefined} />
               <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                {client.profile?.name?.charAt(0)?.toUpperCase() || "C"}
+                {client.profile?.full_name?.charAt(0)?.toUpperCase() || "C"}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 space-y-2">
               <h2 className="text-2xl font-bold">
-                {client.profile?.name || "Cliente sem nome"}
+                {client.profile?.full_name || "Cliente sem nome"}
               </h2>
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                {client.profile?.email && (
+                {client.email && (
                   <div className="flex items-center gap-1">
                     <Mail className="h-4 w-4" />
-                    {client.profile.email}
+                    {client.email}
                   </div>
                 )}
-                {client.profile?.phone && (
+                {(client.phone || client.profile?.phone) && (
                   <div className="flex items-center gap-1">
                     <Phone className="h-4 w-4" />
-                    {client.profile.phone}
+                    {client.phone || client.profile?.phone}
                   </div>
                 )}
                 <div className="flex items-center gap-1">
@@ -209,7 +199,7 @@ export function ClientHistoryPage() {
                 <p className="text-xs text-muted-foreground">Atendimentos</p>
               </div>
               <div className="p-4 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-success">
+                <p className="text-2xl font-bold text-green-500">
                   R$ {totalSpent.toFixed(0)}
                 </p>
                 <p className="text-xs text-muted-foreground">Total gasto</p>
@@ -258,11 +248,11 @@ export function ClientHistoryPage() {
                         <div className="flex items-center gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                             {booking.status === "completed" || booking.status === "confirmed" ? (
-                              <CheckCircle className="h-5 w-5 text-success" />
+                              <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : booking.status === "cancelled" ? (
                               <XCircle className="h-5 w-5 text-destructive" />
                             ) : (
-                              <Clock className="h-5 w-5 text-warning" />
+                              <Clock className="h-5 w-5 text-yellow-500" />
                             )}
                           </div>
                           <div>
@@ -277,7 +267,7 @@ export function ClientHistoryPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="font-semibold">
-                            R$ {(booking.price || 0).toFixed(2)}
+                            R$ {(booking.total_price || 0).toFixed(2)}
                           </span>
                           {getStatusBadge(booking.status)}
                         </div>
@@ -311,7 +301,7 @@ export function ClientHistoryPage() {
                       <div>
                         <p className="font-medium">{sub.plan?.name || "Plano"}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(parseISO(sub.started_at), "dd/MM/yyyy", { locale: ptBR })} - {format(parseISO(sub.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                          {format(parseISO(sub.start_date), "dd/MM/yyyy", { locale: ptBR })} - {format(parseISO(sub.end_date), "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
