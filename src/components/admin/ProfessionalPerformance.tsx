@@ -5,7 +5,8 @@ import { TrendingUp, Award, Users } from "lucide-react";
 
 interface Booking {
   id: string;
-  price: number | null;
+  price?: number | null;
+  total_price?: number | null;
   booking_date: string;
   status: string | null;
   professional?: { name: string } | null;
@@ -37,7 +38,7 @@ const ProfessionalPerformance = ({
       (b) => b.professional_id === prof.id
     );
     const totalRevenue = profBookings.reduce(
-      (sum, b) => sum + Number(b.price || 0),
+      (sum, b) => sum + Number(b.total_price || b.price || 0),
       0
     );
     const totalBookings = profBookings.length;

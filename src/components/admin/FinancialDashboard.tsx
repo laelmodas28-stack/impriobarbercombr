@@ -34,7 +34,8 @@ import ServiceAnalysis from "./ServiceAnalysis";
 
 interface Booking {
   id: string;
-  price: number | null;
+  price?: number | null;
+  total_price?: number | null;
   booking_date: string;
   booking_time: string;
   status: string | null;
@@ -192,7 +193,7 @@ const FinancialDashboard = ({
     const cancelled = filteredBookings.filter((b) => b.status === "cancelled");
 
     const totalRevenue = completed.reduce(
-      (sum, b) => sum + Number(b.price || 0),
+      (sum, b) => sum + Number(b.total_price || b.price || 0),
       0
     );
     const totalBookings = completed.length;
@@ -231,7 +232,7 @@ const FinancialDashboard = ({
       const name = booking.professional?.name || "Desconhecido";
       const revenue = acc[name] || { count: 0, revenue: 0 };
       revenue.count += 1;
-      revenue.revenue += Number(booking.price || 0);
+      revenue.revenue += Number(booking.total_price || booking.price || 0);
       acc[name] = revenue;
       return acc;
     }, {} as Record<string, { count: number; revenue: number }>);
@@ -292,7 +293,7 @@ const FinancialDashboard = ({
 
     const completed = prevBookings.filter((b) => b.status === "completed");
     const totalRevenue = completed.reduce(
-      (sum, b) => sum + Number(b.price || 0),
+      (sum, b) => sum + Number(b.total_price || b.price || 0),
       0
     );
 
