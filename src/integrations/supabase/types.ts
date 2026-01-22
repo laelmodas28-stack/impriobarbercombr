@@ -349,15 +349,7 @@ export type Database = {
           updated_at?: string
           whatsapp?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "barbershops_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       booking_reminders_sent: {
         Row: {
