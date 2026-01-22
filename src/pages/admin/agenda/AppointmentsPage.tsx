@@ -48,7 +48,7 @@ interface Booking {
   booking_date: string;
   booking_time: string;
   status: string;
-  price: number | null;
+  total_price: number | null;
   notes: string | null;
   created_at: string;
   client: {
@@ -113,7 +113,7 @@ export function AppointmentsPage() {
           booking_date,
           booking_time,
           status,
-          price,
+          total_price,
           notes,
           created_at,
           client_id,
@@ -155,10 +155,10 @@ export function AppointmentsPage() {
           if (booking.client_id) {
             const { data: profileData } = await supabase
               .from("profiles")
-              .select("name, phone")
-              .eq("user_id", booking.client_id)
-              .single();
-            client = profileData;
+              .select("full_name, phone")
+              .eq("id", booking.client_id)
+              .maybeSingle();
+            client = profileData ? { name: profileData.full_name, phone: profileData.phone } : null;
           }
           return {
             ...booking,
@@ -279,12 +279,12 @@ export function AppointmentsPage() {
       ),
     },
     {
-      key: "price",
+      key: "total_price",
       header: "Valor",
       sortable: true,
       cell: (row) => (
         <span className="font-medium">
-          R$ {(row.price || 0).toFixed(2)}
+          R$ {(row.total_price || 0).toFixed(2)}
         </span>
       ),
     },

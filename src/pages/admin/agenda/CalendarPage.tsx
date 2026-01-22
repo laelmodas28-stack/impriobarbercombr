@@ -102,10 +102,10 @@ export function CalendarPage() {
           if (booking.client_id) {
             const { data: profileData } = await supabase
               .from("profiles")
-              .select("name")
-              .eq("user_id", booking.client_id)
-              .single();
-            clientName = profileData?.name || null;
+              .select("full_name")
+              .eq("id", booking.client_id)
+              .maybeSingle();
+            clientName = profileData?.full_name || null;
           }
           return {
             ...booking,

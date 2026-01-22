@@ -19,8 +19,6 @@ import {
   DollarSign,
   Clock,
   User,
-  Phone,
-  Mail,
   CheckCircle,
   XCircle,
   Save,
@@ -31,17 +29,13 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-interface ClientProfile {
+interface ClientData {
   id: string;
-  user_id: string;
+  client_id: string;
   created_at: string;
   notes: string | null;
-  profile: {
-    name: string | null;
-    email: string | null;
-    phone: string | null;
-    avatar_url: string | null;
-  } | null;
+  phone: string | null;
+  email: string | null;
 }
 
 interface Booking {
@@ -49,7 +43,7 @@ interface Booking {
   booking_date: string;
   booking_time: string;
   status: string;
-  price: number | null;
+  total_price: number | null;
   service: {
     name: string;
   } | null;
@@ -79,7 +73,7 @@ export function ClientEditPage() {
       // Get barbershop_client record
       const { data: clientData, error: clientError } = await supabase
         .from("barbershop_clients")
-        .select("id, user_id, created_at, notes")
+        .select("id, client_id, created_at, notes, phone, email")
         .eq("id", clientId)
         .maybeSingle();
       
@@ -87,18 +81,16 @@ export function ClientEditPage() {
       if (!clientData) return null;
 
       // Get profile data
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles")
-        .select("name, email, phone, avatar_url")
-        .eq("user_id", clientData.user_id)
+        .select("full_name, phone, avatar_url")
+        .eq("id", clientData.client_id)
         .maybeSingle();
-
-      if (profileError) throw profileError;
 
       return {
         ...clientData,
         profile: profileData,
-      } as ClientProfile;
+      };
     },
     enabled: !!clientId,
   });
@@ -107,9 +99,9 @@ export function ClientEditPage() {
   useEffect(() => {
     if (client) {
       setFormData({
-        name: client.profile?.name || "",
-        email: client.profile?.email || "",
-        phone: client.profile?.phone || "",
+        name: client.profile?.full_name || "",
+        email: client.email || "",
+        phone: client.phone || client.profile?.phone || "",
         notes: client.notes || "",
       });
     }
@@ -119,23 +111,13 @@ export function ClientEditPage() {
     mutationFn: async () => {
       if (!client) throw new Error("Cliente não encontrado");
 
-      // Update profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          name: formData.name.trim() || null,
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-        })
-        .eq("user_id", client.user_id);
-
-      if (profileError) throw profileError;
-
-      // Update barbershop_client notes
+      // Update barbershop_client record
       const { error: clientError } = await supabase
         .from("barbershop_clients")
         .update({
           notes: formData.notes.trim() || null,
+          phone: formData.phone.trim() || null,
+          email: formData.email.trim() || null,
         })
         .eq("id", client.id);
 
@@ -153,9 +135,9 @@ export function ClientEditPage() {
   });
 
   const { data: bookings = [], isLoading: loadingBookings } = useQuery({
-    queryKey: ["admin-client-bookings", client?.user_id, barbershop?.id],
+    queryKey: ["admin-client-bookings", client?.client_id, barbershop?.id],
     queryFn: async () => {
-      if (!client?.user_id || !barbershop?.id) return [];
+      if (!client?.client_id || !barbershop?.id) return [];
       const { data, error } = await supabase
         .from("bookings")
         .select(`
@@ -163,39 +145,39 @@ export function ClientEditPage() {
           booking_date,
           booking_time,
           status,
-          price,
+          total_price,
           service:services(name),
           professional:professionals(name)
         `)
         .eq("barbershop_id", barbershop.id)
-        .eq("client_id", client.user_id)
+        .eq("client_id", client.client_id)
         .order("booking_date", { ascending: false });
       if (error) throw error;
       return data as Booking[];
     },
-    enabled: !!client?.user_id && !!barbershop?.id,
+    enabled: !!client?.client_id && !!barbershop?.id,
   });
 
   const { data: subscriptions = [] } = useQuery({
-    queryKey: ["admin-client-subscriptions", client?.user_id, barbershop?.id],
+    queryKey: ["admin-client-subscriptions", client?.client_id, barbershop?.id],
     queryFn: async () => {
-      if (!client?.user_id || !barbershop?.id) return [];
+      if (!client?.client_id || !barbershop?.id) return [];
       const { data, error } = await supabase
         .from("client_subscriptions")
         .select(`
           id,
           status,
-          started_at,
-          expires_at,
+          start_date,
+          end_date,
           plan:subscription_plans(name, price)
         `)
         .eq("barbershop_id", barbershop.id)
-        .eq("user_id", client.user_id)
+        .eq("client_id", client.client_id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!client?.user_id && !!barbershop?.id,
+    enabled: !!client?.client_id && !!barbershop?.id,
   });
 
   // Calculate stats
@@ -203,7 +185,7 @@ export function ClientEditPage() {
     (b) => b.status === "completed" || b.status === "confirmed"
   );
   const cancelledBookings = bookings.filter((b) => b.status === "cancelled");
-  const totalSpent = completedBookings.reduce((acc, b) => acc + (b.price || 0), 0);
+  const totalSpent = completedBookings.reduce((acc, b) => acc + (b.total_price || 0), 0);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
@@ -278,13 +260,15 @@ export function ClientEditPage() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
+              <Label htmlFor="name">Nome</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Nome completo"
+                disabled
               />
+              <p className="text-xs text-muted-foreground">O nome é gerenciado pelo perfil do usuário</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
@@ -330,7 +314,7 @@ export function ClientEditPage() {
               <p className="text-xs text-muted-foreground">Atendimentos</p>
             </div>
             <div className="p-4 rounded-lg bg-muted text-center">
-              <p className="text-2xl font-bold text-success">
+              <p className="text-2xl font-bold text-green-500">
                 R$ {totalSpent.toFixed(0)}
               </p>
               <p className="text-xs text-muted-foreground">Total gasto</p>
@@ -378,11 +362,11 @@ export function ClientEditPage() {
                         <div className="flex items-center gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                             {booking.status === "completed" || booking.status === "confirmed" ? (
-                              <CheckCircle className="h-5 w-5 text-success" />
+                              <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : booking.status === "cancelled" ? (
                               <XCircle className="h-5 w-5 text-destructive" />
                             ) : (
-                              <Clock className="h-5 w-5 text-warning" />
+                              <Clock className="h-5 w-5 text-yellow-500" />
                             )}
                           </div>
                           <div>
@@ -397,7 +381,7 @@ export function ClientEditPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="font-semibold">
-                            R$ {(booking.price || 0).toFixed(2)}
+                            R$ {(booking.total_price || 0).toFixed(2)}
                           </span>
                           {getStatusBadge(booking.status)}
                         </div>
@@ -431,7 +415,7 @@ export function ClientEditPage() {
                       <div>
                         <p className="font-medium">{sub.plan?.name || "Plano"}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(parseISO(sub.started_at), "dd/MM/yyyy", { locale: ptBR })} - {format(parseISO(sub.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                          {format(parseISO(sub.start_date), "dd/MM/yyyy", { locale: ptBR })} - {format(parseISO(sub.end_date), "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                       </div>
                       <div className="flex items-center gap-4">

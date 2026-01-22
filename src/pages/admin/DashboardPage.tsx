@@ -81,10 +81,10 @@ export function DashboardPage() {
   });
 
   // Calculate metrics
-  const completedBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "completed");
-  const totalRevenue = completedBookings.reduce((acc, b) => acc + (b.total_price || b.service?.price || 0), 0);
-  const prevCompletedBookings = previousBookings.filter((b) => b.status === "confirmed" || b.status === "completed");
-  const prevRevenue = prevCompletedBookings.reduce((acc, b) => acc + ((b as any).total_price || 0), 0);
+  const completedBookings = (bookings || []).filter((b: any) => b.status === "confirmed" || b.status === "completed");
+  const totalRevenue = completedBookings.reduce((acc: number, b: any) => acc + (b.total_price || b.service?.price || 0), 0);
+  const prevCompletedBookings = (previousBookings || []).filter((b: any) => b.status === "confirmed" || b.status === "completed");
+  const prevRevenue = prevCompletedBookings.reduce((acc: number, b: any) => acc + (b.total_price || 0), 0);
   
   const revenueGrowth = prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100) : 0;
   const bookingsGrowth = prevCompletedBookings.length > 0 
