@@ -419,11 +419,22 @@ export function AdminTour({ barbershopId }: AdminTourProps) {
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status, type, index, action } = data;
 
+    // Close tour when finished, skipped, or close button clicked
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status as any)) {
       setRunTour(false);
       setStepIndex(0);
       
       // Mark tour as completed
+      const tourKey = `${TOUR_COMPLETED_KEY}-${barbershopId || "default"}-v${TOUR_VERSION}`;
+      localStorage.setItem(tourKey, "true");
+    }
+
+    // Handle close button click (X button)
+    if (action === ACTIONS.CLOSE) {
+      setRunTour(false);
+      setStepIndex(0);
+      
+      // Also mark as completed when user closes manually
       const tourKey = `${TOUR_COMPLETED_KEY}-${barbershopId || "default"}-v${TOUR_VERSION}`;
       localStorage.setItem(tourKey, "true");
     }
