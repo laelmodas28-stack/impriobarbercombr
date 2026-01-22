@@ -12,28 +12,15 @@ export interface TrialStatus {
   isLoading: boolean;
 }
 
+// Note: This hook requires a barbershop_subscriptions table that doesn't exist yet.
+// For now, we return a default "active" status.
 export const useTrialStatus = (barbershopId?: string): TrialStatus => {
   const { user } = useAuth();
 
-  // Check barbershop subscription status (platform level)
-  const { data: barbershopSubscription, isLoading } = useQuery({
-    queryKey: ["barbershop-subscription-status", barbershopId],
-    queryFn: async () => {
-      if (!barbershopId) return null;
+  // Return default active status since barbershop_subscriptions table doesn't exist yet
+  // TODO: Implement proper subscription checking when table is created
+  const isLoading = false;
 
-      const { data, error } = await supabase
-        .from("barbershop_subscriptions")
-        .select("*")
-        .eq("barbershop_id", barbershopId)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!barbershopId,
-  });
-
-  // If no user or no barbershop, return default
   if (!user || !barbershopId) {
     return {
       isInTrial: false,
@@ -45,72 +32,13 @@ export const useTrialStatus = (barbershopId?: string): TrialStatus => {
     };
   }
 
-  // No subscription record - treat as expired trial
-  if (!barbershopSubscription) {
-    return {
-      isInTrial: false,
-      trialExpired: true,
-      daysRemaining: 0,
-      trialEndDate: null,
-      hasActiveSubscription: false,
-      isLoading,
-    };
-  }
-
-  const { plan_type, status, trial_ends_at, subscription_ends_at } = barbershopSubscription;
-
-  // Check if subscription is suspended/cancelled
-  if (status === "suspended" || status === "cancelled") {
-    return {
-      isInTrial: false,
-      trialExpired: true,
-      daysRemaining: 0,
-      trialEndDate: null,
-      hasActiveSubscription: false,
-      isLoading,
-    };
-  }
-
-  // Check if it's a paid subscription
-  if (plan_type !== "trial") {
-    const now = new Date();
-    const subEnd = subscription_ends_at ? new Date(subscription_ends_at) : null;
-    const hasActive = subEnd ? isAfter(subEnd, now) : true;
-
-    return {
-      isInTrial: false,
-      trialExpired: false,
-      daysRemaining: 0,
-      trialEndDate: null,
-      hasActiveSubscription: hasActive,
-      isLoading,
-    };
-  }
-
-  // It's a trial - check expiration
-  const trialEndDate = trial_ends_at ? new Date(trial_ends_at) : null;
-  const now = new Date();
-  
-  if (!trialEndDate) {
-    return {
-      isInTrial: true,
-      trialExpired: false,
-      daysRemaining: 7,
-      trialEndDate: null,
-      hasActiveSubscription: false,
-      isLoading,
-    };
-  }
-
-  const trialExpired = isAfter(now, trialEndDate);
-  const daysRemaining = Math.max(0, differenceInDays(trialEndDate, now));
-
+  // Default to active subscription (no restrictions)
   return {
-    isInTrial: !trialExpired,
-    trialExpired,
-    daysRemaining,
-    trialEndDate,
-    hasActiveSubscription: false,
+    isInTrial: false,
+    trialExpired: false,
+    daysRemaining: 0,
+    trialEndDate: null,
+    hasActiveSubscription: true,
     isLoading,
   };
 };

@@ -21,6 +21,8 @@ export const NotificationBell = () => {
     }
   };
 
+  // Map 'read' to 'is_read' for consistency in template
+
   return (
     <div className="flex items-center gap-1">
       <VideoTutorials />
@@ -64,15 +66,15 @@ export const NotificationBell = () => {
                   <div
                     key={notification.id}
                     className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                      !notification.is_read ? "bg-primary/5" : ""
+                      !notification.read ? "bg-primary/5" : ""
                     }`}
-                    onClick={() => handleNotificationClick(notification.id, notification.is_read)}
+                    onClick={() => handleNotificationClick(notification.id, notification.read)}
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm">{notification.title}</p>
-                          {!notification.is_read && (
+                          {!notification.read && (
                             <div className="h-2 w-2 rounded-full bg-primary" />
                           )}
                         </div>

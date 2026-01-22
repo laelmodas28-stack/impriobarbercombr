@@ -17,14 +17,7 @@ interface BookingNotificationData {
 }
 
 /**
- * Sends booking notifications via both Email and WhatsApp webhooks
- * This is the centralized function for all booking-related notifications:
- * - Confirmation (new booking)
- * - Cancellation (booking cancelled)
- * - Reminder (upcoming booking)
- * 
- * IMPORTANT: Both webhooks are ALWAYS triggered for cancellation and reminder
- * regardless of individual channel settings.
+ * Sends booking notifications via webhooks
  */
 export async function sendBookingNotifications(data: BookingNotificationData): Promise<{
   emailSent: boolean;
@@ -32,23 +25,16 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
   errors: string[];
 }> {
   const errors: string[] = [];
-  
+  let emailSent = false;
+  let whatsappSent = false;
+
   console.log(`[BookingNotifications] Sending ${data.notificationType} notification`, {
     bookingId: data.bookingId,
     clientEmail: data.clientEmail,
     clientPhone: data.clientPhone,
   });
-  let emailSent = false;
-  let whatsappSent = false;
 
-  // Fetch barbershop settings to check enabled channels
-  const { data: settings } = await supabase
-    .from("barbershop_settings")
-    .select("*")
-    .eq("barbershop_id", data.barbershopId)
-    .single();
-
-  // Fetch barbershop slug and address for WhatsApp instance name
+  // Fetch barbershop info
   const { data: barbershop } = await supabase
     .from("barbershops")
     .select("slug, name, address")
@@ -59,57 +45,16 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
   const barbershopAddress = barbershop?.address || "";
   const barbershopName = barbershop?.name || "Barbearia";
 
-  // Build notification type label
   const typeLabels: Record<NotificationType, string> = {
     confirmation: "Confirmação de Agendamento",
     cancellation: "Cancelamento de Agendamento",
     reminder: "Lembrete de Agendamento",
   };
 
-  const triggerEvents: Record<NotificationType, string> = {
-    confirmation: "booking_confirmed",
-    cancellation: "booking_cancelled",
-    reminder: "booking_reminder",
-  };
-
-  // Fetch templates for this notification type
-  const { data: templates } = await supabase
-    .from("notification_templates")
-    .select("*")
-    .eq("barbershop_id", data.barbershopId)
-    .eq("trigger_event", triggerEvents[data.notificationType])
-    .eq("is_active", true);
-
-  const emailTemplate = templates?.find((t) => t.type === "email");
-  const whatsappTemplate = templates?.find((t) => t.type === "whatsapp");
-
-  // Replace placeholders in template (price format already without R$ prefix)
-  const formatPrice = (price?: number) => price ? price.toFixed(2).replace(".", ",") : "—";
-  
-  const replacePlaceholders = (content: string): string => {
-    return content
-      .replace(/\{\{cliente_nome\}\}/g, data.clientName)
-      .replace(/\{\{servico_nome\}\}/g, data.serviceName)
-      .replace(/\{\{profissional_nome\}\}/g, data.professionalName)
-      .replace(/\{\{data_agendamento\}\}/g, data.bookingDate)
-      .replace(/\{\{hora_agendamento\}\}/g, data.bookingTime)
-      .replace(/\{\{horario_agendamento\}\}/g, data.bookingTime)
-      .replace(/\{\{barbearia_nome\}\}/g, barbershopName)
-      .replace(/\{\{barbearia_endereco\}\}/g, barbershopAddress)
-      .replace(/\{\{servico_preco\}\}/g, formatPrice(data.price))
-      .replace(/\{\{valor\}\}/g, data.price ? `R$ ${formatPrice(data.price)}` : "—")
-      .replace(/\{\{barbearia_telefone\}\}/g, "");
-  };
-
-  // ALWAYS send Email webhook notification
+  // Send Email webhook notification
   try {
-    const emailContent = emailTemplate 
-      ? replacePlaceholders(emailTemplate.content)
-      : `${typeLabels[data.notificationType]}: ${data.serviceName} em ${data.bookingDate} às ${data.bookingTime}`;
-    
-    const emailSubject = emailTemplate?.subject 
-      ? replacePlaceholders(emailTemplate.subject)
-      : typeLabels[data.notificationType];
+    const emailContent = `${typeLabels[data.notificationType]}: ${data.serviceName} em ${data.bookingDate} às ${data.bookingTime}`;
+    const emailSubject = typeLabels[data.notificationType];
 
     console.log(`[BookingNotifications] Calling EMAIL webhook for ${data.notificationType}`);
 
@@ -146,9 +91,8 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
     errors.push(`Email: ${message}`);
   }
 
-  // ALWAYS send WhatsApp webhook notification
+  // Send WhatsApp webhook notification
   try {
-    // Normalize phone number if exists
     let phone = data.clientPhone ? data.clientPhone.replace(/\D/g, "") : null;
     if (phone && !phone.startsWith("55")) {
       phone = `55${phone}`;
@@ -156,14 +100,12 @@ export async function sendBookingNotifications(data: BookingNotificationData): P
 
     console.log(`[BookingNotifications] Calling WHATSAPP webhook for ${data.notificationType}`);
 
-    const whatsappContent = whatsappTemplate
-      ? replacePlaceholders(whatsappTemplate.content)
-      : `*${typeLabels[data.notificationType]}*\n\n` +
-        `👤 Cliente: ${data.clientName}\n` +
-        `✂️ Serviço: ${data.serviceName}\n` +
-        `👨‍💼 Profissional: ${data.professionalName}\n` +
-        `📅 Data: ${data.bookingDate}\n` +
-        `⏰ Horário: ${data.bookingTime}`;
+    const whatsappContent = `*${typeLabels[data.notificationType]}*\n\n` +
+      `👤 Cliente: ${data.clientName}\n` +
+      `✂️ Serviço: ${data.serviceName}\n` +
+      `👨‍💼 Profissional: ${data.professionalName}\n` +
+      `📅 Data: ${data.bookingDate}\n` +
+      `⏰ Horário: ${data.bookingTime}`;
 
     const { error } = await supabase.functions.invoke("send-whatsapp-webhook", {
       body: {
@@ -203,7 +145,6 @@ export async function sendNotificationForBooking(
   bookingId: string,
   notificationType: NotificationType
 ): Promise<{ success: boolean; errors: string[] }> {
-  // Fetch complete booking details
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
     .select(`
@@ -211,7 +152,7 @@ export async function sendNotificationForBooking(
       barbershop_id,
       booking_date,
       booking_time,
-      price,
+      total_price,
       client_id,
       service:services(name),
       professional:professionals(name)
@@ -228,14 +169,14 @@ export async function sendNotificationForBooking(
   if (booking.client_id) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("name, email, phone")
-      .eq("user_id", booking.client_id)
-      .single();
+      .select("full_name, phone")
+      .eq("id", booking.client_id)
+      .maybeSingle();
     
     if (profile) {
       clientData = {
-        name: profile.name || "Cliente",
-        email: profile.email,
+        name: profile.full_name || "Cliente",
+        email: null,
         phone: profile.phone,
       };
     }
@@ -251,7 +192,7 @@ export async function sendNotificationForBooking(
     professionalName: (booking.professional as any)?.name || "Profissional",
     bookingDate: booking.booking_date,
     bookingTime: booking.booking_time,
-    price: booking.price || undefined,
+    price: booking.total_price || undefined,
     notificationType,
   });
 
