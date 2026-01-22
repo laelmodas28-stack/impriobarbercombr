@@ -246,55 +246,61 @@ const DEFAULT_TEMPLATES = {
     booking_confirmation: {
       name: "Confirmação de Agendamento - WhatsApp",
       subject: null,
-      content: `*{{barbearia_nome}} - Confirmação de Agendamento*
+      content: `*{{barbearia_nome}}*
+Confirmação de Agendamento
 
-Olá {{cliente_nome}}!
+Olá, {{cliente_nome}}.
 
-Seu agendamento foi confirmado:
+Seu agendamento foi confirmado com sucesso.
 
-*Serviço:* {{servico_nome}}
-*Data:* {{data_agendamento}} às {{hora_agendamento}}
-*Profissional:* {{profissional_nome}}
-*Valor:* R$ {{servico_preco}}
+Serviço: {{servico_nome}}
+Data: {{data_agendamento}} às {{hora_agendamento}}
+Profissional: {{profissional_nome}}
+Valor: R$ {{servico_preco}}
 
-{{barbearia_endereco}}
+Endereço: {{barbearia_endereco}}
 
-_Enviado por ImperioApp_`,
+Aguardamos você.
+_ImperioApp_`,
     },
     booking_reminder: {
       name: "Lembrete de Agendamento - WhatsApp",
       subject: null,
-      content: `*Lembrete de Agendamento*
+      content: `*{{barbearia_nome}}*
+Lembrete de Agendamento
 
-Olá {{cliente_nome}}!
+Olá, {{cliente_nome}}.
 
-Você tem *{{servico_nome}}* em *{{data_agendamento}} às {{hora_agendamento}}* com {{profissional_nome}} no(a) *{{barbearia_nome}}*.
+Este é um lembrete do seu agendamento:
 
-Caso não puder comparecer, cancele seu horário com antecedência pelo Aplicativo ou entre em contato com o estabelecimento.
+Serviço: {{servico_nome}}
+Data: {{data_agendamento}} às {{hora_agendamento}}
+Profissional: {{profissional_nome}}
 
-{{barbearia_endereco}}
-{{barbearia_telefone}}
+Endereço: {{barbearia_endereco}}
 
-_Enviado por ImperioApp_`,
+Caso não possa comparecer, pedimos que cancele com antecedência.
+
+_ImperioApp_`,
     },
     booking_cancelled: {
       name: "Cancelamento de Agendamento - WhatsApp",
       subject: null,
-      content: `*Agendamento Cancelado*
+      content: `*{{barbearia_nome}}*
+Agendamento Cancelado
 
-Olá {{cliente_nome}},
+Olá, {{cliente_nome}}.
 
-Seu agendamento foi cancelado:
+Informamos que seu agendamento foi cancelado:
 
-*Serviço:* {{servico_nome}}
-*Data:* {{data_agendamento}} às {{hora_agendamento}}
+Serviço: {{servico_nome}}
+Data: {{data_agendamento}} às {{hora_agendamento}}
 
-Para reagendar, acesse nosso sistema ou responda esta mensagem.
+Para reagendar, acesse nosso sistema ou entre em contato.
 
-{{barbearia_nome}}
 {{barbearia_telefone}}
 
-_Enviado por ImperioApp_`,
+_ImperioApp_`,
     },
   },
 };
