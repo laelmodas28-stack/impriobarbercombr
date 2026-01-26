@@ -119,20 +119,30 @@ export function BarbershopSettingsPage() {
     
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${barbershop.id}/logo-${Date.now()}.${fileExt}`;
+      const fileName = `logo-${barbershop.id}-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('barbershop-assets')
+        .from('barbershop-branding')
         .upload(fileName, file, { upsert: true });
       
       if (uploadError) throw uploadError;
       
       const { data: { publicUrl } } = supabase.storage
-        .from('barbershop-assets')
+        .from('barbershop-branding')
         .getPublicUrl(fileName);
       
+      // Atualizar imediatamente no banco de dados
+      const { error: updateError } = await supabase
+        .from("barbershops")
+        .update({ logo_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", barbershop.id);
+      
+      if (updateError) throw updateError;
+      
       setFormData(prev => ({ ...prev, logo_url: publicUrl }));
-      toast.success("Logo enviado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["barbershop-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
+      toast.success("Logo atualizado com sucesso!");
     } catch (error: any) {
       console.error("Erro ao enviar logo:", error);
       toast.error(error.message || "Erro ao enviar logo");
@@ -144,20 +154,30 @@ export function BarbershopSettingsPage() {
     
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${barbershop.id}/cover-${Date.now()}.${fileExt}`;
+      const fileName = `cover-${barbershop.id}-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('barbershop-assets')
+        .from('barbershop-branding')
         .upload(fileName, file, { upsert: true });
       
       if (uploadError) throw uploadError;
       
       const { data: { publicUrl } } = supabase.storage
-        .from('barbershop-assets')
+        .from('barbershop-branding')
         .getPublicUrl(fileName);
       
+      // Atualizar imediatamente no banco de dados
+      const { error: updateError } = await supabase
+        .from("barbershops")
+        .update({ cover_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", barbershop.id);
+      
+      if (updateError) throw updateError;
+      
       setFormData(prev => ({ ...prev, cover_url: publicUrl }));
-      toast.success("Imagem de capa enviada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["barbershop-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["barbershop"] });
+      toast.success("Imagem de capa atualizada com sucesso!");
     } catch (error: any) {
       console.error("Erro ao enviar capa:", error);
       toast.error(error.message || "Erro ao enviar capa");
